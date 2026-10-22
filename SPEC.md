@@ -83,7 +83,11 @@ Acceptance (implemented in scripts/check_milestone.py M0):
   kind is made to a test-day URL; the only exception is the HEAD requests (status 404, no
   body) that recon sent on 2026-10-22 under the original M0 instruction, as recorded in
   recon.json. (Changed 2026-10-22 from "each of the 68 files HTTP 200 with a positive
-  content-length", which HEAD cannot show on this server.)
+  content-length", which HEAD cannot show on this server.) Other recon runs that day sent
+  HEADs of the same kind that recon.json does not hold; they are listed in
+  data/recon_logs/2026-10-22_recon_runs.txt, and whether the exception covers them is
+  question 17 in docs/DATA_RECON.md. Since the decision every request goes through
+  TardisClient and is logged in data/tardis_requests.jsonl before it is sent.
 - AC0.2 recon.json records the exchange metadata returned by the Tardis API.
 - AC0.3 configs/venue.yaml has every field for every date and no TBD.
 - AC0.4 hftbacktest pinned in uv.lock; docs/ENGINE.md has sections Version, Data

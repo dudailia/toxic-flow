@@ -1,16 +1,19 @@
 # M0 review record
 
-Two independent reviews of commits 282ddbf..970fa0c on 2026-10-22, both read-only: the
-leakage-auditor agent and /code-review at high effort. Fixes are in commit a967f6f. Open
-items point to the questions in docs/DATA_RECON.md.
+Two rounds of two independent, read-only reviews on 2026-10-22: the leakage-auditor agent
+and /code-review at high effort. Round 1 covered commits 282ddbf..970fa0c (fixes in
+a967f6f); round 2 covered 282ddbf..67b20c4, after the AC0.1 decision. Open items point to
+the questions in docs/DATA_RECON.md.
 
-## Leakage auditor
+## Round 1
+
+### Leakage auditor
 
 Summary of its report: no path in M0 downloads, converts or reads a test-day file, and no
 forward-looking input reaches the B0 quote decision. Checked and cleared: no test date in
 the manifest, recon.json, any path under data/ or the temp folders; the lock commit
-(13:53 UTC) precedes the first download (14:10 UTC); all 32 test-day recon requests were
-HEAD; the converter's clean-cut argument (its own trace of `correct_event_order`, plus the
+(13:53 UTC) precedes the first download (14:10 UTC); the 32 test-day requests in
+recon.json were HEAD (round 2 found more HEADs outside recon.json, see below); the converter's clean-cut argument (its own trace of `correct_event_order`, plus the
 6 real cuts monotone in both orders with 51 to 54 ms gaps); B0 causality; layering;
 venue.yaml against docs/venue_sources.json.
 
@@ -24,7 +27,7 @@ venue.yaml against docs/venue_sources.json.
 | 6 | Lock accepts a lightweight tag and any remote named origin | Open, protected file; Q14 |
 | 7 | Some DATA_RECON numbers were not in a committed record or counted events as rows | Fixed: counts now from CSV rows in convert.json, RAM and disk in benchmark_m0.json. The server probe results are in DATA_RECON.md with their time; the run meant to record them was rate-limited (Q16), and since the AC0.1 decision recon.py sends no dataset request |
 
-## Code review
+### Code review
 
 | Finding | Status |
 |---|---|
@@ -44,9 +47,44 @@ venue.yaml against docs/venue_sources.json.
 | Smoke test used models the study does not use | Fixed: no-partial-fill and feed-based latency |
 | Lock does not require an annotated tag | Open, protected file; Q14 |
 
-## Found while fixing
+### Found while fixing
 
 hftbacktest keeps a raw pointer to an ndarray passed to `data()` or
 `intp_order_latency()` without copying it. A B0 smoke test passed a local array and two of
 four full test runs aborted. Tests and the benchmark now pass file paths; three full runs
 in a row then passed. docs/ENGINE.md records the rule for M2.
+
+## Round 2
+
+### Leakage auditor
+
+Summary: no code path can download, convert or read a test-day file before prereg-v1, and
+every test-day contact on record was a HEAD that returned 404 with no body; HEAD also
+returns 404 for a symbol that does not exist, so these requests revealed nothing.
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | DATA_RECON's account of test-day requests left out run A (13:54 to 14:04 UTC) | Fixed: every run listed in data/recon_logs/2026-10-22_recon_runs.txt and DATA_RECON.md; Q17 |
+| 2 | AC0.1 read only recon.json and passed when its test rows were deleted or changed; TardisClient had no lock and no log | Fixed: the 32 rows pinned by count and hash, statuses checked, recon_logs checked, every request logged before it is sent, test-day dataset URLs refused in TardisClient (leakage tests) |
+| 3 | Exclusion rule 1 cannot tell a rate limit from a missing file | Open, PREREGISTRATION.md; Q18 |
+| 4 | The 429 in force came from an ad-hoc call the client never saw; date-form Retry-After | Fixed: wait file seeded (no request before 2026-10-23 15:26:43 UTC); date form parsed |
+
+### Code review
+
+| Finding | Status |
+|---|---|
+| Retry-After as an HTTP date raised ValueError, so the wait was dropped | Fixed; test |
+| AC0.1 passed while DATA_RECON listed HEADs outside recon.json | Fixed with auditor item 2; Q17 |
+| Split lock trusts whatever URL origin has | Open, protected file; Q14 |
+| convert.json was gitignored, so DATA_RECON numbers had no committed record | Fixed: convert.json committed |
+| Local disk errors counted as Tardis failures; no free-space check | Fixed: DiskSpaceError before any byte is written; test |
+| http.client protocol errors escaped the failure count | Fixed; test |
+| Failed conversion left its staging directory | Fixed; test |
+| Raw file made read-only only after it was placed | Fixed: read-only before os.link; test with a simulated crash, and one for a stale read-only .part |
+| Snapshot block span from first and last rows, not min and max | Fixed; test |
+| Header-only file gave a TypeError | Fixed: ConversionError; test |
+| ru_maxrss is KiB on Linux | Fixed: machine.peak_rss_bytes; test |
+| Ongoing incident without an end crashed recon | Fixed; test |
+| No test of the re-fetch of an evicted raw file | Added; it passed as written |
+| TardisClient did not itself enforce "no retry of a failed URL" | Fixed: failed URLs refused; test |
+| Benchmark warm-up decompresses part 0 to read one timestamp | Deferred, minor: changing it means re-measuring |

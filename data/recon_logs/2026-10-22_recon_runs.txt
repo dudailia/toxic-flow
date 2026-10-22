@@ -1,0 +1,25 @@
+Every run of scripts/recon.py on 2026-10-22, from the Claude Code session transcript
+(session 344a1151-4baf-4164-8bf1-2eb83851dc7e). Times are UTC. The recon code of runs
+A to D sent the Tardis exchange-API GET, then a HEAD to each of the 68 dataset URLs in
+date order (train, then val, then test), and for train and val dates only a GET whose body
+was never read. HEAD on datasets.tardis.dev returns 404 with no body for every URL.
+
+Run A  13:54:32 to 14:04:51  tool_use toolu_013gSJLndHCjPVao4WtBEVbc, killed by pkill
+       (toolu_01WkfsrdwvzWHLJUvz63VTGY). Output lost (piped to tail; task bmtf3wx98 holds
+       only the exit code). nettop at 14:04:42 showed about 3.9 KB received by the
+       process, less than the 300 KB API response, which suggests it never passed the API
+       request; not conclusive. Test-day HEADs: unknown, at most 32.
+Run B  14:05:17 to 14:17:17  tool_use toolu_014J27SyNCGJUDioMDHjVU5n, task b0g3l2r9y,
+       crashed on a 30 s read timeout after at least 14 rows. Its log was overwritten by
+       run C. Test-day HEADs: unknown, at most 32.
+Run C  15:26:09 to 15:37:35  task boioitftf. Its recon.json is the committed one: 32
+       test-day HEADs, all 404 with no size, checked 15:32:37 to 15:37:34.
+Run D  about 16:08 to 16:20  task bnd0044hk. Its recon.json was discarded; its stdout is
+       2026-10-22T16-08Z_run_not_in_recon_json.log here: 32 test-day HEADs, all 404 with
+       no size.
+Run E  16:21 to 17:21        recon code with server probes run first; it hung on a
+       Retry-After sleep after the train-day probes and was killed. No test-day request.
+
+No GET, ranged request or download was ever sent to a test-day URL. Since Ilia's AC0.1
+decision (2026-10-22, about 20:20) every request goes through TardisClient, which logs
+it in data/tardis_requests.jsonl before sending and refuses test-day dataset URLs.

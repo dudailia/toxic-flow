@@ -43,14 +43,19 @@ data/converted/2024-01-01/convert.json (make data), data/benchmark_m0.json
   recorded (SPEC.md M0). File sizes move to M1 (AC1.6). Since the decision, scripts/recon.py
   sends only the exchange-API request, every request goes through TardisClient
   (src/toxic_flow/data/tardis.py), and no request has gone to any tardis.dev URL.
-- Test-day requests, stated in full: recon.json records 32 HEAD requests to test-day URLs
-  (15:32 to 15:37 UTC), all 404 with no body. A second complete recon run between about
-  16:08 and 16:21 UTC sent 32 more, all 404 with no size; its recon.json was discarded,
-  and its output is kept in data/recon_logs/2026-10-22T16-08Z_run_not_in_recon_json.log.
-  An earlier run (about 14:05 to 14:17 UTC) crashed on a timeout after at least 14 rows
-  and its output was not kept, so it may have sent some test-day HEADs too, at most 32.
-  No GET, ranged request or download ever went to a test-day URL, and no test-day byte is
-  on disk.
+- Test-day requests, stated in full (data/recon_logs/2026-10-22_recon_runs.txt lists
+  every recon run with its times): run C's 32 HEADs are in recon.json and AC0.1 pins them
+  (count and hash). Run D sent 32 more between about 16:08 and 16:20 UTC; its recon.json
+  was discarded and its stdout is in data/recon_logs/, which AC0.1 also checks (all 404,
+  no size). Runs A (13:54 to 14:04) and B (14:05 to 14:17) lost their output; each could
+  have sent up to 32 test-day HEADs before it stopped (run A probably none: about 3.9 KB
+  had been received, less than the API response). All were HEAD requests, which return
+  404 with no body for every URL here, real or not. No GET, ranged request or download
+  ever went to a test-day URL, and no test-day byte is on disk. [TBD: Q17 below.]
+- Since the decision: TardisClient refuses any test-day dataset URL through the split
+  lock (tests/leakage/test_client_lock.py), writes every request to
+  data/tardis_requests.jsonl before sending it (committed; AC0.1 fails on a test-day URL
+  in it), and knows the 429 still in force (no request before 2026-10-23 15:26:43 UTC).
 - For train and val dates only, recon.json also holds a `get_headers` record: a GET whose
   response body is never read; the connection is closed after the headers. The split lock
   was checked before each one. All 36 returned 200 with a size. This departed from "HEAD
@@ -220,3 +225,12 @@ available, so 2 runs of 3.87 GiB fit side by side although there are 8 cores.
     run and is remembered in data/tardis_wait.json), never retries a failed file in the
     same run, and stops at the third failure. M1 downloads 36 files: how many per session,
     and is an API key worth getting?
+17. AC0.1's exception names the HEADs "as recorded in recon.json" (32). Run D's 32 are
+    recorded in data/recon_logs/ and checked; runs A and B lost their output (up to 64,
+    probably far fewer). All were HEADs with 404 and no body. Do they fall under the same
+    exception?
+18. Exclusion rule 1 (PREREGISTRATION.md section 2: "does not return HTTP 200") cannot tell
+    a missing file from a rate limit: the free tier sent 429 for a day here, and M5 needs
+    32 test files. Proposed before the tag: exclude only on 404 or 400 from a GET seen on
+    two attempts at least 24 hours apart; 429, 5xx and timeouts are retried later and
+    never exclude a day. data/tardis_requests.jsonl records each status.
