@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "date": "2024-01-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/01/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-01-01/incremental_book_L2.csv.gz",
+      "bytes": 546329028,
+      "sha256": "622b971bcc1fed5f30a309b0b001f1627dab0ccffc5e0ae9c8c4cc01fe9b0432",
+      "downloaded_at": "2026-10-22T14:10:33+00:00"
+    },
+    {
+      "date": "2024-01-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/01/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-01-01/trades.csv.gz",
+      "bytes": 20848659,
+      "sha256": "8387c9d605f986bb6bde754735f5f9c2440ec76908f0d143af1b9282cefe981a",
+      "downloaded_at": "2026-10-22T14:10:35+00:00"
+    }
+  ]
+}
