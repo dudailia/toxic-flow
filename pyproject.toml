@@ -1,0 +1,49 @@
+[project]
+name = "toxic-flow"
+version = "0.1.0"
+description = "Pre-registered study of a Hawkes order-flow overlay for a passive market maker, in L2 replay simulation."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Ilia Duda" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "hftbacktest==2.4.4",
+    "numba",
+    "numpy",
+    "polars",
+    "pyarrow",
+    "pyyaml",
+    "scipy",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# ruff format owns line length; scripts/check_milestone.py is protected and keeps its own layout.
+ignore = ["E501"]
+
+[tool.ruff.format]
+exclude = ["scripts/check_milestone.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: long-running tests, run by make check-full only"]
+
+[tool.uv]
+# Resolve every dependency as of a fixed date two weeks before M0, so the lock is
+# reproducible and no package newer than two weeks enters it.
+exclude-newer = "2026-10-08T00:00:00Z"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
