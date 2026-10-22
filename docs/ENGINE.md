@@ -57,6 +57,12 @@ and from the source at the release tag. Source links point at tag `py-v2.4.4`, c
   one. In that second case `_convert_depth` itself would silently truncate the snapshot,
   because it reslices its buffer to each block's size (checked empirically).
 - Loading: `BacktestAsset().data([part_00, part_01, ...])` reads the parts in order.
+- Pass file paths, not arrays, to `data()` and `intp_order_latency()`. For an ndarray
+  argument the wrapper hands Rust only `ndarray.ctypes.data`, and Rust wraps that pointer
+  without copying (`_add_data_ndarray` and `_intp_order_latency_ndarray` in
+  [lib.rs](https://github.com/nkaz001/hftbacktest/blob/py-v2.4.4/py-hftbacktest/src/lib.rs#L206-L324)).
+  If the array is freed before the backtest ends, the run reads freed memory. That caused
+  intermittent aborts in this repo's first B0 smoke test.
 
 ## Queue models
 
@@ -122,6 +128,13 @@ Note the spelling `adverse` in the method name.
   environment, not information the strategy can read, but it means order latency is not
   strictly causal. Stated here so the auditor does not have to find it.
 - Outside the data range the first or last row's latency is used (latency.rs lines 171 to 186).
+- Two things in the samples are not network latency. The start-of-day snapshot comes from
+  the REST API, so its local minus exchange time on 2024-01-01 is 1,913 ms against a
+  median sample of 3.25 ms (data/benchmark_m0.json), and it becomes the sample of the 1 s
+  bucket in which it arrived. That bucket falls in the warm-up on that day; a mid-day
+  reconnect snapshot would put a multi-second order latency into the quoting window. And the `correct_local_timestamp` offset is one value per day, so a
+  single negative-latency row raises every sample of that day. It was 0 on 2024-01-01.
+  [TBD: Q11 in docs/DATA_RECON.md.]
 
 ## Exchange model
 
@@ -148,6 +161,13 @@ Note the spelling `adverse` in the method name.
   the hftbacktest default, which ran the same day without error. Limitation, to state next
   to every result: an order at the front of the queue fills in full on any trade at its
   price, whatever the trade size. The M0 benchmark loop uses it.
+- That limitation reaches the primary cell too. `RiskAdverseQueueModel::is_filled` reports a
+  fill once the quantity ahead is overshot by half a lot, and `NoPartialFillExchange` then
+  fills the whole order. On 2024-01-01 the order is 3 lots, so a trade that clears the
+  queue by one lot fills all 3. Those small overshoots are likely the least adverse fills,
+  so gross PnL per notional is biased upward even in the "pessimistic" cell. A test on
+  one train day can bound it: count fills where the trade at the order's price was
+  smaller than the order. [TBD: part of Q3 in docs/DATA_RECON.md.]
 - Replay caveat from the docs: market data cannot react to our orders, so a fill does not
   remove liquidity from the replayed book.
 

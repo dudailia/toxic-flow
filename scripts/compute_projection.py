@@ -2,6 +2,7 @@
 """Compute projection for M4 and M5 from the M0 benchmark. Prints markdown for DATA_RECON.md.
 
 Usage: uv run python scripts/compute_projection.py [free_ram_gib]
+Without an argument, free RAM is the available memory recorded by the benchmark.
 
 Assumptions, each printed with the table: a day-run costs the B0 loop time of 2024-01-01
 scaled by that day's book-file size (event count grows with it); test days have the mean
@@ -25,8 +26,9 @@ VAL_DAYS, TRAIN_DAYS, TEST_DAYS = 6, 12, 16
 
 
 def main() -> None:
-    free_ram_gib = float(sys.argv[1]) if len(sys.argv) > 1 else 8.0
     bench = json.loads((ROOT / "data" / "benchmark_m0.json").read_text())
+    recorded = bench["available_ram_bytes_at_end"] / GIB
+    free_ram_gib = float(sys.argv[1]) if len(sys.argv) > 1 else recorded
     recon = json.loads((ROOT / "data" / "recon.json").read_text())
 
     book = {

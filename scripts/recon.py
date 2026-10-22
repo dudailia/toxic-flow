@@ -30,9 +30,10 @@ def now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def request(url: str, method: str, attempts: int = 4) -> tuple[int, dict]:
+def request(url: str, method: str, attempts: int = 4, headers=None) -> tuple[int, dict]:
     """Status and headers only. The response body is never read."""
-    req = urllib.request.Request(url, method=method, headers={"User-Agent": USER_AGENT})
+    headers = {"User-Agent": USER_AGENT, **(headers or {})}
+    req = urllib.request.Request(url, method=method, headers=headers)
     for attempt in range(attempts):
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
@@ -50,6 +51,24 @@ def request(url: str, method: str, attempts: int = 4) -> tuple[int, dict]:
 def content_length(headers: dict) -> int | None:
     value = headers.get("Content-Length")
     return int(value) if value is not None else None
+
+
+def server_probes() -> dict:
+    """Why HEAD gives no answer here: the server's replies to a known file, a symbol that
+    does not exist, and a byte-range GET. Train-day URLs only."""
+    day = "2024-01-01"
+    assert_allowed(day)
+    real = dataset_url(day, "trades")
+    fake = real.replace(SYMBOL, "NOSUCHSYMBOL")
+    return {
+        "url": real,
+        "head_existing_file": request(real, "HEAD")[0],
+        "head_nonexistent_symbol": request(fake, "HEAD")[0],
+        "get_existing_file_headers_only": request(real, "GET")[0],
+        "get_nonexistent_symbol": request(fake, "GET")[0],
+        "ranged_get_existing_file": request(real, "GET", headers={"Range": "bytes=0-99"})[0],
+        "checked_at": now(),
+    }
 
 
 def exchange_meta(api: dict, days: list[str]) -> dict:
@@ -121,6 +140,7 @@ def main() -> None:
         "api_url": API_URL,
         "fetched_at": now(),
         "exchange_meta": exchange_meta(api, days),
+        "server_probes": server_probes(),
         "files": files,
     }
     OUT.write_text(json.dumps(recon, indent=2) + "\n")

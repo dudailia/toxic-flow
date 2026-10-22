@@ -88,3 +88,26 @@ def test_resolve_days():
     assert resolve_days("train")[0] == "2024-01-01"
     assert len(resolve_days("val")) == 6
     assert resolve_days("2024-01-01") == ["2024-01-01"]
+
+
+def test_crash_before_manifest_save_recovers(tmp_path, monkeypatch):
+    # A crash between placing a raw file and pinning it must not leave a file that
+    # blocks every later run.
+    import toxic_flow.data.download as dl
+
+    real_save = dl.save_manifest
+    crashed = []
+
+    def crash_once(path, entries):
+        if not crashed:
+            crashed.append(True)
+            raise KeyboardInterrupt
+        real_save(path, entries)
+
+    manifest = tmp_path / "manifest.json"
+    monkeypatch.setattr(dl, "save_manifest", crash_once)
+    with pytest.raises(KeyboardInterrupt):
+        download_day("2024-01-01", raw_dir=tmp_path, manifest=manifest, fetch=serve([]))
+    monkeypatch.setattr(dl, "save_manifest", real_save)
+    entries = download_day("2024-01-01", raw_dir=tmp_path, manifest=manifest, fetch=serve([]))
+    assert [e["data_type"] for e in entries] == ["incremental_book_L2", "trades"]

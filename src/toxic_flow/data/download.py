@@ -101,24 +101,26 @@ def download_day(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, fetch
             if pinned is not None and sha != pinned["sha256"]:
                 # A file evicted from disk may be fetched again, but only if it is identical.
                 raise ManifestError(f"{url} now differs from the pinned SHA-256")
+            entry = pinned or {
+                "date": day,
+                "data_type": data_type,
+                "split": split,
+                "url": url,
+                "path": f"data/raw/{day}/{data_type}.csv.gz",
+                "bytes": n,
+                "sha256": sha,
+                "downloaded_at": datetime.now(UTC).isoformat(timespec="seconds"),
+            }
+            if pinned is None:
+                # Pin before placing the file. A crash in between then leaves an entry with
+                # no file, which the next run re-fetches and verifies; the other order would
+                # leave an unpinned file that blocks every later run.
+                entries.append(entry)
+                save_manifest(manifest, entries)
             os.link(part, dest)  # unlike rename, link fails if dest exists: never overwrite
         finally:
             part.unlink(missing_ok=True)
         dest.chmod(0o444)
-
-        entry = pinned or {
-            "date": day,
-            "data_type": data_type,
-            "split": split,
-            "url": url,
-            "path": f"data/raw/{day}/{data_type}.csv.gz",
-            "bytes": n,
-            "sha256": sha,
-            "downloaded_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        }
-        if pinned is None:
-            entries.append(entry)
-            save_manifest(manifest, entries)  # after every file, so a crash keeps the record
         out.append(entry)
     return out
 

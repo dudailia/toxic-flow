@@ -10,6 +10,7 @@ import json
 import multiprocessing
 import platform
 import resource
+import shutil
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -41,12 +42,23 @@ def sysctl(name: str) -> str:
     return subprocess.run(["sysctl", "-n", name], capture_output=True, text=True).stdout.strip()
 
 
-def build(parts: list[Path], latency: np.ndarray, venue: dict):
+def available_ram_bytes() -> int:
+    """Free plus inactive plus speculative pages from vm_stat: what a new run could use."""
+    out = subprocess.run(["vm_stat"], capture_output=True, text=True).stdout.splitlines()
+    page = int(out[0].split("page size of")[1].split()[0])
+    pages = {ln.split(":")[0]: int(ln.split(":")[1].strip(" .")) for ln in out[1:] if ":" in ln}
+    keys = ("Pages free", "Pages inactive", "Pages speculative")
+    return page * sum(pages[k] for k in keys)
+
+
+def build(parts: list[Path], lat_file: Path, venue: dict):
+    # Paths, not arrays: hftbacktest keeps a raw pointer to an ndarray argument without
+    # copying it (py-hftbacktest/src/lib.rs, _intp_order_latency_ndarray).
     asset = (
         BacktestAsset()
         .data([str(p) for p in parts])
         .linear_asset(1.0)
-        .intp_order_latency(latency)
+        .intp_order_latency(str(lat_file))
         .risk_adverse_queue_model()
         # partial_fill_exchange() panics on this day in 2.4.4; see docs/ENGINE.md.
         .no_partial_fill_exchange()
@@ -58,22 +70,21 @@ def build(parts: list[Path], latency: np.ndarray, venue: dict):
 
 
 def backtest(parts: list[Path], lat_file: Path, venue: dict, queue) -> None:
-    latency = np.load(lat_file)["data"]
     args = (H_TICKS, venue["lot_size"], venue["min_notional"], MAX_LOTS)
     window = (utc_ns(DAY, 0, 30), utc_ns(DAY, 23, 59), STEP_NS)
 
     # Compile once on the first part with an empty quoting window, so the timed run below
     # measures the loop and not numba.
     t0 = time.perf_counter()
-    hbt = build(parts[:1], latency, venue)
+    hbt = build(parts[:1], lat_file, venue)
     first = int(np.load(parts[0])["data"]["local_ts"][0])
-    run_b0(hbt, *args, first, first, STEP_NS, np.zeros(6))
+    run_b0(hbt, *args, first, first, STEP_NS, np.zeros(10))
     hbt.close()
     compile_seconds = time.perf_counter() - t0
 
-    out = np.zeros(6)
+    out = np.zeros(10)
     t0 = time.perf_counter()
-    hbt = build(parts, latency, venue)
+    hbt = build(parts, lat_file, venue)
     run_b0(hbt, *args, *window, out)
     hbt.close()
     queue.put((out, compile_seconds, time.perf_counter() - t0))
@@ -92,6 +103,7 @@ def main() -> None:
     )
     latency_seconds = time.perf_counter() - t0
 
+    entry_ms = (latency["exch_ts"] - latency["req_ts"]) / 1e6
     lat_file = day_dir / "order_latency_low.npz"
     np.savez_compressed(lat_file, data=latency)
 
@@ -108,7 +120,7 @@ def main() -> None:
     child_rss = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     out, compile_seconds, loop_seconds = result
 
-    steps, fills, position, balance, mid, qty = out
+    steps, fills, position, balance, mid, qty, max_side, max_lots = out[:8]
     report = {
         "date": DAY,
         "strategy": "B0 h=1 tick, post-only, one order per side",
@@ -121,11 +133,20 @@ def main() -> None:
         "steps_quoted": int(steps),
         "fill_count": int(fills),
         "end_position_btc": round(float(position), 6),
+        "max_orders_on_one_side": int(max_side),
+        "max_inventory_lots": int(max_lots),
         "gross_pnl_usdt_not_a_result": round(float(balance + position * mid), 4),
         "loop_wall_seconds": round(loop_seconds, 1),
         "compile_and_first_part_seconds": round(compile_seconds, 1),
         "order_latency_build_seconds": round(latency_seconds, 1),
         "order_latency_rows": len(latency),
+        # Entry latency in ms (= feed latency at mul 1). The largest sample is the
+        # start-of-day REST snapshot, not network latency; see docs/ENGINE.md.
+        "order_entry_latency_ms": {
+            "first_sample": round(float(entry_ms[0]), 3),
+            **{f"p{q}": round(float(np.percentile(entry_ms, q)), 3) for q in (50, 90, 99)},
+            "max": round(float(entry_ms.max()), 3),
+        },
         "backtest_peak_rss_bytes": child_rss,
         "latency_build_peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         "events": sum(convert_info["events_per_part"]),
@@ -142,6 +163,8 @@ def main() -> None:
             "python": platform.python_version(),
             "hftbacktest": hftbacktest.__version__,
         },
+        "available_ram_bytes_at_end": available_ram_bytes(),
+        "free_disk_bytes_at_end": shutil.disk_usage(ROOT).free,
         "measured_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     out_path = ROOT / "data" / "benchmark_m0.json"

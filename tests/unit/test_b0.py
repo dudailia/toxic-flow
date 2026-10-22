@@ -35,35 +35,73 @@ def test_order_size_meets_min_notional_in_whole_lots():
     assert order_size(100_000.0, 0.001, 100.0) == pytest.approx(0.001)
 
 
-@pytest.mark.slow
-def test_run_b0_quotes_through_the_window(tmp_path):
-    # Engine smoke run on a synthetic day converted the study's way. Catches loops that
-    # never start: before its first elapse, hftbacktest's current_timestamp is i64 max.
+def synthetic_backtest(tmp_path, latency):
+    """A synthetic day converted the study's way, in a backtest with the study's models."""
     import numpy as np
     from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
-    from synthetic import T0, synthetic_day
+    from hftbacktest.data.utils.feed_order_latency import generate_order_latency
+    from synthetic import synthetic_day
 
     from toxic_flow.data.convert import convert_parts
-    from toxic_flow.strategies.b0_fixed import run_b0
 
     trades, depth = synthetic_day(tmp_path)
     (data,), _ = convert_parts(trades, depth, n_parts=1)
     np.savez_compressed(tmp_path / "day.npz", data=data)
+    asset = BacktestAsset().data([str(tmp_path / "day.npz")]).linear_asset(1.0)
+    if latency == "feed":
+        # A file path, not the array: hftbacktest keeps a raw pointer to an ndarray
+        # argument without copying it, so a local array would be freed under it.
+        lat_file = tmp_path / "latency.npz"
+        generate_order_latency(str(tmp_path / "day.npz"), str(lat_file), resampling_ns=100_000_000)
+        asset = asset.intp_order_latency(str(lat_file))
+    else:
+        asset = asset.constant_order_latency(latency, latency)
     asset = (
-        BacktestAsset()
-        .data([str(tmp_path / "day.npz")])
-        .linear_asset(1.0)
-        .constant_order_latency(1_000_000, 1_000_000)
-        .risk_adverse_queue_model()
-        .partial_fill_exchange()
+        asset.risk_adverse_queue_model()
+        .no_partial_fill_exchange()
         .trading_value_fee_model(0.0, 0.0)
         .tick_size(0.05)
         .lot_size(0.001)
     )
-    hbt = HashMapMarketDepthBacktest([asset])
-    start, end, step = T0 * 1000 + 1_000_000_000, T0 * 1000 + 4_000_000_000, 100_000_000
-    out = np.zeros(6)
-    run_b0(hbt, 1, 0.001, 100.0, 10, start, end, step, out)
+    return HashMapMarketDepthBacktest([asset])
+
+
+def run_window(hbt, start_s, end_s):
+    import numpy as np
+    from synthetic import T0
+
+    from toxic_flow.strategies.b0_fixed import run_b0
+
+    out = np.zeros(10)
+    t0 = T0 * 1000
+    run_b0(hbt, 1, 0.001, 100.0, 10, t0 + start_s * 10**9, t0 + end_s * 10**9, 100_000_000, out)
     hbt.close()
+    return out
+
+
+@pytest.mark.slow
+def test_run_b0_quotes_through_the_window(tmp_path):
+    # Engine smoke run with the study's exchange and latency models. Catches loops that
+    # never start: before its first elapse, hftbacktest's current_timestamp is i64 max.
+    out = run_window(synthetic_backtest(tmp_path, "feed"), 1, 4)
     assert 25 <= out[0] <= 31  # about one quoted step per 100 ms of the 3 s window
     assert out[5] == pytest.approx(0.003)  # 100 USDT at about 42,000 is 3 lots
+
+
+@pytest.mark.slow
+def test_run_b0_one_order_per_side_when_latency_exceeds_the_step(tmp_path):
+    # 250 ms each way is longer than the 100 ms step, so cancels and new orders are in
+    # flight when the target moves. B0 must still hold at most one order per side.
+    out = run_window(synthetic_backtest(tmp_path, 250_000_000), 1, 6)
+    assert out[0] > 0
+    assert out[6] == 1
+    assert out[7] <= 10
+
+
+@pytest.mark.slow
+def test_run_b0_stops_deciding_at_quote_end_and_marks_there(tmp_path):
+    from synthetic import T0
+
+    out = run_window(synthetic_backtest(tmp_path, "feed"), 1, 4)
+    end = T0 * 1000 + 4 * 10**9
+    assert out[8] < end <= out[9] < end + 100_000_000

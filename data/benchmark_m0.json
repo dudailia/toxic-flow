@@ -10,20 +10,29 @@
     "23:59:00"
   ],
   "order_qty_btc": 0.003,
-  "steps_quoted": 845400,
-  "fill_count": 32854,
-  "end_position_btc": -0.012,
-  "gross_pnl_usdt_not_a_result": -414.2775,
-  "loop_wall_seconds": 16.7,
-  "compile_and_first_part_seconds": 4.7,
-  "order_latency_build_seconds": 12.2,
+  "steps_quoted": 845399,
+  "fill_count": 31464,
+  "end_position_btc": -0.006,
+  "max_orders_on_one_side": 1,
+  "max_inventory_lots": 10,
+  "gross_pnl_usdt_not_a_result": -399.3066,
+  "loop_wall_seconds": 15.5,
+  "compile_and_first_part_seconds": 4.5,
+  "order_latency_build_seconds": 11.2,
   "order_latency_rows": 86406,
-  "backtest_peak_rss_bytes": 4182736896,
-  "latency_build_peak_rss_bytes": 4736286720,
+  "order_entry_latency_ms": {
+    "first_sample": 2.939,
+    "p50": 3.252,
+    "p90": 3.917,
+    "p99": 9.823,
+    "max": 1913.082
+  },
+  "backtest_peak_rss_bytes": 4150591488,
+  "latency_build_peak_rss_bytes": 6187679744,
   "events": 100128234,
   "raw_bytes": 567177687,
   "converted_bytes": 776082982,
-  "conversion_seconds": 150.1,
+  "conversion_seconds": 153.3,
   "machine": {
     "cpu": "Apple M1 Pro",
     "cores": 8,
@@ -34,5 +43,7 @@
     "python": "3.12.13",
     "hftbacktest": "2.4.4"
   },
-  "measured_at": "2026-10-22T15:47:49+00:00"
+  "available_ram_bytes_at_end": 8947122176,
+  "free_disk_bytes_at_end": 7971573760,
+  "measured_at": "2026-10-22T16:18:04+00:00"
 }

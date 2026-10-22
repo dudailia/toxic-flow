@@ -11,7 +11,7 @@ def test_infer_increment_is_most_common_gap():
 
 
 def test_rare_off_grid_value_is_counted_not_taken_as_the_tick():
-    # 2024-01-01 has 233 of 97.8M book rows on a 0.01 grid; they must not set the tick.
+    # 2024-01-01 has a few hundred book rows on a 0.01 grid; they must not set the tick.
     values = np.array([42314.0, 42314.1, 42314.2, 42314.3, 42314.35, 42314.35])
     counts = np.array([5, 5, 5, 5, 1, 1])
     step, off = infer_increment(values, counts)

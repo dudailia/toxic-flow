@@ -24,10 +24,11 @@ def snapshot_rows(ts, n_bid=20, n_ask=20):
     return rows
 
 
-def synthetic_day(tmp_path, mid_snapshot=(20, 20), seed=7):
+def synthetic_day(tmp_path, mid_snapshot=(20, 20), seed=7, overtaking_row=False):
     """One timeline of depth updates and trades with a start-of-day snapshot, a mid-day
     snapshot, negative and reordering latencies, and a few quiet gaps where a clean cut
-    exists."""
+    exists. With overtaking_row, a book update sent just after the mid-day snapshot
+    arrives before it, as when the REST snapshot is slower than the websocket."""
     rng = np.random.default_rng(seed)
     depth, trades, ts = snapshot_rows(T0), [], T0
     for step in range(3000):
@@ -36,6 +37,10 @@ def synthetic_day(tmp_path, mid_snapshot=(20, 20), seed=7):
             ts += 200_000  # 200 ms with nothing sent
         if step == 1500:
             depth += snapshot_rows(ts, *mid_snapshot)
+            if overtaking_row:
+                depth.append(
+                    f"binance-futures,BTCUSDT,{ts + 100},{ts + 200},false,bid,41999.9,2.0\n"
+                )
         local = ts + int(rng.integers(-300, 5000))
         if rng.random() < 0.15:
             side = ["buy", "sell", "unknown"][int(rng.integers(0, 3))]

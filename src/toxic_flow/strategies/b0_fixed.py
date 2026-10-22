@@ -8,7 +8,7 @@ q <= -Q. M0 uses it as the one-day benchmark; M2 extends it with the per-step re
 import math
 
 import numpy as np
-from hftbacktest import BUY, GTX, LIMIT, SELL
+from hftbacktest import BUY, GTX, LIMIT
 from numba import njit
 
 
@@ -37,15 +37,21 @@ def order_size(price: float, lot_size: float, min_notional: float) -> float:
 
 @njit
 def run_b0(hbt, h, lot_size, min_notional, max_lots, quote_start_ns, quote_end_ns, step_ns, out):
-    """Quote from quote_start_ns to quote_end_ns, then cancel everything.
+    """Quote from quote_start_ns until quote_end_ns, then cancel everything and mark.
 
-    The order size is fixed for the day at the first quoting step, from the mid seen then,
-    so it uses no later price. out receives: steps quoted, fills, position, cash balance,
-    mid at the end, order size.
+    One order per side at most: a side gets a new order only once our previous order there
+    is gone, so with latency above the step a replace waits for its cancel, and fills
+    cannot push inventory past max_lots. The order size is fixed for the day at the first
+    quoting step, from the mid seen then, so it uses no later price.
+
+    out receives: steps quoted, fills, position, cash balance, mid at quote_end_ns, order
+    size, most of our orders seen on one side at a step, largest inventory in order sizes,
+    time of the last decision, time of the mark.
     """
     asset = 0
     steps = 0
     order_qty = 0.0
+    next_id = 1  # never reused, so an order still in the local map cannot block a new one
     # Warm-up, no orders. Elapse before reading the clock: until the first elapse,
     # hftbacktest reports current_timestamp as i64 max.
     while True:
@@ -53,50 +59,59 @@ def run_b0(hbt, h, lot_size, min_notional, max_lots, quote_start_ns, quote_end_n
             return
         if hbt.current_timestamp >= quote_start_ns:
             break
-    while hbt.current_timestamp < quote_end_ns:
+    while True:
         if hbt.elapse(step_ns) != 0:
             break
+        if hbt.current_timestamp >= quote_end_ns:
+            break  # no decision at or after quote_end_ns
         hbt.clear_inactive_orders(asset)
         depth = hbt.depth(asset)
         bb, ba = depth.best_bid_tick, depth.best_ask_tick
         if not (np.isfinite(depth.best_bid) and np.isfinite(depth.best_ask)) or bb >= ba:
             continue
         steps += 1
+        out[8] = hbt.current_timestamp
         if order_qty == 0.0:
             order_qty = order_size((depth.best_bid + depth.best_ask) / 2.0, lot_size, min_notional)
         bid_tick, ask_tick = quote_ticks(bb, ba, h)
         want_bid, want_ask = sides_allowed(hbt.position(asset), order_qty, max_lots)
+        out[7] = max(out[7], abs(round(hbt.position(asset) / order_qty)))
 
-        # Order id = price tick: at most one of our orders per price, and a bid can never
-        # share a tick with an ask because bid_tick < ask_tick.
-        orders = hbt.orders(asset)
-        values = orders.values()
+        n_buy, n_sell = 0, 0
+        values = hbt.orders(asset).values()
         while values.has_next():
             o = values.get()
-            if not o.cancellable:
-                continue
-            if o.side == BUY and (not want_bid or o.price_tick != bid_tick):
+            if o.side == BUY:
+                n_buy += 1
+                stale = not want_bid or o.price_tick != bid_tick
+            else:
+                n_sell += 1
+                stale = not want_ask or o.price_tick != ask_tick
+            if stale and o.cancellable:
                 hbt.cancel(asset, o.order_id, False)
-            elif o.side == SELL and (not want_ask or o.price_tick != ask_tick):
-                hbt.cancel(asset, o.order_id, False)
+        out[6] = max(out[6], n_buy, n_sell)
         tick = depth.tick_size
-        if want_bid and not orders.__contains__(bid_tick):
-            hbt.submit_buy_order(asset, bid_tick, bid_tick * tick, order_qty, GTX, LIMIT, False)
-        if want_ask and not orders.__contains__(ask_tick):
-            hbt.submit_sell_order(asset, ask_tick, ask_tick * tick, order_qty, GTX, LIMIT, False)
+        if want_bid and n_buy == 0:
+            hbt.submit_buy_order(asset, next_id, bid_tick * tick, order_qty, GTX, LIMIT, False)
+            next_id += 1
+        if want_ask and n_sell == 0:
+            hbt.submit_sell_order(asset, next_id, ask_tick * tick, order_qty, GTX, LIMIT, False)
+            next_id += 1
 
-    # End of the quoting window: cancel all resting orders and let the cancels land.
+    # quote_end_ns: cancel every resting order and mark at the mid now. The cancels then
+    # need their latency to land; fills in that time still count in position and cash.
+    depth = hbt.depth(asset)
+    out[4] = (depth.best_bid + depth.best_ask) / 2.0
+    out[9] = hbt.current_timestamp
     values = hbt.orders(asset).values()
     while values.has_next():
         o = values.get()
         if o.cancellable:
             hbt.cancel(asset, o.order_id, False)
     hbt.elapse(1_000_000_000)
-    depth = hbt.depth(asset)
     sv = hbt.state_values(asset)
     out[0] = steps
     out[1] = sv.num_trades
     out[2] = sv.position
     out[3] = sv.balance
-    out[4] = (depth.best_bid + depth.best_ask) / 2.0
     out[5] = order_qty

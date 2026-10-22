@@ -12,12 +12,16 @@ received before every message sent after B. At a clean cut the exchange-time and
 local-time orders do not interleave across B, so the parts, concatenated, equal the
 one-shot output. tests/unit/test_convert.py checks that against tardis.convert itself.
 Anything that would make the parts differ raises ConversionError instead.
+
+A ConversionError is a failure of this splitter, not of hftbacktest, so it is not
+exclusion rule 2 of PREREGISTRATION.md section 2. It stops the pipeline for Ilia.
 """
 
 import gzip
 import json
 import math
 import os
+import resource
 import shutil
 import sys
 import time
@@ -42,7 +46,7 @@ from toxic_flow.data.download import (
 )
 from toxic_flow.data.split_lock import SplitLockError, assert_allowed, normalise
 from toxic_flow.data.tardis import DATA_TYPES
-from toxic_flow.data.validate import infer_tick_and_lot
+from toxic_flow.data.validate import infer_from_rows
 
 ROOT = Path(__file__).resolve().parents[3]
 CONVERTED = ROOT / "data" / "converted"
@@ -154,8 +158,9 @@ def _depth_rows(df: pl.DataFrame) -> np.ndarray:
 def _snapshot_blocks(exch_ts, side, is_snapshot, buffer_size):
     """Scan snapshot blocks in file order the way _convert_depth does.
 
-    Returns per emitted block (first exch_ts, last exch_ts, bid rows, ask rows) and the
-    index of the first block that the one-shot _convert_depth would truncate, or -1.
+    Returns per emitted block (first exch_ts, last exch_ts, exch_ts of the row that closes
+    it, bid rows, ask rows) and the index of the first block that the one-shot
+    _convert_depth would truncate, or -1. A block is emitted when its closing row is read.
     _convert_depth reslices its snapshot buffers to each emitted block's size (even to 0),
     so a later block with more rows on a side than the smallest earlier one is cut short.
     """
@@ -165,6 +170,7 @@ def _snapshot_blocks(exch_ts, side, is_snapshot, buffer_size):
             n_max += 1
     lo = np.empty(n_max, np.int64)
     hi = np.empty(n_max, np.int64)
+    close = np.empty(n_max, np.int64)
     nb = np.empty(n_max, np.int64)
     na = np.empty(n_max, np.int64)
     n, cap_b, cap_a = 0, buffer_size, buffer_size
@@ -183,9 +189,9 @@ def _snapshot_blocks(exch_ts, side, is_snapshot, buffer_size):
             if (b > cap_b or a > cap_a) and truncated < 0:
                 truncated = n
             cap_b, cap_a = min(cap_b, b), min(cap_a, a)
-            lo[n], hi[n], nb[n], na[n] = first, last, b, a
+            lo[n], hi[n], close[n], nb[n], na[n] = first, last, exch_ts[i], b, a
             n += 1
-    return lo[:n], hi[:n], nb[:n], na[:n], truncated
+    return lo[:n], hi[:n], close[:n], nb[:n], na[:n], truncated
 
 
 def _masked_max(x, mask):
@@ -196,34 +202,47 @@ def _masked_min(x, mask):
     return int(np.min(x, where=mask, initial=I64.max))
 
 
-def find_cuts(trades, depth, n_parts: int, window_ns: int, blocks: list) -> list[int]:
-    """Clean cuts nearest to n_parts - 1 equally spaced exchange times."""
+def find_cuts(trades, depth, n_parts: int, windows_ns: tuple, blocks: list) -> list[int]:
+    """Clean cuts nearest to n_parts - 1 equally spaced exchange times.
+
+    Each target tries the windows in order and takes the first that has a clean cut.
+    blocks holds (first, last, closing row) exchange times of each snapshot block.
+    """
     srcs = [(s["exch_ts"], s["local_ts"]) for s in (trades, depth)]
     t_lo = min(int(e.min()) for e, _ in srcs)
     t_hi = max(int(e.max()) for e, _ in srcs)
     cuts = []
     for k in range(1, n_parts):
         target = t_lo + (t_hi - t_lo) * k // n_parts
-        w_lo, w_hi = target - window_ns, target + window_ns
-        before = max(_masked_max(loc, e < w_lo) for e, loc in srcs)
-        after = min(_masked_min(loc, e >= w_hi) for e, loc in srcs)
-        e_w = np.concatenate([e[(e >= w_lo) & (e < w_hi)] for e, _ in srcs])
-        l_w = np.concatenate([loc[(e >= w_lo) & (e < w_hi)] for e, loc in srcs])
-        order = np.argsort(e_w, kind="mergesort")
-        e_w, l_w = e_w[order], l_w[order]
-        # Cut between sorted positions i and i + 1, at B = e_w[i + 1]: everything sent
-        # before B must be received strictly before everything sent at or after B.
-        pmax = np.maximum(np.maximum.accumulate(l_w), before)
-        smin = np.minimum(np.minimum.accumulate(l_w[::-1])[::-1], after)
-        ok = (e_w[:-1] < e_w[1:]) & (pmax[:-1] < smin[1:])
-        cand = e_w[1:][ok]
-        # A snapshot block must not straddle a cut.
-        for b_lo, b_hi in blocks:
-            cand = cand[~((cand > b_lo) & (cand <= b_hi))]
-        if len(cand) == 0:
-            raise ConversionError(f"no clean cut within {window_ns} ns of {target}")
-        cuts.append(int(cand[np.argmin(np.abs(cand - target))]))
+        for window_ns in windows_ns:
+            cand = _clean_cuts_near(srcs, target, window_ns, blocks)
+            if len(cand):
+                cuts.append(int(cand[np.argmin(np.abs(cand - target))]))
+                break
+        else:
+            raise ConversionError(f"no clean cut within {max(windows_ns)} ns of {target}")
     return cuts
+
+
+def _clean_cuts_near(srcs, target: int, window_ns: int, blocks: list) -> np.ndarray:
+    w_lo, w_hi = target - window_ns, target + window_ns
+    before = max(_masked_max(loc, e < w_lo) for e, loc in srcs)
+    after = min(_masked_min(loc, e >= w_hi) for e, loc in srcs)
+    e_w = np.concatenate([e[(e >= w_lo) & (e < w_hi)] for e, _ in srcs])
+    l_w = np.concatenate([loc[(e >= w_lo) & (e < w_hi)] for e, loc in srcs])
+    order = np.argsort(e_w, kind="mergesort")
+    e_w, l_w = e_w[order], l_w[order]
+    # Cut between sorted positions i and i + 1, at B = e_w[i + 1]: everything sent
+    # before B must be received strictly before everything sent at or after B.
+    pmax = np.maximum(np.maximum.accumulate(l_w), before)
+    smin = np.minimum(np.minimum.accumulate(l_w[::-1])[::-1], after)
+    ok = (e_w[:-1] < e_w[1:]) & (pmax[:-1] < smin[1:])
+    cand = e_w[1:][ok]
+    # A snapshot block and the row that closes it must land in the same part.
+    for b_lo, b_hi, b_close in blocks:
+        lo, hi = min(b_lo, b_close), max(b_hi, b_close)
+        cand = cand[~((cand > lo) & (cand <= hi))]
+    return cand
 
 
 def convert_parts(
@@ -232,7 +251,7 @@ def convert_parts(
     n_parts: int | None = None,
     events_per_part: int = 15_000_000,
     chunk_bytes: int = 256 << 20,
-    search_window_us: int = 300_000_000,
+    search_windows_us: tuple = (300_000_000, 1_800_000_000),
     sink=None,
 ) -> tuple[list[np.ndarray], dict]:
     """Return (parts, info). With sink, each part goes to sink(k, part) and is not kept."""
@@ -241,7 +260,7 @@ def convert_parts(
     if n_parts is None:
         n_parts = max(1, math.ceil((len(trades) + len(depth)) / events_per_part))
 
-    lo, hi, nb, na, truncated = _snapshot_blocks(
+    lo, hi, close, nb, na, truncated = _snapshot_blocks(
         depth["exch_ts"], depth["side"], depth["is_snapshot"], SS_BUFFER_SIZE
     )
     if truncated >= 0:
@@ -255,11 +274,13 @@ def convert_parts(
     min_lat = min(int((s["local_ts"] - s["exch_ts"]).min()) for s in (trades, depth))
     offset = -min_lat if min_lat < 0 else 0
 
-    cuts = find_cuts(
-        trades, depth, n_parts, search_window_us * 1000, list(zip(lo, hi, strict=True))
-    )
+    windows_ns = tuple(w * 1000 for w in search_windows_us)
+    blocks = list(zip(lo, hi, close, strict=True))
+    cuts = find_cuts(trades, depth, n_parts, windows_ns, blocks)
+    if any(b <= a for a, b in zip(cuts, cuts[1:], strict=False)):
+        raise ConversionError(f"cuts are not strictly increasing: {cuts}")
     edges = [I64.min, *cuts, I64.max]
-    parts, sizes, emitted = [], [], 0
+    parts, sizes, emitted, prev_max_local = [], [], 0, None
     for k in range(n_parts):
         t_seg = trades[(trades["exch_ts"] >= edges[k]) & (trades["exch_ts"] < edges[k + 1])]
         d_seg = depth[(depth["exch_ts"] >= edges[k]) & (depth["exch_ts"] < edges[k + 1])]
@@ -271,6 +292,15 @@ def convert_parts(
         n = _convert_depth(tmp, d_seg, len(t_seg), ss_bid, ss_ask, 0)
         tmp = tmp[:n]
         del d_seg, t_seg
+        if n == 0:
+            raise ConversionError(f"part {k} is empty")
+        # Counted before correct_event_order, which can write a row twice (EXCH and LOCAL).
+        emitted += int(((tmp["ev"] & 0xFF) == DEPTH_SNAPSHOT_EVENT).sum())
+        # Re-check the cut actually used: this part must start receiving after the
+        # previous part finished receiving.
+        if prev_max_local is not None and int(tmp["local_ts"].min()) <= prev_max_local:
+            raise ConversionError(f"cut {k} is not clean: messages in flight across it")
+        prev_max_local = int(tmp["local_ts"].max())
         if offset:
             tmp["local_ts"] += offset
         data = correct_event_order(
@@ -280,7 +310,6 @@ def convert_parts(
         )
         del tmp
         validate_event_order(data)
-        emitted += int(((data["ev"] & 0xFF) == DEPTH_SNAPSHOT_EVENT).sum())
         sizes.append(len(data))
         if sink is None:
             parts.append(data)
@@ -291,7 +320,9 @@ def convert_parts(
     # The one-shot pass emits every block that some non-snapshot row follows in file
     # order. A part can only emit fewer, so equal totals mean the same blocks.
     if emitted != int(nb.sum() + na.sum()):
-        raise ConversionError(f"parts emitted {emitted} snapshot rows, one-shot would emit more")
+        raise ConversionError(
+            f"parts emitted {emitted} snapshot rows, the one-shot pass {int(nb.sum() + na.sum())}"
+        )
 
     info = {
         "n_parts": n_parts,
@@ -303,6 +334,9 @@ def convert_parts(
         "snapshot_levels_bid_ask": [[int(b), int(a)] for b, a in zip(nb, na, strict=True)][:10],
         "min_feed_latency_ns": min_lat,
         "local_ts_offset_ns": offset,
+        # Tick and lot as the data shows them, over CSV rows (not converted events);
+        # tests/unit/test_venue.py compares them with configs/venue.yaml.
+        "inferred": infer_from_rows(depth["px"], trades["px"], trades["qty"]),
     }
     return parts, info
 
@@ -347,8 +381,6 @@ def convert_day(
     )
     files = sorted(staging.glob("part-*.npz"))
     conversion_seconds = round(time.perf_counter() - start, 1)
-    # Tick and lot as the data shows them; tests/unit/test_venue.py compares with venue.yaml.
-    info["inferred"] = infer_tick_and_lot(files)
     info.update(
         {
             "date": day,
@@ -358,6 +390,9 @@ def convert_day(
             "files": [f.name for f in files],
             "converted_bytes": sum(f.stat().st_size for f in files),
             "conversion_seconds": conversion_seconds,
+            # ru_maxrss is bytes on macOS. Peak of this process so far, so with several
+            # days in one make data call it is the largest day up to this one.
+            "process_peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         }
     )
     (staging / "convert.json").write_text(json.dumps(info, indent=2) + "\n")
