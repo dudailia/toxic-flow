@@ -22,7 +22,7 @@ venue.yaml against docs/venue_sources.json.
 | 4 | Order latency includes the REST snapshot sample and a day-wide offset | Documented in ENGINE.md; quantiles now in benchmark_m0.json; Q11 |
 | 5 | B0 end of day did not match section 3 | Fixed: no decision at or after quote end, mark at that mid |
 | 6 | Lock accepts a lightweight tag and any remote named origin | Open, protected file; Q14 |
-| 7 | Some DATA_RECON numbers were not in a committed record or counted events as rows | Fixed: counts now from CSV rows in convert.json, RAM and disk in benchmark_m0.json. The server probes are in recon.py but not yet in recon.json: Tardis rate-limited the run (Q16) |
+| 7 | Some DATA_RECON numbers were not in a committed record or counted events as rows | Fixed: counts now from CSV rows in convert.json, RAM and disk in benchmark_m0.json. The server probe results are in DATA_RECON.md with their time; the run meant to record them was rate-limited (Q16), and since the AC0.1 decision recon.py sends no dataset request |
 
 ## Code review
 

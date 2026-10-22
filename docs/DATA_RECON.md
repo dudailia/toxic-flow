@@ -26,25 +26,41 @@ data/converted/2024-01-01/convert.json (make data), data/benchmark_m0.json
 - Incident reports: 18 in the API response, none overlapping any of the 34 study dates
   (`incidents_on_study_dates` is empty). The nearest is 2025-08-29 06:18 to 06:37 UTC.
 
-## HEAD does not work on datasets.tardis.dev
+## HEAD does not work on datasets.tardis.dev, and AC0.1
 
-- Every one of the 68 HEAD requests returned HTTP 404 with no Content-Length, for all
-  three splits. It is the server, not the files. Running `server_probes()` from
-  scripts/recon.py at 2026-10-22 16:08:08 UTC gave: HEAD 404 for the 2024-01-01 trades
-  file and 404 for a symbol that does not exist; a GET of the same file 200 (400 for the
-  missing symbol); a byte-range GET 403. These probes are not yet in the committed
-  recon.json: the recon run meant to record them hit HTTP 429 with `Retry-After: 79529`
-  (about 22 hours), after two complete and three partial recon runs that day. recon.py records them
-  on its next run. [TBD: Q16 below.]
-- Consequence: AC0.1 ("each HTTP 200 with a positive content-length") cannot pass with
-  HEAD, and this session forbids any GET of a test-day file. AC0.1 fails until Ilia
-  decides. [TBD: Q1 below.]
+- Every one of the 68 HEAD requests in recon.json returned HTTP 404 with no
+  Content-Length, for all three splits. It is the server, not the files. Running
+  `server_probes()` (then part of scripts/recon.py) at 2026-10-22 16:08:08 UTC gave: HEAD
+  404 for the 2024-01-01 trades file and 404 for a symbol that does not exist; a GET of the
+  same file 200 (400 for the missing symbol); a byte-range GET 403.
+- Evidence shown to Ilia on 2026-10-22: a HEAD of the 2024-01-01 trades URL at 19:08:30
+  GMT returned `HTTP/2 404` with `content-type: application/json`, `server: cloudflare` and
+  no Content-Length. The rate limit was a GET of the same URL at 17:21:14 GMT: HTTP 429,
+  `Retry-After: 79529` (about 22 hours), Content-Length 113 (the body was not read).
+- Decision (Ilia, 2026-10-22): AC0.1 now rests on the Tardis exchange metadata in
+  recon.json, which lists BTCUSDT `incremental_book_L2` and `trades` from 2019-11-17 to
+  2026-10-22, and on no request of any kind to a test-day URL apart from the HEADs already
+  recorded (SPEC.md M0). File sizes move to M1 (AC1.6). Since the decision, scripts/recon.py
+  sends only the exchange-API request, every request goes through TardisClient
+  (src/toxic_flow/data/tardis.py), and no request has gone to any tardis.dev URL.
+- Test-day requests, stated in full: recon.json records 32 HEAD requests to test-day URLs
+  (15:32 to 15:37 UTC), all 404 with no body. A second complete recon run between about
+  16:08 and 16:21 UTC sent 32 more, all 404 with no size; its recon.json was discarded,
+  and its output is kept in data/recon_logs/2026-10-22T16-08Z_run_not_in_recon_json.log.
+  An earlier run (about 14:05 to 14:17 UTC) crashed on a timeout after at least 14 rows
+  and its output was not kept, so it may have sent some test-day HEADs too, at most 32.
+  No GET, ranged request or download ever went to a test-day URL, and no test-day byte is
+  on disk.
 - For train and val dates only, recon.json also holds a `get_headers` record: a GET whose
   response body is never read; the connection is closed after the headers. The split lock
-  is checked before each one. All 36 returned 200 with a size. This departs from "HEAD
+  was checked before each one. All 36 returned 200 with a size. This departed from "HEAD
   only" for non-test days; nothing was written to disk by it.
 
 ## Sizes per split (compressed CSV, from `get_headers`)
+
+These sizes came from the header-only GETs above. The acceptance check for sizes is now
+AC1.6 in M1 (content-length or bytes on disk for all 36 train and val files).
+
 
 | Split | Days | incremental_book_L2 bytes | trades bytes | Total bytes |
 |---|---|---|---|---|
@@ -116,15 +132,15 @@ One day, 2024-01-01 (convert.json and benchmark_m0.json, measured 2026-10-22).
 
 ## Compute projection
 
-From `uv run python scripts/compute_projection.py`, which reads benchmark_m0.json and
-recon.json. Assumptions: a day-run costs the 2024-01-01 loop time scaled by that day's
-book-file size; test days have the mean train and val size, because HEAD gives no size;
-B1, B2, B2b and B3 cost the same as B0, which is a lower bound until M2 and M3 time them;
-free RAM is the 8.33 GiB the benchmark recorded as available, so 2 runs of 3.87 GiB fit
-side by side even though there are 8 cores.
+From `uv run python scripts/compute_projection.py`, which reads benchmark_m0.json only.
+Every day-run is costed at the 2024-01-01 loop time, the one day measured so far. Once M1
+has the size of every train and val file (AC1.6), each day can be scaled by its size and
+the test days estimated from the train and val sizes; those figures will be estimates,
+labelled as such. Other assumptions: B1, B2, B2b and B3 cost the same as B0, a lower
+bound until M2 and M3 time them; free RAM is the 8.33 GiB the benchmark recorded as
+available, so 2 runs of 3.87 GiB fit side by side although there are 8 cores.
 
-- Loop cost: 15.5 s for 546,329,028 book bytes.
-- Mean seconds per day-run: train 17, val 15, test 17.
+- Day-run cost: 15.5 s, the 2024-01-01 loop (567,177,687 raw bytes, 100,128,234 events).
 - Usable parallel runs: 2 (memory bound, not core bound).
 
 | Item | Day-runs | Core-hours | Wall-clock hours at 2 parallel |
@@ -132,11 +148,11 @@ side by side even though there are 8 cores.
 | M4 tuning (63 candidates x 6 val days, primary cell) | 378 | 1.6 | 0.8 |
 | M4 canaries C1 to C4 and B1 reference, val days | 36 | 0.2 | 0.1 |
 | M4 MDE, B2b and B3 on train days | 24 | 0.1 | 0.1 |
-| M5 B1, B2, B2b, B3 in all 8 cells, 16 test days | 512 | 2.4 | 1.2 |
-| M5 canaries, primary cell only | 80 | 0.4 | 0.2 |
-| M5 canaries in every cell (upper case) | 576 | 2.7 | 1.3 |
+| M5 B1, B2, B2b, B3 in all 8 cells, 16 test days | 512 | 2.2 | 1.1 |
+| M5 canaries, primary cell only | 80 | 0.3 | 0.2 |
+| M5 canaries in every cell (upper case) | 576 | 2.5 | 1.2 |
 | M4 total (canaries primary cell) | 438 | 1.9 | 0.9 |
-| M5 total (canaries primary cell) | 592 | 2.7 | 1.4 |
+| M5 total (canaries primary cell) | 592 | 2.5 | 1.3 |
 
 - One-time costs not in the table: conversion at about 150 s per day (34 days, about
   1.4 hours) and one order-latency file per day and latency setting (about 11 s each).
@@ -145,13 +161,8 @@ side by side even though there are 8 cores.
 
 ## Open questions for Ilia
 
-1. AC0.1 cannot pass: HEAD returns 404 for every file (see `server_probes`). Options: (a)
-   allow a header-only GET for test days (body never read, nothing written; still a GET
-   of a test-day URL); (b) accept the Tardis API listing (BTCUSDT incremental_book_L2 and
-   trades available to 2026-10-22, no incident on a study date) as the availability check
-   and change AC0.1 in scripts/check_milestone.py; (c) leave AC0.1 open until M5, where
-   exclusion rule 1 handles a missing file. Also confirm that the header-only GETs already
-   made for train and val days are acceptable.
+1. Resolved 2026-10-22: AC0.1 rests on the Tardis exchange metadata and on no request to
+   a test-day URL apart from the recorded HEADs (see above); sizes move to M1 as AC1.6.
 2. Queue-model variants: PREREGISTRATION.md names power n = 3, power n = 2 and log.
    hftbacktest 2.4.4 has three power and two log variants. Proposed:
    `power_prob_queue_model(3.0)`, `power_prob_queue_model(2.0)`, `log_prob_queue_model()`
@@ -202,8 +213,10 @@ side by side even though there are 8 cores.
     (they are equal on all 34 dates); two `make data` runs on the same day at once would
     share a `.part` file; the converter reads each gzip file twice (row count, then
     parse).
-16. Tardis rate limit: after two complete and three partial recon runs (a complete run is
-    68 HEAD and 36 header-only GETs) and
-    one day's download, datasets.tardis.dev answered 429 with `Retry-After: 79529` s.
-    M1 downloads 36 files. Download at most a few days per session, or get an API key?
-    Recon does not need to run again for M0.
+16. Tardis rate limit: on 2026-10-22, after two complete and three partial recon runs (a
+    complete run was 68 HEAD and 36 header-only GETs) and one day's download,
+    datasets.tardis.dev answered 429 with `Retry-After: 79529` s. Downloads now go one at a
+    time through TardisClient, which honours Retry-After (a wait over 5 minutes stops the
+    run and is remembered in data/tardis_wait.json), never retries a failed file in the
+    same run, and stops at the third failure. M1 downloads 36 files: how many per session,
+    and is an API key worth getting?

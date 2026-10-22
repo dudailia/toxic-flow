@@ -4,10 +4,10 @@
 Usage: uv run python scripts/compute_projection.py [free_ram_gib]
 Without an argument, free RAM is the available memory recorded by the benchmark.
 
-Assumptions, each printed with the table: a day-run costs the B0 loop time of 2024-01-01
-scaled by that day's book-file size (event count grows with it); test days have the mean
-train and val size because HEAD gives no size; B1 to B3 cost the same as B0 per day,
-which is a lower bound until M2 and M3 time them.
+M0 has one measured day, so every day-run is costed at the 2024-01-01 loop time. Once M1
+has recorded the size of every train and val file (AC1.6), each day can be scaled by its
+size, and test days estimated from the train and val sizes; those figures are estimates.
+B1 to B3 are costed like B0, a lower bound until M2 and M3 time them.
 """
 
 import json
@@ -29,40 +29,24 @@ def main() -> None:
     bench = json.loads((ROOT / "data" / "benchmark_m0.json").read_text())
     recorded = bench["available_ram_bytes_at_end"] / GIB
     free_ram_gib = float(sys.argv[1]) if len(sys.argv) > 1 else recorded
-    recon = json.loads((ROOT / "data" / "recon.json").read_text())
-
-    book = {
-        f["date"]: f["get_headers"]["content_length"]
-        for f in recon["files"]
-        if f["data_type"] == "incremental_book_L2" and "get_headers" in f
-    }
-    seconds_per_byte = bench["loop_wall_seconds"] / book[bench["date"]]
-    mean_book = sum(book.values()) / len(book)
-    split = {f["date"]: f["split"] for f in recon["files"]}
-    day_cost = {
-        s: sum(seconds_per_byte * b for d, b in book.items() if split[d] == s)
-        / sum(1 for d in book if split[d] == s)
-        for s in ("train", "val")
-    }
-    day_cost["test"] = seconds_per_byte * mean_book
+    day_s = bench["loop_wall_seconds"]
 
     cores = bench["machine"]["cores"]
     rss_gib = bench["backtest_peak_rss_bytes"] / GIB
     usable = max(1, min(cores, int(free_ram_gib // rss_gib)))
 
     rows = [
-        ("M4 tuning", sum(TUNING.values()) * VAL_DAYS, "val"),
-        ("M4 canaries and B1 reference", (CANARY_RUNS + 1) * VAL_DAYS, "val"),
-        ("M4 MDE, B2b and B3 on train days", 2 * TRAIN_DAYS, "train"),
-        ("M5 strategies, all cells", len(STRATEGIES_M5) * CELLS * TEST_DAYS, "test"),
-        ("M5 canaries, primary cell only", CANARY_RUNS * TEST_DAYS, "test"),
+        ("M4 tuning", sum(TUNING.values()) * VAL_DAYS),
+        ("M4 canaries and B1 reference", (CANARY_RUNS + 1) * VAL_DAYS),
+        ("M4 MDE, B2b and B3 on train days", 2 * TRAIN_DAYS),
+        ("M5 strategies, all cells", len(STRATEGIES_M5) * CELLS * TEST_DAYS),
+        ("M5 canaries, primary cell only", CANARY_RUNS * TEST_DAYS),
         # C3 is zero latency, so it has one run per queue model instead of eight cells.
-        ("M5 canaries in every cell (upper case)", (4 * CELLS + 4) * TEST_DAYS, "test"),
+        ("M5 canaries in every cell (upper case)", (4 * CELLS + 4) * TEST_DAYS),
     ]
-    print(f"- loop cost: {bench['loop_wall_seconds']} s for {book[bench['date']]:,} book bytes")
     print(
-        f"- mean seconds per day-run: train {day_cost['train']:.0f}, val {day_cost['val']:.0f}, "
-        f"test {day_cost['test']:.0f} (test assumed at the train and val mean size)"
+        f"- day-run cost: {day_s} s, the 2024-01-01 loop "
+        f"({bench['raw_bytes']:,} raw bytes, {bench['events']:,} events), for every day"
     )
     print(
         f"- peak RSS per run {rss_gib:.2f} GiB; free RAM assumed {free_ram_gib:.1f} GiB; "
@@ -72,8 +56,8 @@ def main() -> None:
     print(f"| Item | Day-runs | Core-hours | Wall-clock hours at {usable} parallel |")
     print("|---|---|---|---|")
     totals = {"M4": [0, 0.0], "M5": [0, 0.0]}
-    for name, runs, s in rows:
-        core_h = runs * day_cost[s] / 3600
+    for name, runs in rows:
+        core_h = runs * day_s / 3600
         print(f"| {name} | {runs} | {core_h:.1f} | {core_h / usable:.1f} |")
         if "upper" not in name:
             totals[name[:2]][0] += runs
