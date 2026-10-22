@@ -4,24 +4,30 @@ Usage: uv run python -m toxic_flow.data.download train|val|test|YYYY-MM-DD
 
 Each file lands at data/raw/<date>/<data_type>.csv.gz, read-only, with its SHA-256 pinned in
 data/manifest.json. On a re-run an existing file is re-hashed against the manifest instead
-of being fetched again. The split lock runs before any URL is opened.
+of being fetched again. The split lock runs before any URL is opened. Requests go one at a
+time through TardisClient (toxic_flow.data.tardis): Retry-After is honoured, a failed file
+is not retried in the same run, and the run stops at the third failure.
 """
 
 import hashlib
 import json
 import os
 import sys
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
 from toxic_flow.data.split_lock import SplitLockError, assert_allowed, load_splits, normalise
-from toxic_flow.data.tardis import DATA_TYPES, dataset_url
+from toxic_flow.data.tardis import (
+    DATA_TYPES,
+    RequestFailed,
+    StopRequests,
+    TardisClient,
+    dataset_url,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 RAW = ROOT / "data" / "raw"
 MANIFEST = ROOT / "data" / "manifest.json"
-USER_AGENT = "toxic-flow-download/0.1 (+https://github.com/dudailia/toxic-flow)"
 CHUNK = 1 << 20
 
 
@@ -32,11 +38,6 @@ class ManifestError(RuntimeError):
 def resolve_days(arg: str) -> list[str]:
     splits = load_splits()
     return splits[arg] if arg in splits else [normalise(arg)]
-
-
-def _fetch(url: str):
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    return urllib.request.urlopen(req, timeout=60)
 
 
 def sha256_file(path: Path) -> str:
@@ -58,26 +59,37 @@ def save_manifest(path: Path, entries: list[dict]) -> None:
     os.replace(tmp, path)
 
 
-def _stream(url: str, part: Path, fetch) -> tuple[int, str]:
-    """Write url to part. Return (bytes, sha256). Raise OSError on a short or corrupt transfer."""
+def _stream(url: str, part: Path, client: TardisClient) -> tuple[int, str]:
+    """Write url to part. Return (bytes, sha256). A short or corrupt transfer is a failure."""
     sha, md5, n = hashlib.sha256(), hashlib.md5(), 0
-    with fetch(url) as r, open(part, "wb") as f:
-        expected = int(r.headers["Content-Length"])
-        tardis_md5 = (r.headers.get("x-md5") or "").strip('"')
-        while chunk := r.read(CHUNK):
-            f.write(chunk)
-            sha.update(chunk)
-            md5.update(chunk)
-            n += len(chunk)
+    try:
+        with client.open(url) as r, open(part, "wb") as f:
+            expected = int(r.headers["Content-Length"])
+            tardis_md5 = (r.headers.get("x-md5") or "").strip('"')
+            while chunk := r.read(CHUNK):
+                f.write(chunk)
+                sha.update(chunk)
+                md5.update(chunk)
+                n += len(chunk)
+    except (OSError, KeyError, ValueError) as e:  # connection lost or headers missing
+        client.failed(f"transfer of {url} failed: {e!r}")
     if n != expected:
-        raise OSError(f"{url}: got {n} bytes, Content-Length said {expected}")
+        client.failed(f"{url}: got {n} bytes, Content-Length said {expected}")
     if tardis_md5 and md5.hexdigest() != tardis_md5:
-        raise OSError(f"{url}: md5 {md5.hexdigest()} does not match x-md5 {tardis_md5}")
+        client.failed(f"{url}: md5 {md5.hexdigest()} does not match x-md5 {tardis_md5}")
     return n, sha.hexdigest()
 
 
-def download_day(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, fetch=_fetch):
+def download_day(
+    day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, fetch=None, client=None
+) -> list[dict]:
+    """Download one day's files; return the manifest entries of the files now on disk.
+
+    A file whose request fails is skipped and counted by the client; the run goes on to
+    the next file. StopRequests ends the run.
+    """
     split = assert_allowed(day)  # first, so a refused day never reaches the network
+    client = client or (TardisClient(fetch=fetch) if fetch else TardisClient())
     day = normalise(day)
     entries = load_manifest(manifest)
     known = {(e["date"], e["data_type"]): e for e in entries}
@@ -97,7 +109,7 @@ def download_day(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, fetch
         part = dest.with_name(dest.name + ".part")
         url = dataset_url(day, data_type)
         try:
-            n, sha = _stream(url, part, fetch)
+            n, sha = _stream(url, part, client)
             if pinned is not None and sha != pinned["sha256"]:
                 # A file evicted from disk may be fetched again, but only if it is identical.
                 raise ManifestError(f"{url} now differs from the pinned SHA-256")
@@ -118,6 +130,9 @@ def download_day(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, fetch
                 entries.append(entry)
                 save_manifest(manifest, entries)
             os.link(part, dest)  # unlike rename, link fails if dest exists: never overwrite
+        except RequestFailed as e:
+            print(f"failed, not retried in this run: {e}", file=sys.stderr)
+            continue
         finally:
             part.unlink(missing_ok=True)
         dest.chmod(0o444)
@@ -129,14 +144,21 @@ def main(argv: list[str]) -> int:
     if len(argv) != 1:
         print(__doc__)
         return 2
+    client = TardisClient()  # one client for the run, so failures and waits add up
     for day in resolve_days(argv[0]):
         try:
-            entries = download_day(day)
+            entries = download_day(day, client=client)
         except SplitLockError as e:
             print(f"refused: {e}", file=sys.stderr)
             return 1
+        except StopRequests as e:
+            print(f"stopped: {e}", file=sys.stderr)
+            return 1
         for e in entries:
             print(f"{e['date']} {e['data_type']}: {e['bytes']} bytes sha256 {e['sha256'][:12]}")
+    if client.failures:
+        print(f"{client.failures} request(s) failed; re-run later to fetch them", file=sys.stderr)
+        return 1
     return 0
 
 

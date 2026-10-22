@@ -1,80 +1,27 @@
 #!/usr/bin/env python3
-"""Recon: what Tardis says about BTCUSDT, and whether each of the 68 study files exists.
+"""Recon: what the Tardis exchange API says about BTCUSDT and the study dates.
 
 Writes data/recon.json. Usage: uv run python scripts/recon.py
 
-1. GET the Tardis exchange API and keep what it says about BTCUSDT.
-2. HEAD every dataset URL (34 dates x 2 data types). HEAD transfers no file data.
-3. Train and val dates only: a GET whose body is never read, closed right after the
-   response headers, to learn the size. datasets.tardis.dev answers HEAD with 404 even
-   for files it serves (see docs/DATA_RECON.md), so HEAD alone gives no size. Every such
-   GET goes through the split lock first, so it cannot reach a test date.
+One request: GET the Tardis exchange API, through TardisClient. No request goes to any
+dataset URL. HEAD answers 404 for every file on datasets.tardis.dev (docs/DATA_RECON.md),
+and test-day URLs get no request of any kind (SPEC.md AC0.1, changed 2026-10-22). File
+sizes are recorded in M1 from the downloads (AC1.6).
+
+The per-file records of the earlier recon (HEAD on all 68 files, header-only GET on train
+and val files, sent on 2026-10-22 before that change) are carried over unchanged, so the
+record of every request made stays in the file.
 """
 
 import json
-import time
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-from toxic_flow.data.split_lock import assert_allowed, load_splits
-from toxic_flow.data.tardis import API_URL, DATA_TYPES, EXCHANGE, SYMBOL, dataset_url, incidents_on
+from toxic_flow.data.split_lock import load_splits
+from toxic_flow.data.tardis import API_URL, EXCHANGE, SYMBOL, TardisClient, incidents_on
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "recon.json"
-USER_AGENT = "toxic-flow-recon/0.1 (+https://github.com/dudailia/toxic-flow)"
-
-
-def now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")
-
-
-def request(url: str, method: str, attempts: int = 4, headers=None) -> tuple[int, dict]:
-    """Status and headers only. The response body is never read."""
-    headers = {"User-Agent": USER_AGENT, **(headers or {})}
-    req = urllib.request.Request(url, method=method, headers=headers)
-    for attempt in range(attempts):
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                return r.status, dict(r.headers)
-        except urllib.error.HTTPError as e:
-            wait = int(e.headers.get("Retry-After") or 30)
-            if e.code == 429 and wait <= 120 and attempt < attempts - 1:
-                # Rate limited briefly: that is the server's load, not an answer about the
-                # file. A long Retry-After (the free tier's daily quota) is recorded as is.
-                time.sleep(wait)
-                continue
-            return e.code, dict(e.headers)
-        except (TimeoutError, urllib.error.URLError, ConnectionError):
-            # datasets.tardis.dev is slow to answer HEAD; a timeout is not an answer.
-            if attempt == attempts - 1:
-                raise
-            time.sleep(5 * (attempt + 1))
-    raise AssertionError("unreachable")
-
-
-def content_length(headers: dict) -> int | None:
-    value = headers.get("Content-Length")
-    return int(value) if value is not None else None
-
-
-def server_probes() -> dict:
-    """Why HEAD gives no answer here: the server's replies to a known file, a symbol that
-    does not exist, and a byte-range GET. Train-day URLs only."""
-    day = "2024-01-01"
-    assert_allowed(day)
-    real = dataset_url(day, "trades")
-    fake = real.replace(SYMBOL, "NOSUCHSYMBOL")
-    return {
-        "url": real,
-        "head_existing_file": request(real, "HEAD")[0],
-        "head_nonexistent_symbol": request(fake, "HEAD")[0],
-        "get_existing_file_headers_only": request(real, "GET")[0],
-        "get_nonexistent_symbol": request(fake, "GET")[0],
-        "ranged_get_existing_file": request(real, "GET", headers={"Range": "bytes=0-99"})[0],
-        "checked_at": now(),
-    }
 
 
 def exchange_meta(api: dict, days: list[str]) -> dict:
@@ -102,56 +49,20 @@ def exchange_meta(api: dict, days: list[str]) -> dict:
 
 
 def main() -> None:
-    splits = load_splits()
-    split_of = {d: name for name, ds in splits.items() for d in ds}
-    days = sorted(split_of)
-
-    with urllib.request.urlopen(
-        urllib.request.Request(API_URL, headers={"User-Agent": USER_AGENT}), timeout=30
-    ) as r:
+    days = sorted(d for ds in load_splits().values() for d in ds)
+    previous = json.loads(OUT.read_text()) if OUT.exists() else {}
+    with TardisClient().open(API_URL) as r:
         api = json.load(r)
-    probes = server_probes()  # first, before the 104 file requests use up the rate limit
-
-    files = []
-    for day in days:
-        for data_type in DATA_TYPES:
-            url = dataset_url(day, data_type)
-            status, headers = request(url, "HEAD")
-            row = {
-                "date": day,
-                "data_type": data_type,
-                "split": split_of[day],
-                "url": url,
-                "method": "HEAD",
-                "status": status,
-                "content_length": content_length(headers) if status == 200 else None,
-                "checked_at": now(),
-            }
-            if split_of[day] != "test":
-                assert_allowed(day)  # raises on a test date; belt and braces
-                get_status, get_headers = request(url, "GET")
-                row["get_headers"] = {
-                    "status": get_status,
-                    "content_length": content_length(get_headers),
-                    "x_md5": get_headers.get("x-md5", "").strip('"') or None,
-                    "checked_at": now(),
-                }
-            files.append(row)
-            print(row["date"], data_type, status, row.get("get_headers", {}).get("content_length"))
-            time.sleep(0.2)
-
-    OUT.parent.mkdir(parents=True, exist_ok=True)
     recon = {
         "exchange": EXCHANGE,
         "symbol": SYMBOL,
         "api_url": API_URL,
-        "fetched_at": now(),
+        "fetched_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "exchange_meta": exchange_meta(api, days),
-        "server_probes": probes,
-        "files": files,
+        "files": previous.get("files", []),
     }
     OUT.write_text(json.dumps(recon, indent=2) + "\n")
-    print(f"wrote {OUT.relative_to(ROOT)}: {len(files)} files")
+    print(f"wrote {OUT.relative_to(ROOT)}; carried over {len(recon['files'])} file records")
 
 
 if __name__ == "__main__":

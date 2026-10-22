@@ -6,3 +6,4 @@ results/*/fills*.parquet
 __pycache__/
 .venv/
 *.npz
+data/tardis_wait.json
