@@ -39,6 +39,12 @@ def request(url: str, method: str, attempts: int = 4, headers=None) -> tuple[int
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.status, dict(r.headers)
         except urllib.error.HTTPError as e:
+            wait = int(e.headers.get("Retry-After") or 30)
+            if e.code == 429 and wait <= 120 and attempt < attempts - 1:
+                # Rate limited briefly: that is the server's load, not an answer about the
+                # file. A long Retry-After (the free tier's daily quota) is recorded as is.
+                time.sleep(wait)
+                continue
             return e.code, dict(e.headers)
         except (TimeoutError, urllib.error.URLError, ConnectionError):
             # datasets.tardis.dev is slow to answer HEAD; a timeout is not an answer.
@@ -104,6 +110,7 @@ def main() -> None:
         urllib.request.Request(API_URL, headers={"User-Agent": USER_AGENT}), timeout=30
     ) as r:
         api = json.load(r)
+    probes = server_probes()  # first, before the 104 file requests use up the rate limit
 
     files = []
     for day in days:
@@ -140,7 +147,7 @@ def main() -> None:
         "api_url": API_URL,
         "fetched_at": now(),
         "exchange_meta": exchange_meta(api, days),
-        "server_probes": server_probes(),
+        "server_probes": probes,
         "files": files,
     }
     OUT.write_text(json.dumps(recon, indent=2) + "\n")

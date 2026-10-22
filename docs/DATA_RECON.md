@@ -29,9 +29,13 @@ data/converted/2024-01-01/convert.json (make data), data/benchmark_m0.json
 ## HEAD does not work on datasets.tardis.dev
 
 - Every one of the 68 HEAD requests returned HTTP 404 with no Content-Length, for all
-  three splits. `server_probes` in recon.json shows it is the server, not the files: HEAD
-  gives 404 both for a train file that exists and for a symbol that does not; a GET of the
-  same train file gives 200 (400 for the missing symbol); a byte-range GET gives 403.
+  three splits. It is the server, not the files. Running `server_probes()` from
+  scripts/recon.py at 2026-10-22 16:08:08 UTC gave: HEAD 404 for the 2024-01-01 trades
+  file and 404 for a symbol that does not exist; a GET of the same file 200 (400 for the
+  missing symbol); a byte-range GET 403. These probes are not yet in the committed
+  recon.json: the recon run meant to record them hit HTTP 429 with `Retry-After: 79529`
+  (about 22 hours), after two complete and three partial recon runs that day. recon.py records them
+  on its next run. [TBD: Q16 below.]
 - Consequence: AC0.1 ("each HTTP 200 with a positive content-length") cannot pass with
   HEAD, and this session forbids any GET of a test-day file. AC0.1 fails until Ilia
   decides. [TBD: Q1 below.]
@@ -198,3 +202,8 @@ side by side even though there are 8 cores.
     (they are equal on all 34 dates); two `make data` runs on the same day at once would
     share a `.part` file; the converter reads each gzip file twice (row count, then
     parse).
+16. Tardis rate limit: after two complete and three partial recon runs (a complete run is
+    68 HEAD and 36 header-only GETs) and
+    one day's download, datasets.tardis.dev answered 429 with `Retry-After: 79529` s.
+    M1 downloads 36 files. Download at most a few days per session, or get an API key?
+    Recon does not need to run again for M0.
