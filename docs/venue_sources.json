@@ -1,0 +1,1296 @@
+[
+ {
+  "date": "2024-01-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20231212170051id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "lot_size": "https://web.archive.org/web/20231212170051id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "min_qty": "https://web.archive.org/web/20231212170051id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "min_notional": "https://web.archive.org/web/20231212170051id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "maker_fee_bps": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20231212170051id_/https://www.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2023-12-12 16:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240101234534id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2024-01-01 22:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2023-12-23 17:39"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240223223845id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-02-23 22:38"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2023-12-12 16:00 UTC, after = exchangeInfo (Wayback) at 2024-01-01 22:00 UTC (20.3 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2023-12-23 and 2024-02-23. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-02-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240131113012id_/https://www.binance.com/en/futures/markets/overview-um",
+   "lot_size": "https://web.archive.org/web/20240131113012id_/https://www.binance.com/en/futures/markets/overview-um",
+   "min_qty": "https://web.archive.org/web/20240131113012id_/https://www.binance.com/en/futures/markets/overview-um",
+   "min_notional": "https://web.archive.org/web/20240131113012id_/https://www.binance.com/en/futures/markets/overview-um",
+   "maker_fee_bps": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240131113012id_/https://www.binance.com/en/futures/markets/overview-um",
+    "data_time_utc": "2024-01-31 11:30",
+    "kind": "USDS-M markets overview page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240205072438id_/https://www.binance.com/en/futures/markets/overview-um",
+    "data_time_utc": "2024-02-05 07:24",
+    "kind": "USDS-M markets overview page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20231223173944id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2023-12-23 17:39"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240223223845id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-02-23 22:38"
+   }
+  },
+  "notes": "Spec bracket: before = USDS-M markets overview page SSR at 2024-01-31 11:30 UTC, after = USDS-M markets overview page SSR at 2024-02-05 07:24 UTC (4.8 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2023-12-23 and 2024-02-23. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-03-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240229020202id_/https://www.binance.com/en/futures/trading-rules/perpetual/",
+   "lot_size": "https://web.archive.org/web/20240229020202id_/https://www.binance.com/en/futures/trading-rules/perpetual/",
+   "min_qty": "https://web.archive.org/web/20240229020202id_/https://www.binance.com/en/futures/trading-rules/perpetual/",
+   "min_notional": "https://web.archive.org/web/20240229020202id_/https://www.binance.com/en/futures/trading-rules/perpetual/",
+   "maker_fee_bps": "https://web.archive.org/web/20240223223845id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240223223845id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240229020202id_/https://www.binance.com/en/futures/trading-rules/perpetual/",
+    "data_time_utc": "2024-02-29 02:02",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240303214957id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2024-03-03 20:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240223223845id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-02-23 22:38"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240305165257id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-03-05 16:52"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-02-29 02:02 UTC, after = exchangeInfo (Wayback) at 2024-03-03 20:00 UTC (3.7 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-02-23 and 2024-03-05. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-04-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240314034430id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "lot_size": "https://web.archive.org/web/20240314034430id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_qty": "https://web.archive.org/web/20240314034430id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_notional": "https://web.archive.org/web/20240314034430id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "maker_fee_bps": "https://web.archive.org/web/20240305165257id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240305165257id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240314034430id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2024-03-14 02:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+    "data_time_utc": "2024-04-08 10:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240305165257id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-03-05 16:52"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240402161208id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-04-02 16:12"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2024-03-14 02:00 UTC, after = exchangeInfo (Wayback) at 2024-04-08 10:00 UTC (25.3 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-03-05 and 2024-04-02. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-05-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+   "lot_size": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+   "min_qty": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+   "min_notional": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+   "maker_fee_bps": "https://web.archive.org/web/20240402161208id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240402161208id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240408103545id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=false",
+    "data_time_utc": "2024-04-08 10:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-05-22 18:57",
+    "kind": "trading-rules page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240402161208id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-04-02 16:12"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-05-29 01:33"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2024-04-08 10:00 UTC, after = trading-rules page SSR (zh-CN) at 2024-05-22 18:57 UTC (44.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-04-02 and 2024-05-29. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-06-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "lot_size": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "min_qty": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "min_notional": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "maker_fee_bps": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240522185747id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-05-22 18:57",
+    "kind": "trading-rules page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240606091739id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-06-06 09:17",
+    "kind": "trading-rules page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-05-29 01:33"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-07-12 09:17"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR (zh-CN) at 2024-05-22 18:57 UTC, after = trading-rules page SSR (zh-CN) at 2024-06-06 09:17 UTC (14.6 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-05-29 and 2024-07-12. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-07-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240623142709id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "lot_size": "https://web.archive.org/web/20240623142709id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_qty": "https://web.archive.org/web/20240623142709id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_notional": "https://web.archive.org/web/20240623142709id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "maker_fee_bps": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240623142709id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-06-23 14:27",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-07-11 00:46",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240529013307id_/https://www.binance.com/bapi/composite/v1/public/account/futures-trade-level/get",
+    "capture_utc": "2024-05-29 01:33"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-07-12 09:17"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-06-23 14:27 UTC, after = trading-rules page SSR at 2024-07-11 00:46 UTC (17.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-05-29 and 2024-07-12. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-08-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "lot_size": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_qty": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_notional": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "maker_fee_bps": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240711004645id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-07-11 00:46",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240803100732id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-08-03 10:07",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-07-12 09:17"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240907132539id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-07 13:25"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-07-11 00:46 UTC, after = trading-rules page SSR at 2024-08-03 10:07 UTC (23.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-07-12 and 2024-09-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-09-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240829112433id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "lot_size": "https://web.archive.org/web/20240829112433id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_qty": "https://web.archive.org/web/20240829112433id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_notional": "https://web.archive.org/web/20240829112433id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "maker_fee_bps": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240829112433id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-08-29 11:24",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+    "data_time_utc": "2024-09-20 03:59",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240712091717id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-07-12 09:17"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20240907132539id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-07 13:25"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-08-29 11:24 UTC, after = trading-rules page SSR at 2024-09-20 03:59 UTC (21.7 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-07-12 and 2024-09-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-10-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+   "lot_size": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+   "min_qty": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+   "min_notional": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+   "maker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20240920035942id_/https://www.binance.com/en/futures/trading-rules/perpetual/multi-asset-info",
+    "data_time_utc": "2024-09-20 03:59",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-10-08 09:22",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-20 04:00"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-09-20 03:59 UTC, after = trading-rules page SSR at 2024-10-08 09:22 UTC (18.2 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-09-20 and 2025-02-25. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-11-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "lot_size": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_qty": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_notional": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "maker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20241008092206id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-10-08 09:22",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-11-29 10:32",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-20 04:00"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-10-08 09:22 UTC, after = trading-rules page SSR at 2024-11-29 10:32 UTC (52.0 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-09-20 and 2025-02-25. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2024-12-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "lot_size": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_qty": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_notional": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "maker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20241129103221id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2024-11-29 10:32",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20241202142754id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2024-12-02 14:27",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-20 04:00"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2024-11-29 10:32 UTC, after = trading-rules page SSR at 2024-12-02 14:27 UTC (3.2 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-09-20 and 2025-02-25. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-01-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20241220102616id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "lot_size": "https://web.archive.org/web/20241220102616id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_qty": "https://web.archive.org/web/20241220102616id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_notional": "https://web.archive.org/web/20241220102616id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "maker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20241220102616id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2024-12-20 10:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250104175922id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-01-04 17:59",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-20 04:00"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2024-12-20 10:00 UTC, after = BTCUSDT trading page SSR at 2025-01-04 17:59 UTC (15.3 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-09-20 and 2025-02-25. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-02-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250124082202id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "lot_size": "https://web.archive.org/web/20250124082202id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_qty": "https://web.archive.org/web/20250124082202id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "min_notional": "https://web.archive.org/web/20250124082202id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+   "maker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250124082202id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2025-01-24 08:22",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250217113617id_/https://www.binance.com/en/futures/trading-rules/perpetual",
+    "data_time_utc": "2025-02-17 11:36",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20240920040029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2024-09-20 04:00"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2025-01-24 08:22 UTC, after = trading-rules page SSR at 2025-02-17 11:36 UTC (24.1 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2024-09-20 and 2025-02-25. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-03-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250225170125id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "lot_size": "https://web.archive.org/web/20250225170125id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_qty": "https://web.archive.org/web/20250225170125id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_notional": "https://web.archive.org/web/20250225170125id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "maker_fee_bps": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250225170125id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2025-02-25 16:08",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250302191200id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-03-02 19:12",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250225124345id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-02-25 12:43"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250312085024id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-03-12 08:50"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2025-02-25 16:08 UTC, after = BTCUSDT trading page SSR at 2025-03-02 19:12 UTC (5.1 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-02-25 and 2025-03-12. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-04-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250308102419id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "lot_size": "https://web.archive.org/web/20250308102419id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_qty": "https://web.archive.org/web/20250308102419id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_notional": "https://web.archive.org/web/20250308102419id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "maker_fee_bps": "https://web.archive.org/web/20250312085024id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250312085024id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250308102419id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2025-03-08 10:24",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+    "data_time_utc": "2025-04-14 16:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250312085024id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-03-12 08:50"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250416045613id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-04-16 04:56"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2025-03-08 10:24 UTC, after = exchangeInfo (Wayback) at 2025-04-14 16:00 UTC (37.2 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-03-12 and 2025-04-16. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-05-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+   "lot_size": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+   "min_qty": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+   "min_notional": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+   "maker_fee_bps": "https://web.archive.org/web/20250416045613id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250416045613id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250414160908id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=all",
+    "data_time_utc": "2025-04-14 16:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250521000211id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-05-21 00:02",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250416045613id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-04-16 04:56"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-05-19 13:48"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2025-04-14 16:00 UTC, after = BTCUSDT trading page SSR at 2025-05-21 00:02 UTC (36.3 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-04-16 and 2025-05-19. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-06-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250526092216id_/https://www.binance.com/en/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20250526092216id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20250526092216id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20250526092216id_/https://www.binance.com/en/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250526092216id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-05-26 09:22",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250603041941id_/https://www.binance.com/en/futures/btcUSDT",
+    "data_time_utc": "2025-06-03 04:19",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-05-19 13:48"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250707122820id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-07-07 12:28"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR at 2025-05-26 09:22 UTC, after = BTCUSDT trading page SSR at 2025-06-03 04:19 UTC (7.8 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-05-19 and 2025-07-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-07-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250611040355id_/https://www.binance.com/en/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20250611040355id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20250611040355id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20250611040355id_/https://www.binance.com/en/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250611040355id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-06-11 04:03",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250719195155id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-07-19 19:51",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250519134857id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-05-19 13:48"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250707122820id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-07-07 12:28"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR at 2025-06-11 04:03 UTC, after = BTCUSDT trading page SSR at 2025-07-19 19:51 UTC (38.7 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-05-19 and 2025-07-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-08-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250721220833id_/https://www.binance.com/en/futures/markets/overview-um",
+   "lot_size": "https://web.archive.org/web/20250721220833id_/https://www.binance.com/en/futures/markets/overview-um",
+   "min_qty": "https://web.archive.org/web/20250721220833id_/https://www.binance.com/en/futures/markets/overview-um",
+   "min_notional": "https://web.archive.org/web/20250721220833id_/https://www.binance.com/en/futures/markets/overview-um",
+   "maker_fee_bps": "https://web.archive.org/web/20250707122820id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250707122820id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250721220833id_/https://www.binance.com/en/futures/markets/overview-um",
+    "data_time_utc": "2025-07-21 22:08",
+    "kind": "USDS-M markets overview page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2025-08-09 11:54",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250707122820id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-07-07 12:28"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250801081321id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-08-01 08:13"
+   }
+  },
+  "notes": "Spec bracket: before = USDS-M markets overview page SSR at 2025-07-21 22:08 UTC, after = BTCUSDT trading page SSR (zh-CN) at 2025-08-09 11:54 UTC (18.6 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-07-07 and 2025-08-01. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-09-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20250801081321id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250801081321id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250809115409id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2025-08-09 11:54",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20250920150507id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-09-20 15:05",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250801081321id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-08-01 08:13"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20250922070359id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-09-22 07:03"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR (zh-CN) at 2025-08-09 11:54 UTC, after = BTCUSDT trading page SSR at 2025-09-20 15:05 UTC (42.1 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-08-01 and 2025-09-22. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-10-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20250921033758id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "lot_size": "https://web.archive.org/web/20250921033758id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "min_qty": "https://web.archive.org/web/20250921033758id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "min_notional": "https://web.archive.org/web/20250921033758id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+   "maker_fee_bps": "https://web.archive.org/web/20250922070359id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20250922070359id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20250921033758id_/https://www.binance.com/zh-CN/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2025-09-21 03:37",
+    "kind": "trading-rules page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20251001105754id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2025-10-01 10:57",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20250922070359id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-09-22 07:03"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20251014234806id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-10-14 23:48"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR (zh-CN) at 2025-09-21 03:37 UTC, after = BTCUSDT trading page SSR (zh-CN) at 2025-10-01 10:57 UTC (10.3 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-09-22 and 2025-10-14. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-11-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20251022174854id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "lot_size": "https://web.archive.org/web/20251022174854id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_qty": "https://web.archive.org/web/20251022174854id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "min_notional": "https://web.archive.org/web/20251022174854id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+   "maker_fee_bps": "https://web.archive.org/web/20251014234806id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20251014234806id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20251022174854id_/https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin",
+    "data_time_utc": "2025-10-22 17:48",
+    "kind": "trading-rules page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2025-11-18 12:08",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20251014234806id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-10-14 23:48"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20251108092029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-11-08 09:20"
+   }
+  },
+  "notes": "Spec bracket: before = trading-rules page SSR at 2025-10-22 17:48 UTC, after = BTCUSDT trading page SSR (zh-CN) at 2025-11-18 12:08 UTC (26.8 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-10-14 and 2025-11-08. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2025-12-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20251108092029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20251108092029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20251118120812id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2025-11-18 12:08",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20251204010421id_/https://www.binance.com/en/futures/trading-rules/perpetual/portfolio-margin/negative-balance-threshold",
+    "data_time_utc": "2025-12-04 01:04",
+    "kind": "trading-rules page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20251108092029id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-11-08 09:20"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-12-06 01:24"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR (zh-CN) at 2025-11-18 12:08 UTC, after = trading-rules page SSR at 2025-12-04 01:04 UTC (15.5 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-11-08 and 2025-12-06. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-01-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20251210164745id_/https://www.binance.com/en/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20251210164745id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20251210164745id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20251210164745id_/https://www.binance.com/en/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20251210164745id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2025-12-10 16:47",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260104100914id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2026-01-04 10:09",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-12-06 01:24"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260201153212id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-01 15:32"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR at 2025-12-10 16:47 UTC, after = BTCUSDT trading page SSR at 2026-01-04 10:09 UTC (24.7 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-12-06 and 2026-02-01. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-02-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260131080829id_/https://www.binance.com/en/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20260131080829id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20260131080829id_/https://www.binance.com/en/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20260131080829id_/https://www.binance.com/en/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260131080829id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2026-01-31 08:08",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260206040143id_/https://www.binance.com/en/futures/BTCUSDT",
+    "data_time_utc": "2026-02-06 04:01",
+    "kind": "BTCUSDT trading page SSR"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20251206012423id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2025-12-06 01:24"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260201153212id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-01 15:32"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR at 2026-01-31 08:08 UTC, after = BTCUSDT trading page SSR at 2026-02-06 04:01 UTC (5.8 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2025-12-06 and 2026-02-01. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-03-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "lot_size": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_qty": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_notional": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "maker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-02-17 04:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+    "data_time_utc": "2026-04-20 12:49",
+    "kind": "BTCUSDT trading page SSR (vi)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-27 03:49"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   },
+   "min_notional_change_announcement": "https://www.binance.com/en/support/announcement/detail/10999fd17dc045de801c0c78ab29e6fc"
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2026-02-17 04:00 UTC, after = BTCUSDT trading page SSR (vi) at 2026-04-20 12:49 UTC (62.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-02-27 and 2026-06-15. min_notional differs across the bracket (100 before, 50 after); the announced change 100 -> 50 USDT at 2026-04-14 06:30 UTC falls inside it, so the value on this date is 100. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-04-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 100.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "lot_size": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_qty": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_notional": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "maker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260217041328id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-02-17 04:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+    "data_time_utc": "2026-04-20 12:49",
+    "kind": "BTCUSDT trading page SSR (vi)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-27 03:49"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   },
+   "min_notional_change_announcement": "https://www.binance.com/en/support/announcement/detail/10999fd17dc045de801c0c78ab29e6fc"
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2026-02-17 04:00 UTC, after = BTCUSDT trading page SSR (vi) at 2026-04-20 12:49 UTC (62.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-02-27 and 2026-06-15. min_notional differs across the bracket (100 before, 50 after); the announced change 100 -> 50 USDT at 2026-04-14 06:30 UTC falls inside it, so the value on this date is 100. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-05-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260420124944id_/https://www.binance.com/vi/futures/BTCUSDT",
+    "data_time_utc": "2026-04-20 12:49",
+    "kind": "BTCUSDT trading page SSR (vi)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-05-10 10:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-27 03:49"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR (vi) at 2026-04-20 12:49 UTC, after = exchangeInfo (Wayback) at 2026-05-10 10:00 UTC (19.9 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-02-27 and 2026-06-15. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-06-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "lot_size": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_qty": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "min_notional": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+   "maker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260510103016id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-05-10 10:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2026-06-07 06:31",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260227034955id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-02-27 03:49"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2026-05-10 10:00 UTC, after = BTCUSDT trading page SSR (zh-CN) at 2026-06-07 06:31 UTC (27.9 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-02-27 and 2026-06-15. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-07-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2026-06-07 06:31",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260819162330id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2026-08-19 16:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260807201307id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-08-07 20:13"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR (zh-CN) at 2026-06-07 06:31 UTC, after = exchangeInfo (Wayback) at 2026-08-19 16:00 UTC (73.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-06-15 and 2026-08-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-08-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "lot_size": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_qty": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "min_notional": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+   "maker_fee_bps": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260607063152id_/https://www.binance.com/zh-CN/futures/BTCUSDT",
+    "data_time_utc": "2026-06-07 06:31",
+    "kind": "BTCUSDT trading page SSR (zh-CN)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260819162330id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2026-08-19 16:00",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260615214412id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-06-15 21:44"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20260807201307id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-08-07 20:13"
+   }
+  },
+  "notes": "Spec bracket: before = BTCUSDT trading page SSR (zh-CN) at 2026-06-07 06:31 UTC, after = exchangeInfo (Wayback) at 2026-08-19 16:00 UTC (73.4 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-06-15 and 2026-08-07. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-09-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260828100250id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "lot_size": "https://web.archive.org/web/20260828100250id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "min_qty": "https://web.archive.org/web/20260828100250id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "min_notional": "https://web.archive.org/web/20260828100250id_/https://www.binance.com/fapi/v1/exchangeInfo",
+   "maker_fee_bps": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260828100250id_/https://www.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-08-28 09:36",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20260901093922id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2026-09-01 09:06",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-08-24 16:45"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20261004010040id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-10-04 01:00"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2026-08-28 09:36 UTC, after = exchangeInfo (Wayback) at 2026-09-01 09:06 UTC (4.0 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-08-24 and 2026-10-04. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ },
+ {
+  "date": "2026-10-01",
+  "tick_size": 0.1,
+  "lot_size": 0.001,
+  "min_qty": 0.001,
+  "min_notional": 50.0,
+  "maker_fee_bps": 2.0,
+  "taker_fee_bps": 5.0,
+  "sources": {
+   "tick_size": "https://web.archive.org/web/20260930034231id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "lot_size": "https://web.archive.org/web/20260930034231id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_qty": "https://web.archive.org/web/20260930034231id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "min_notional": "https://web.archive.org/web/20260930034231id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+   "maker_fee_bps": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+   "taker_fee_bps": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get"
+  },
+  "bracket": {
+   "spec_before": {
+    "url": "https://web.archive.org/web/20260930034231id_/https://www.binance.com/fapi/v1/exchangeInfo?showall=true",
+    "data_time_utc": "2026-09-30 00:01",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "spec_after": {
+    "url": "https://web.archive.org/web/20261001035141id_/https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "data_time_utc": "2026-10-01 02:49",
+    "kind": "exchangeInfo (Wayback)"
+   },
+   "fee_before": {
+    "url": "https://web.archive.org/web/20260824164504id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-08-24 16:45"
+   },
+   "fee_after": {
+    "url": "https://web.archive.org/web/20261004010040id_/https://www.binance.com/bapi/composite/v1/public/commission/futures-trade-level/get",
+    "capture_utc": "2026-10-04 01:00"
+   }
+  },
+  "notes": "Spec bracket: before = exchangeInfo (Wayback) at 2026-09-30 00:01 UTC, after = exchangeInfo (Wayback) at 2026-10-01 02:49 UTC (1.1 days apart); both give tickSize 0.10, stepSize 0.001, minQty 0.001. Fee bracket: level 0 maker 0.0002 / taker 0.0005 at 2026-08-24 and 2026-10-04. No BTCUSDT fee promotion for regular users found; fees exclude the BNB discount."
+ }
+]
