@@ -136,10 +136,18 @@ Note the spelling `adverse` in the method name.
   size; `PartialFillExchange` fills at most the remaining traded quantity.
 - Both accept `GTX` (post-only), which the study uses. `PartialFillExchange` also accepts
   `FOK` and `IOC`.
-- Proposal for PREREGISTRATION.md section 3 [TBD: Ilia to decide]: `partial_fill_exchange()`.
-  Reason: it never fills more than the no-partial-fill model, and with minimum-size orders a
-  print smaller than the order (one lot, 0.001 BTC) is possible, where the no-partial-fill
-  model would fill the whole order. The M0 benchmark loop uses it.
+- `partial_fill_exchange()` would be the more conservative choice: it never fills more than
+  the no-partial-fill model, and with minimum-size orders a print smaller than the order
+  (one lot, 0.001 BTC) is possible. But in 2.4.4 it panics on 2024-01-01 under the B0 loop:
+  `called Option::unwrap() on a None value` at `partialfillexchange.rs:251`, inside
+  `remove_filled_orders`, where an order id queued as filled is no longer in the order map.
+  It happens with price-tick order ids and with unique ids. A minimal synthetic sequence
+  (an exact fill at the front, then crossing book updates) did not reproduce it, so the
+  cause is not known. The same line is unchanged on master as of 2026-10-22.
+- Proposal for PREREGISTRATION.md section 3 [TBD: Ilia to decide]: `no_partial_fill_exchange()`,
+  the hftbacktest default, which ran the same day without error. Limitation, to state next
+  to every result: an order at the front of the queue fills in full on any trade at its
+  price, whatever the trade size. The M0 benchmark loop uses it.
 - Replay caveat from the docs: market data cannot react to our orders, so a fill does not
   remove liquidity from the replayed book.
 

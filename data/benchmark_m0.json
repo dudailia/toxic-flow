@@ -1,0 +1,38 @@
+{
+  "date": "2024-01-01",
+  "strategy": "B0 h=1 tick, post-only, one order per side",
+  "queue_model": "risk_adverse_queue_model()",
+  "exchange_model": "no_partial_fill_exchange()",
+  "latency": "intp_order_latency, generate_order_latency mul=1.0",
+  "decision_step_ns": 100000000,
+  "quote_window_utc": [
+    "00:30:00",
+    "23:59:00"
+  ],
+  "order_qty_btc": 0.003,
+  "steps_quoted": 845400,
+  "fill_count": 32854,
+  "end_position_btc": -0.012,
+  "gross_pnl_usdt_not_a_result": -414.2775,
+  "loop_wall_seconds": 16.7,
+  "compile_and_first_part_seconds": 4.7,
+  "order_latency_build_seconds": 12.2,
+  "order_latency_rows": 86406,
+  "backtest_peak_rss_bytes": 4182736896,
+  "latency_build_peak_rss_bytes": 4736286720,
+  "events": 100128234,
+  "raw_bytes": 567177687,
+  "converted_bytes": 776082982,
+  "conversion_seconds": 150.1,
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "cores": 8,
+    "performance_cores": 6,
+    "efficiency_cores": 2,
+    "ram_bytes": 17179869184,
+    "os": "macOS-26.0-arm64-arm-64bit",
+    "python": "3.12.13",
+    "hftbacktest": "2.4.4"
+  },
+  "measured_at": "2026-10-22T15:47:49+00:00"
+}

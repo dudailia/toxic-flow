@@ -1,0 +1,69 @@
+import pytest
+
+from toxic_flow.strategies.b0_fixed import order_size, quote_ticks, sides_allowed
+
+
+@pytest.mark.parametrize(
+    "best_bid, best_ask, h, expected",
+    [
+        (100, 101, 1, (99, 102)),  # one-tick spread: mid is half a tick inside, rounds outward
+        (100, 102, 1, (100, 102)),  # two-tick spread: mid on a tick
+        (100, 101, 3, (97, 104)),
+    ],
+)
+def test_quote_ticks_round_outward(best_bid, best_ask, h, expected):
+    assert quote_ticks(best_bid, best_ask, h) == expected
+
+
+def test_quote_ticks_never_cross_the_book():
+    bid, ask = quote_ticks(100, 101, 1)
+    assert bid < 101 and ask > 100
+
+
+def test_sides_allowed_respects_inventory_cap():
+    q = 0.003
+    assert sides_allowed(0.0, q, 10) == (True, True)
+    assert sides_allowed(10 * q, q, 10) == (False, True)
+    assert sides_allowed(-10 * q, q, 10) == (True, False)
+    assert sides_allowed(9 * q + 1e-12, q, 10) == (True, True)  # float noise is not a lot
+
+
+def test_order_size_meets_min_notional_in_whole_lots():
+    # 100 USDT at 42,300 is 0.00236 BTC, so 3 lots of 0.001.
+    assert order_size(42_300.0, 0.001, 100.0) == pytest.approx(0.003)
+    # Exactly at the boundary one lot is enough.
+    assert order_size(100_000.0, 0.001, 100.0) == pytest.approx(0.001)
+
+
+@pytest.mark.slow
+def test_run_b0_quotes_through_the_window(tmp_path):
+    # Engine smoke run on a synthetic day converted the study's way. Catches loops that
+    # never start: before its first elapse, hftbacktest's current_timestamp is i64 max.
+    import numpy as np
+    from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
+    from synthetic import T0, synthetic_day
+
+    from toxic_flow.data.convert import convert_parts
+    from toxic_flow.strategies.b0_fixed import run_b0
+
+    trades, depth = synthetic_day(tmp_path)
+    (data,), _ = convert_parts(trades, depth, n_parts=1)
+    np.savez_compressed(tmp_path / "day.npz", data=data)
+    asset = (
+        BacktestAsset()
+        .data([str(tmp_path / "day.npz")])
+        .linear_asset(1.0)
+        .constant_order_latency(1_000_000, 1_000_000)
+        .risk_adverse_queue_model()
+        .partial_fill_exchange()
+        .trading_value_fee_model(0.0, 0.0)
+        .tick_size(0.05)
+        .lot_size(0.001)
+    )
+    hbt = HashMapMarketDepthBacktest([asset])
+    start, end, step = T0 * 1000 + 1_000_000_000, T0 * 1000 + 4_000_000_000, 100_000_000
+    out = np.zeros(6)
+    run_b0(hbt, 1, 0.001, 100.0, 10, start, end, step, out)
+    hbt.close()
+    assert 25 <= out[0] <= 31  # about one quoted step per 100 ms of the 3 s window
+    assert out[5] == pytest.approx(0.003)  # 100 USDT at about 42,000 is 3 lots
