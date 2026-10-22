@@ -1,0 +1,8 @@
+data/raw/
+data/converted/
+results/*/fills*.parquet
+.claude/state/
+.claude/settings.local.json
+__pycache__/
+.venv/
+*.npz

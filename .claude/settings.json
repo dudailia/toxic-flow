@@ -1,0 +1,73 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(/data/raw/**)",
+      "Edit(/results/**)",
+      "Bash(git tag *prereg*)",
+      "Bash(git tag -d *)",
+      "Bash(git tag -f *)",
+      "Bash(git tag --delete *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --delete *)",
+      "Bash(git push * :refs/tags/*)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit -n *)"
+    ],
+    "allow": [
+      "Bash(make check)",
+      "Bash(make check-full)",
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run python scripts/check_milestone.py *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_paths.py"
+            ],
+            "onFailure": "block",
+            "statusMessage": "Checking protected paths"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ruff_py.py"
+            ],
+            "statusMessage": "ruff format and check"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/stop_check.py"
+            ],
+            "timeout": 300,
+            "statusMessage": "Running make check"
+          }
+        ]
+      }
+    ]
+  }
+}
