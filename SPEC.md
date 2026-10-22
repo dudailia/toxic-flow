@@ -64,8 +64,10 @@ Build:
 - src/toxic_flow/data/split_lock.py and tests/leakage/test_split_lock.py, written before
   download.py. The lock refuses any test date unless `git tag --list prereg-v1` returns it
   and `git ls-remote --tags origin prereg-v1` returns it.
-- scripts/recon.py: GET https://api.tardis.dev/v1/exchanges/binance-futures, then an HTTP
-  HEAD for each of the 68 dataset URLs (34 dates times 2 data types). HEAD reads no data.
+- scripts/recon.py: GET https://api.tardis.dev/v1/exchanges/binance-futures and keep what it
+  says about BTCUSDT. No request to any dataset URL. (Changed 2026-10-22, Ilia's decision:
+  datasets.tardis.dev answers HEAD with 404 for every URL, so HEAD cannot show a file
+  exists; see docs/DATA_RECON.md. File sizes move to M1.)
 - configs/venue.yaml: for each date, tick size, lot size, minimum notional, standard-tier
   maker and taker fee in bp, each with a source URL. Tick size on downloaded days is
   also inferred from the data and must match. Unsourced values stay TBD and block M0.
@@ -76,7 +78,12 @@ Build:
   excluding CLAUDE.md, .claude/ and tests/writing_rules.txt.
 
 Acceptance (implemented in scripts/check_milestone.py M0):
-- AC0.1 data/recon.json covers all 68 files, each HTTP 200 with a positive content-length.
+- AC0.1 the Tardis exchange metadata in data/recon.json lists BTCUSDT with both data types,
+  available from on or before 2024-01-01 through on or after 2026-10-01. No request of any
+  kind is made to a test-day URL; the only exception is the HEAD requests (status 404, no
+  body) that recon sent on 2026-10-22 under the original M0 instruction, as recorded in
+  recon.json. (Changed 2026-10-22 from "each of the 68 files HTTP 200 with a positive
+  content-length", which HEAD cannot show on this server.)
 - AC0.2 recon.json records the exchange metadata returned by the Tardis API.
 - AC0.3 configs/venue.yaml has every field for every date and no TBD.
 - AC0.4 hftbacktest pinned in uv.lock; docs/ENGINE.md has sections Version, Data
@@ -122,6 +129,7 @@ Acceptance:
   size and VWAP; prints at one timestamp with opposite sides stay two events.
 - AC1.5 the event table for each day is Parquet with schema
   (exch_ts, local_ts, side, size, vwap, n_prints, levels).
+- AC1.6 content-length or bytes on disk recorded for all 36 train and val files.
 
 Viva topics: why collapse prints; what goes wrong in a Hawkes MLE with tied timestamps;
 what feed latency quantiles say about which latency setting is realistic.

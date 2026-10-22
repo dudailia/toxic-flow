@@ -14,7 +14,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
 import yaml
@@ -74,17 +74,43 @@ def m0(r: Results) -> None:
         r.add("AC0.1 data/recon.json", False, "missing")
     else:
         recon = json.loads(recon_text)
-        files = {(f.get("date"), f.get("data_type")): f for f in recon.get("files", [])}
-        missing = [(d, t) for d in dates for t in DATA_TYPES if (d, t) not in files]
+        # AC0.1 as changed on 2026-10-22 (SPEC.md): datasets.tardis.dev answers HEAD with 404
+        # for every URL, so coverage comes from the Tardis exchange metadata, and test-day
+        # URLs get no request at all except the HEADs recon sent before that decision.
+        meta = recon.get("exchange_meta") or {}
+        sym = [s for s in meta.get("datasets", {}).get("symbol", []) if s.get("id") == "BTCUSDT"]
+        first = datetime.combine(date.fromisoformat(dates[0]), time(), UTC)
+        end = datetime.combine(date.fromisoformat(dates[-1]) + timedelta(days=1), time(), UTC)
+
+        def utc(ts: str) -> datetime:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+        covered = (
+            len(sym) == 1
+            and all(t in sym[0].get("dataTypes", []) for t in DATA_TYPES)
+            and utc(sym[0]["availableSince"]) <= first
+            and utc(sym[0]["availableTo"]) >= end
+        )
+        span = f"{sym[0]['availableSince']} to {sym[0]['availableTo']}" if sym else "no BTCUSDT"
+        r.add("AC0.1 Tardis metadata covers all 34 dates", covered, span)
+
+        decision = datetime(2026, 10, 22, 20, 0, tzinfo=UTC)
+        contacts = [f for f in recon.get("files", []) if f.get("date") in test_dates]
         bad = [
-            k
-            for k, f in files.items()
-            if f.get("status") != 200
-            or not isinstance(f.get("content_length"), int)
-            or f["content_length"] <= 0
+            (f.get("date"), f.get("data_type"))
+            for f in contacts
+            if f.get("method") != "HEAD"
+            or "get_headers" in f
+            or f.get("content_length") is not None
+            or utc(f.get("checked_at") or "9999-12-31T00:00:00Z") >= decision
         ]
-        r.add("AC0.1 recon covers 34 days x 2 types", not missing, f"missing {missing[:4]}")
-        r.add("AC0.1 every file HTTP 200 with a size", not bad, f"bad {bad[:4]}")
+        rest = json.dumps({k: v for k, v in recon.items() if k != "files"})
+        urls = [d for d in test_dates if "/" + d.replace("-", "/") + "/" in rest]
+        r.add(
+            "AC0.1 no test-day request beyond the recorded HEADs",
+            not bad and not urls,
+            f"{len(contacts)} recorded HEADs; bad {bad[:4]} {urls[:4]}",
+        )
         meta_ok = (
             recon.get("exchange") == "binance-futures"
             and recon.get("symbol") == "BTCUSDT"
@@ -143,7 +169,9 @@ def m0(r: Results) -> None:
         )
         r.add("AC0.6 benchmark day in manifest", any(e.get("date") == dates[0] for e in entries))
         r.add("AC0.6 manifest hashes well formed", hashes_ok)
-        r.add("AC0.5 no test date in manifest", not any(e.get("date") in test_dates for e in entries))
+        r.add(
+            "AC0.5 no test date in manifest", not any(e.get("date") in test_dates for e in entries)
+        )
     recon_md = read("docs/DATA_RECON.md")
     r.add(
         "AC0.6 DATA_RECON.md has Benchmark and Compute projection",

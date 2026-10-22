@@ -24,6 +24,9 @@ build-backend = "uv_build"
 line-length = 100
 target-version = "py312"
 extend-exclude = [".superpowers"]
+# Apply the excludes below even when a file is named on the command line, as the
+# PostToolUse hook does; otherwise the hook reformats scripts/check_milestone.py.
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
