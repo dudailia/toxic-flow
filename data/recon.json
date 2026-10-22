@@ -1,0 +1,1126 @@
+{
+  "exchange": "binance-futures",
+  "symbol": "BTCUSDT",
+  "api_url": "https://api.tardis.dev/v1/exchanges/binance-futures",
+  "fetched_at": "2026-10-22T15:37:35+00:00",
+  "exchange_meta": {
+    "id": "binance-futures",
+    "name": "Binance USDS-M Futures",
+    "enabled": true,
+    "availableSince": "2019-11-17T00:00:00.000Z",
+    "available_symbol": [
+      {
+        "id": "btcusdt",
+        "type": "perpetual",
+        "availableSince": "2019-11-17T00:00:00.000Z"
+      }
+    ],
+    "datasets": {
+      "formats": [
+        "csv"
+      ],
+      "exportedFrom": "2019-11-17T00:00:00.000Z",
+      "exportedUntil": "2026-10-22T00:00:00.000Z",
+      "symbol": [
+        {
+          "id": "BTCUSDT",
+          "type": "perpetual",
+          "dataTypes": [
+            "trades",
+            "incremental_book_L2",
+            "quotes",
+            "book_snapshot_5",
+            "book_snapshot_25",
+            "derivative_ticker",
+            "liquidations",
+            "book_ticker"
+          ],
+          "availableSince": "2019-11-17T00:00:00.000Z",
+          "availableTo": "2026-10-22T00:00:00.000Z"
+        }
+      ]
+    },
+    "channelDetails": [
+      {
+        "name": "trade",
+        "description": "Public futures trade executions stream",
+        "frequency": "real-time",
+        "frequencySource": "inferred",
+        "sourceFor": [
+          "trade"
+        ],
+        "availableSince": "2019-11-17T00:00:00.000Z"
+      },
+      {
+        "name": "depth",
+        "description": "Incremental futures order book updates stream",
+        "additionalInfo": "Subscribed as depth@0ms with real-time dynamically adjusted update speed.",
+        "frequency": "real-time",
+        "frequencySource": "inferred",
+        "exchangeDocsUrl": "https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Diff-Book-Depth-Streams",
+        "sourceFor": [
+          "book_change"
+        ],
+        "changes": [
+          {
+            "until": "2020-01-07T00:00:00.000Z",
+            "frequency": "100ms"
+          }
+        ],
+        "availableSince": "2019-11-17T00:00:00.000Z"
+      },
+      {
+        "name": "depthSnapshot",
+        "description": "Generated full order book snapshots stream",
+        "additionalInfo": "Binance USDT Futures real-time WebSocket API does not provide initial order book snapshots. To overcome this issue we fetch initial order book snapshots from REST API and store them together with the rest of the WebSocket messages (top 1000 levels). Snapshot messages are marked with \"stream\":\"<symbol>@depthSnapshot\" and \"generated\":true.\n\nDuring data collection, integrity of incremental order book updates is validated using sequence numbers from the real-time feed (pu and u fields). If a missed message is detected, the WebSocket connection is restarted. Initial book snapshots fetched from REST API are also validated for overlap with received depth messages.",
+        "frequency": "on-subscribe",
+        "frequencySource": "internal",
+        "generated": true,
+        "sourceFor": [
+          "book_change"
+        ],
+        "availableSince": "2019-11-17T00:00:00.000Z"
+      }
+    ],
+    "dataCollectionDetails": {
+      "recorderDataCenter": {
+        "host": "GCP",
+        "regionId": "asia-northeast1",
+        "location": "Tokyo, Japan"
+      },
+      "recorderDataCenterChanges": [
+        {
+          "until": "2020-05-14T00:00:00.000Z",
+          "dataCenter": {
+            "host": "GCP",
+            "regionId": "europe-west2",
+            "location": "London, UK"
+          }
+        }
+      ],
+      "wssConnection": {
+        "url": "wss://fstream.binance.com/public/stream"
+      },
+      "wssConnectionChanges": [
+        {
+          "until": "2026-03-18T12:07:41.000Z",
+          "url": "wss://fstream.binance.com/stream"
+        }
+      ],
+      "exchangeDataCenter": {
+        "host": "AWS",
+        "regionId": "ap-northeast-1",
+        "location": "Tokyo, Japan"
+      }
+    },
+    "incidentReports": [
+      {
+        "from": "2026-08-13T14:33:00.000Z",
+        "to": "2026-08-13T14:36:00.000Z",
+        "status": "resolved",
+        "details": "Partial data gaps were caused by a brief connectivity interruption affecting real-time data collection. Normal recording resumed after the affected connections recovered."
+      },
+      {
+        "from": "2026-07-27T22:40:00.000Z",
+        "to": "2026-07-28T08:45:00.000Z",
+        "status": "resolved",
+        "details": "Missing data caused by a wave of rapid WebSocket reconnects that exhausted Binance API rate limits and triggered repeated IP bans that were difficult to work around, prolonging recovery."
+      },
+      {
+        "from": "2026-07-14T12:30:07.786Z",
+        "to": "2026-07-14T14:10:47.151Z",
+        "status": "resolved",
+        "details": "Partial Binance Futures data gaps were caused by an internal rate-limit handling issue. After a WebSocket disconnect, REST requests for initial order book snapshots hit temporary Binance IP bans, causing repeated reconnects and missing real-time and generated REST data. Most channels progressively recovered between 12:58 and 13:00 UTC, and 13:01 UTC is the first complete minute. Open interest remained incomplete during recovery and was completely absent from 12:59 through 14:09 UTC. Normal open-interest recording resumed at 2026-07-14T14:10:47 UTC, with 14:11 UTC as its first complete minute. Request retry and rate-limit handling was corrected."
+      },
+      {
+        "from": "2026-06-22T04:25:00.000Z",
+        "to": "2026-06-22T04:30:00.000Z",
+        "status": "resolved",
+        "details": "Missing data in exchange-specific minute slices caused by a transient Tokyo recorder infrastructure/network disruption. Some affected slices are empty or contain only reconnect markers. Normal recording resumed after reconnects completed around 2026-06-22T04:29:50 UTC."
+      },
+      {
+        "from": "2026-06-12T03:58:00.000Z",
+        "to": "2026-06-12T04:28:50.000Z",
+        "status": "resolved",
+        "details": "Missing data caused by an internal recorder infrastructure failure. Normal recording resumed after automated recovery kicked-in."
+      },
+      {
+        "from": "2026-06-08T09:48:00.000Z",
+        "to": "2026-06-08T09:48:43.654Z",
+        "status": "resolved",
+        "details": "Short data gap caused by a Tokyo recorder stability issue. Recording resumed at 2026-06-08T09:48:43.654Z UTC."
+      },
+      {
+        "from": "2026-06-08T08:52:00.000Z",
+        "to": "2026-06-08T08:53:03.413Z",
+        "status": "resolved",
+        "details": "Short data gap caused by a Tokyo recorder stability issue. The 08:52 UTC minute slice contains only a reconnect marker; recording resumed at 2026-06-08T08:53:03.413Z UTC."
+      },
+      {
+        "from": "2026-05-21T16:31:00.000Z",
+        "to": "2026-05-21T16:57:00.000Z",
+        "status": "resolved",
+        "details": "Missing data caused by an internal recorder infrastructure failure. Normal recording resumed after automated recovery."
+      },
+      {
+        "from": "2026-03-26T08:34:51.160Z",
+        "to": "2026-03-26T08:44:59.308Z",
+        "status": "resolved",
+        "details": "Missing data caused by a recorder reconnect loop after repeated Binance Futures WebSocket read cancellations. Repeated full client rebuilds hit Binance REST -1003 rate limits while rebuilding subscriptions."
+      },
+      {
+        "from": "2025-08-29T06:18:03.205Z",
+        "to": "2025-08-29T06:37:04.820Z",
+        "status": "resolved",
+        "details": "Missing trade, bookTicker, and depth data caused by a Binance Futures exchange-side outage affecting USD-margined futures. Other lower-volume streams continued during the window. Normal trade recording resumed at 2025-08-29T06:37:04.820Z UTC."
+      },
+      {
+        "from": "2023-05-10T13:00:00.000Z",
+        "to": "2023-05-10T14:13:00.000Z",
+        "status": "resolved",
+        "details": "Missing data due to hitting Binance Futures rate limits for HTTP requests (403 error), fix was implemented (HTTP proxy & multiple IPs) and deployed."
+      },
+      {
+        "from": "2022-04-08T05:00:00.000Z",
+        "to": "2022-04-08T12:00:00.000Z",
+        "status": "resolved",
+        "details": "Increased disconnections count and WS connections timeouts resulting in small data gaps."
+      },
+      {
+        "from": "2022-03-06T21:10:00.000Z",
+        "to": "2022-03-07T02:43:00.000Z",
+        "status": "resolved",
+        "details": "Missing BTCUSDT instrument data caused by Binance API not publishing any messages over open connection except @markPrice stream, additional checks have been added to restart connection in such case."
+      },
+      {
+        "from": "2021-05-12T07:02:00.000Z",
+        "to": "2021-05-12T07:42:00.000Z",
+        "status": "resolved",
+        "details": "GKE node network issue resulted triggering auto-repair logic and missing data in that period."
+      },
+      {
+        "from": "2021-03-05T14:14:00.000Z",
+        "to": "2021-03-05T14:23:00.000Z",
+        "status": "resolved",
+        "details": "Missing data due to virtual machine crash. Crash was caused by hardware issue on the physical machine hosting VM which has been automatically replaced with healthy one by auto-repair logic."
+      },
+      {
+        "from": "2020-06-11T18:32:00.000Z",
+        "to": "2020-06-11T19:55:00.000Z",
+        "status": "resolved",
+        "details": "Intermittent Kubernetes Node network issue caused increased disconnections count and establishing connection timeouts that resulted in missing data."
+      },
+      {
+        "from": "2020-05-14T12:29:59.000Z",
+        "to": "2020-05-14T12:30:07.000Z",
+        "status": "resolved",
+        "details": "Missing data (~8 seconds) caused by moving Binance Futures data collection infrastructure from London to Tokyo GKE cluster."
+      },
+      {
+        "from": "2020-01-06T00:00:00.000Z",
+        "to": "2020-02-28T00:00:00.000Z",
+        "status": "resolved",
+        "details": "Occasional initial order book snapshots not overlapping with depthUpdate messages for all instruments. This bug has been introduced when switching to @0ms depth channel. Logic that was checking mentioned scenario was not validating correctly @depth@0ms messages."
+      }
+    ],
+    "incidents_on_study_dates": {}
+  },
+  "files": [
+    {
+      "date": "2024-01-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:26:23+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 546329028,
+        "x_md5": "49501d164ac4b1ad4d0b208c8df9d8a7",
+        "checked_at": "2026-10-22T15:26:24+00:00"
+      }
+    },
+    {
+      "date": "2024-01-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:26:32+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 20848659,
+        "x_md5": "352f4dc175b7e3241b88e6b251e208f5",
+        "checked_at": "2026-10-22T15:26:32+00:00"
+      }
+    },
+    {
+      "date": "2024-02-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:26:38+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 543563627,
+        "x_md5": "13eebe6614203dd8b73285766cb90c8d",
+        "checked_at": "2026-10-22T15:26:38+00:00"
+      }
+    },
+    {
+      "date": "2024-02-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:26:47+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 29935161,
+        "x_md5": "e91c6add00a2bd79aec933514bdf3382",
+        "checked_at": "2026-10-22T15:26:48+00:00"
+      }
+    },
+    {
+      "date": "2024-03-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:01+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 699758947,
+        "x_md5": "2656959b8b2ae928da80dc8a777069fc",
+        "checked_at": "2026-10-22T15:27:02+00:00"
+      }
+    },
+    {
+      "date": "2024-03-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:07+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 38250629,
+        "x_md5": "299ce6ad0b2ef9c6b58aa697c69fa820",
+        "checked_at": "2026-10-22T15:27:08+00:00"
+      }
+    },
+    {
+      "date": "2024-04-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:16+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 703042208,
+        "x_md5": "c58b48358790770e5431c82073d585a9",
+        "checked_at": "2026-10-22T15:27:16+00:00"
+      }
+    },
+    {
+      "date": "2024-04-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:24+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 36211468,
+        "x_md5": "4de926b5bc238da091248ffa6a4ac33e",
+        "checked_at": "2026-10-22T15:27:25+00:00"
+      }
+    },
+    {
+      "date": "2024-05-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:39+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 941657804,
+        "x_md5": "69b24807928480b3b825fb58c09ae9c9",
+        "checked_at": "2026-10-22T15:27:40+00:00"
+      }
+    },
+    {
+      "date": "2024-05-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:27:54+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 68127645,
+        "x_md5": "3a774ce9295b76e665fcb00fef40d0e7",
+        "checked_at": "2026-10-22T15:27:54+00:00"
+      }
+    },
+    {
+      "date": "2024-06-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:01+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 250916612,
+        "x_md5": "8cbf7d56bb62170fc8fad71a79c48fbe",
+        "checked_at": "2026-10-22T15:28:01+00:00"
+      }
+    },
+    {
+      "date": "2024-06-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:09+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 8478257,
+        "x_md5": "483e2bce56b4569dacb89f6b908fbf46",
+        "checked_at": "2026-10-22T15:28:09+00:00"
+      }
+    },
+    {
+      "date": "2024-07-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:18+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 472205818,
+        "x_md5": "f92984b64aef69947b542bddeebebe04",
+        "checked_at": "2026-10-22T15:28:18+00:00"
+      }
+    },
+    {
+      "date": "2024-07-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:31+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 21281017,
+        "x_md5": "9378d282760631604d6e31d90dfc627e",
+        "checked_at": "2026-10-22T15:28:32+00:00"
+      }
+    },
+    {
+      "date": "2024-08-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:40+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 814943134,
+        "x_md5": "ddbc0bb416085b6972156fc8918435ed",
+        "checked_at": "2026-10-22T15:28:40+00:00"
+      }
+    },
+    {
+      "date": "2024-08-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:28:47+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 39694804,
+        "x_md5": "3b82e46393da7eeeb51f9705ecd31748",
+        "checked_at": "2026-10-22T15:28:47+00:00"
+      }
+    },
+    {
+      "date": "2024-09-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:00+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 552747012,
+        "x_md5": "3ca803c3a133cfdcd444e8751af63150",
+        "checked_at": "2026-10-22T15:29:00+00:00"
+      }
+    },
+    {
+      "date": "2024-09-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:07+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 28371011,
+        "x_md5": "a001ecf98cb90513220f78701b5d447b",
+        "checked_at": "2026-10-22T15:29:07+00:00"
+      }
+    },
+    {
+      "date": "2024-10-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:16+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 679012865,
+        "x_md5": "ad781527e231643979d98cdb52492d7d",
+        "checked_at": "2026-10-22T15:29:16+00:00"
+      }
+    },
+    {
+      "date": "2024-10-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:28+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 47881495,
+        "x_md5": "eca40392c4775d7479b614a66837a1a7",
+        "checked_at": "2026-10-22T15:29:28+00:00"
+      }
+    },
+    {
+      "date": "2024-11-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/11/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:43+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 673268474,
+        "x_md5": "67a1d714ea6743441f9388371e324967",
+        "checked_at": "2026-10-22T15:29:44+00:00"
+      }
+    },
+    {
+      "date": "2024-11-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/11/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:29:58+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 42700288,
+        "x_md5": "a1ef4c115922df6900d5d6675d0847f6",
+        "checked_at": "2026-10-22T15:29:59+00:00"
+      }
+    },
+    {
+      "date": "2024-12-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/12/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:30:09+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 456563062,
+        "x_md5": "d56ecbb34f1aad2ea79b3f416e1719ec",
+        "checked_at": "2026-10-22T15:30:10+00:00"
+      }
+    },
+    {
+      "date": "2024-12-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/12/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:30:22+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 17408459,
+        "x_md5": "cca2db68398b9bb263a7b37dc9c3c7c0",
+        "checked_at": "2026-10-22T15:30:22+00:00"
+      }
+    },
+    {
+      "date": "2025-01-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:30:37+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 411297451,
+        "x_md5": "f65330fe26af71ce2720b1960fbd923b",
+        "checked_at": "2026-10-22T15:30:37+00:00"
+      }
+    },
+    {
+      "date": "2025-01-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:30:49+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 16993821,
+        "x_md5": "b67c43282a462206ea216aba805a3145",
+        "checked_at": "2026-10-22T15:30:49+00:00"
+      }
+    },
+    {
+      "date": "2025-02-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:30:58+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 421757848,
+        "x_md5": "db1871a282d244608317b33156a5deb2",
+        "checked_at": "2026-10-22T15:30:58+00:00"
+      }
+    },
+    {
+      "date": "2025-02-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:05+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 19404936,
+        "x_md5": "6bced49803624bed5b935dcaa6be6435",
+        "checked_at": "2026-10-22T15:31:06+00:00"
+      }
+    },
+    {
+      "date": "2025-03-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:20+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 641166282,
+        "x_md5": "ded53e596ee86d7d89f233ea21aee6d6",
+        "checked_at": "2026-10-22T15:31:20+00:00"
+      }
+    },
+    {
+      "date": "2025-03-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:32+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 27949678,
+        "x_md5": "2e8ff174002adb0ac9d71bb055aa7f2b",
+        "checked_at": "2026-10-22T15:31:32+00:00"
+      }
+    },
+    {
+      "date": "2025-04-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:38+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 756056671,
+        "x_md5": "2f23f0a52c8a86918f73993a4f41e5ee",
+        "checked_at": "2026-10-22T15:31:39+00:00"
+      }
+    },
+    {
+      "date": "2025-04-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:46+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 29898882,
+        "x_md5": "13c56a7ea95bdaf2cb0d97465181149e",
+        "checked_at": "2026-10-22T15:31:47+00:00"
+      }
+    },
+    {
+      "date": "2025-05-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:31:54+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 547317311,
+        "x_md5": "b5494162da430b0729a87117d6ef1f6d",
+        "checked_at": "2026-10-22T15:31:54+00:00"
+      }
+    },
+    {
+      "date": "2025-05-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:09+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 26178488,
+        "x_md5": "49d0b0e9cfa55c0ad74143153636c84c",
+        "checked_at": "2026-10-22T15:32:09+00:00"
+      }
+    },
+    {
+      "date": "2025-06-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:15+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 457199183,
+        "x_md5": "0b13e39bc9d1f45fee34e589894534d1",
+        "checked_at": "2026-10-22T15:32:16+00:00"
+      }
+    },
+    {
+      "date": "2025-06-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:23+00:00",
+      "get_headers": {
+        "status": 200,
+        "content_length": 17819800,
+        "x_md5": "e290adb74d6dc0da31c223ad2db95787",
+        "checked_at": "2026-10-22T15:32:24+00:00"
+      }
+    },
+    {
+      "date": "2025-07-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:37+00:00"
+    },
+    {
+      "date": "2025-07-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:42+00:00"
+    },
+    {
+      "date": "2025-08-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:52+00:00"
+    },
+    {
+      "date": "2025-08-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:32:58+00:00"
+    },
+    {
+      "date": "2025-09-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:04+00:00"
+    },
+    {
+      "date": "2025-09-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:16+00:00"
+    },
+    {
+      "date": "2025-10-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:24+00:00"
+    },
+    {
+      "date": "2025-10-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:36+00:00"
+    },
+    {
+      "date": "2025-11-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/11/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:44+00:00"
+    },
+    {
+      "date": "2025-11-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/11/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:33:56+00:00"
+    },
+    {
+      "date": "2025-12-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/12/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:34:11+00:00"
+    },
+    {
+      "date": "2025-12-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/12/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:34:17+00:00"
+    },
+    {
+      "date": "2026-01-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:34:26+00:00"
+    },
+    {
+      "date": "2026-01-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/01/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:34:40+00:00"
+    },
+    {
+      "date": "2026-02-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:34:52+00:00"
+    },
+    {
+      "date": "2026-02-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/02/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:02+00:00"
+    },
+    {
+      "date": "2026-03-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:14+00:00"
+    },
+    {
+      "date": "2026-03-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/03/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:24+00:00"
+    },
+    {
+      "date": "2026-04-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:37+00:00"
+    },
+    {
+      "date": "2026-04-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/04/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:47+00:00"
+    },
+    {
+      "date": "2026-05-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:35:58+00:00"
+    },
+    {
+      "date": "2026-05-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/05/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:05+00:00"
+    },
+    {
+      "date": "2026-06-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:16+00:00"
+    },
+    {
+      "date": "2026-06-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/06/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:29+00:00"
+    },
+    {
+      "date": "2026-07-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:37+00:00"
+    },
+    {
+      "date": "2026-07-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/07/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:46+00:00"
+    },
+    {
+      "date": "2026-08-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:36:53+00:00"
+    },
+    {
+      "date": "2026-08-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/08/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:37:01+00:00"
+    },
+    {
+      "date": "2026-09-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:37:09+00:00"
+    },
+    {
+      "date": "2026-09-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/09/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:37:15+00:00"
+    },
+    {
+      "date": "2026-10-01",
+      "data_type": "incremental_book_L2",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:37:27+00:00"
+    },
+    {
+      "date": "2026-10-01",
+      "data_type": "trades",
+      "split": "test",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/10/01/BTCUSDT.csv.gz",
+      "method": "HEAD",
+      "status": 404,
+      "content_length": null,
+      "checked_at": "2026-10-22T15:37:34+00:00"
+    }
+  ]
+}
