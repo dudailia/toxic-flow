@@ -30,6 +30,10 @@ select = ["E", "F", "I", "B", "UP"]
 # ruff format owns line length; scripts/check_milestone.py is protected and keeps its own layout.
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+# Fixed, so import order does not depend on whether the imported module exists yet.
+known-first-party = ["toxic_flow"]
+
 [tool.ruff.format]
 exclude = ["scripts/check_milestone.py"]
 
