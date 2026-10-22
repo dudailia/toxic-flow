@@ -24,6 +24,7 @@ from hftbacktest.data.utils.feed_order_latency import generate_order_latency
 from toxic_flow.data.convert import CONVERTED
 from toxic_flow.data.split_lock import assert_allowed
 from toxic_flow.data.venue import venue_for
+from toxic_flow.machine import peak_rss_bytes
 from toxic_flow.strategies.b0_fixed import run_b0
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,7 +118,7 @@ def main() -> None:
     if child.exitcode != 0:
         raise RuntimeError(f"backtest process exited with code {child.exitcode}")
     result = queue.get(timeout=10)
-    child_rss = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+    child_rss = peak_rss_bytes(resource.RUSAGE_CHILDREN)
     out, compile_seconds, loop_seconds = result
 
     steps, fills, position, balance, mid, qty, max_side, max_lots = out[:8]
@@ -148,7 +149,7 @@ def main() -> None:
             "max": round(float(entry_ms.max()), 3),
         },
         "backtest_peak_rss_bytes": child_rss,
-        "latency_build_peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        "latency_build_peak_rss_bytes": peak_rss_bytes(),
         "events": sum(convert_info["events_per_part"]),
         "raw_bytes": convert_info["raw_bytes"],
         "converted_bytes": convert_info["converted_bytes"],

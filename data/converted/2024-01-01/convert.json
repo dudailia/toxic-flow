@@ -1,0 +1,59 @@
+{
+  "n_parts": 7,
+  "cuts": [
+    1704079542879000000,
+    1704091885702000000,
+    1704104228546000000,
+    1704116571438000000,
+    1704128914307000000,
+    1704141257154000000
+  ],
+  "events_per_part": [
+    13574595,
+    13310990,
+    11182029,
+    11557928,
+    13849623,
+    18469406,
+    18183663
+  ],
+  "trade_rows": 2197331,
+  "depth_rows": 96295836,
+  "snapshot_blocks": 1,
+  "snapshot_levels_bid_ask": [
+    [
+      1010,
+      1003
+    ]
+  ],
+  "min_feed_latency_ns": 1790000,
+  "local_ts_offset_ns": 0,
+  "inferred": {
+    "tick_size": 0.1,
+    "book_rows": 96295836,
+    "book_rows_off_tick_grid": 201,
+    "trade_rows": 2197331,
+    "trade_rows_off_tick_grid": 101,
+    "lot_size": 0.001,
+    "trade_rows_off_lot_grid": 0
+  },
+  "date": "2024-01-01",
+  "hftbacktest_version": "2.4.4",
+  "raw_sha256": {
+    "incremental_book_L2": "622b971bcc1fed5f30a309b0b001f1627dab0ccffc5e0ae9c8c4cc01fe9b0432",
+    "trades": "8387c9d605f986bb6bde754735f5f9c2440ec76908f0d143af1b9282cefe981a"
+  },
+  "raw_bytes": 567177687,
+  "files": [
+    "part-00.npz",
+    "part-01.npz",
+    "part-02.npz",
+    "part-03.npz",
+    "part-04.npz",
+    "part-05.npz",
+    "part-06.npz"
+  ],
+  "converted_bytes": 776082982,
+  "conversion_seconds": 153.3,
+  "process_peak_rss_bytes": 7545012224
+}

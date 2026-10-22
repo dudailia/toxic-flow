@@ -27,6 +27,7 @@ def client(tmp_path, fetch, slept=None, clock=None):
     return TardisClient(
         fetch=fetch,
         state=tmp_path / "tardis_wait.json",
+        log=tmp_path / "tardis_requests.jsonl",
         sleep=slept.append,
         clock=clock or (lambda: 1_000_000.0 + sum(slept)),
     )
@@ -117,7 +118,8 @@ def test_short_transfer_is_a_failure_and_leaves_no_file(tmp_path):
     entries = download_day("2024-01-01", raw_dir=tmp_path, manifest=tmp_path / "m.json", client=c)
     assert entries == []
     assert c.failures == 2
-    assert not [p for p in tmp_path.rglob("*") if p.is_file() and p.name != "tardis_wait.json"]
+    keep = ("tardis_wait.json", "tardis_requests.jsonl")
+    assert not [p for p in tmp_path.rglob("*") if p.is_file() and p.name not in keep]
 
 
 def test_resolve_days():
@@ -208,3 +210,91 @@ def test_long_retry_after_stops_the_run_and_is_remembered(tmp_path):
             client=client(tmp_path, fetch),
         )
     assert len(calls) == 1
+
+
+def test_full_disk_is_a_local_error_not_a_request_failure(tmp_path, monkeypatch):
+    import shutil
+    from collections import namedtuple
+
+    import toxic_flow.data.download as dl
+
+    usage = namedtuple("usage", "total used free")
+    monkeypatch.setattr(dl.shutil, "disk_usage", lambda p: usage(10, 9, 1))
+    c = client(tmp_path, serve([]))
+    with pytest.raises(dl.DiskSpaceError):
+        download_day("2024-01-01", raw_dir=tmp_path, manifest=tmp_path / "m.json", client=c)
+    assert c.failures == 0
+    assert not list((tmp_path / "2024-01-01").glob("*.csv.gz*"))
+    assert shutil.disk_usage is not None
+
+
+def test_crash_while_placing_never_leaves_a_writable_raw_file(tmp_path, monkeypatch):
+    import pathlib
+
+    manifest = tmp_path / "m.json"
+    real_chmod = pathlib.Path.chmod
+    crashed = []
+
+    def chmod_once(self, mode):
+        if not crashed:
+            crashed.append(True)
+            raise KeyboardInterrupt
+        return real_chmod(self, mode)
+
+    monkeypatch.setattr(pathlib.Path, "chmod", chmod_once)
+    with pytest.raises(KeyboardInterrupt):
+        download_day(
+            "2024-01-01", raw_dir=tmp_path, manifest=manifest, client=client(tmp_path, serve([]))
+        )
+    monkeypatch.setattr(pathlib.Path, "chmod", real_chmod)
+    download_day(
+        "2024-01-01", raw_dir=tmp_path, manifest=manifest, client=client(tmp_path, serve([]))
+    )
+    for f in (tmp_path / "2024-01-01").glob("*.csv.gz"):
+        assert f.stat().st_mode & 0o222 == 0, f
+
+
+def test_evicted_pinned_file_is_refetched_and_must_match(tmp_path):
+    manifest = tmp_path / "m.json"
+    download_day(
+        "2024-01-01", raw_dir=tmp_path, manifest=manifest, client=client(tmp_path, serve([]))
+    )
+    path = tmp_path / "2024-01-01" / "trades.csv.gz"
+    path.chmod(0o644)
+    path.unlink()
+    calls = []
+    download_day(
+        "2024-01-01", raw_dir=tmp_path, manifest=manifest, client=client(tmp_path, serve(calls))
+    )
+    assert len(calls) == 1 and path.exists()
+    assert len(json.loads(manifest.read_text())["files"]) == 2  # no duplicate entry
+
+    path.chmod(0o644)
+    path.unlink()
+    BODY_BEFORE = BODY["trades"]
+    BODY["trades"] = gzip.compress(b"different\n")
+    try:
+        with pytest.raises(ManifestError):
+            download_day(
+                "2024-01-01",
+                raw_dir=tmp_path,
+                manifest=manifest,
+                client=client(tmp_path, serve([])),
+            )
+    finally:
+        BODY["trades"] = BODY_BEFORE
+    assert not path.exists()
+
+
+def test_stale_read_only_part_from_a_hard_kill_does_not_block(tmp_path):
+    stale = tmp_path / "2024-01-01" / "trades.csv.gz.part"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"left by a kill -9")
+    stale.chmod(0o444)
+    entries = download_day(
+        "2024-01-01",
+        raw_dir=tmp_path,
+        manifest=tmp_path / "m.json",
+        client=client(tmp_path, serve([])),
+    )
+    assert len(entries) == 2 and not stale.exists()

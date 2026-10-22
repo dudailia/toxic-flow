@@ -10,8 +10,10 @@ is not retried in the same run, and the run stops at the third failure.
 """
 
 import hashlib
+import http.client
 import json
 import os
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,10 +31,15 @@ ROOT = Path(__file__).resolve().parents[3]
 RAW = ROOT / "data" / "raw"
 MANIFEST = ROOT / "data" / "manifest.json"
 CHUNK = 1 << 20
+DISK_MARGIN = 1 << 30  # keep 1 GiB free beyond the file, for the .part and conversion
 
 
 class ManifestError(RuntimeError):
     pass
+
+
+class DiskSpaceError(RuntimeError):
+    """Not enough local disk. A local problem, so it is not counted as a request failure."""
 
 
 def resolve_days(arg: str) -> list[str]:
@@ -60,23 +67,37 @@ def save_manifest(path: Path, entries: list[dict]) -> None:
 
 
 def _stream(url: str, part: Path, client: TardisClient) -> tuple[int, str]:
-    """Write url to part. Return (bytes, sha256). A short or corrupt transfer is a failure."""
+    """Write url to part. Return (bytes, sha256).
+
+    Only the server's side counts as a request failure: missing headers, a read that fails,
+    a short or corrupt transfer. A local write error propagates as it is.
+    """
     sha, md5, n = hashlib.sha256(), hashlib.md5(), 0
-    try:
-        with client.open(url) as r, open(part, "wb") as f:
+    with client.open(url) as r:
+        try:
             expected = int(r.headers["Content-Length"])
-            tardis_md5 = (r.headers.get("x-md5") or "").strip('"')
-            while chunk := r.read(CHUNK):
+        except (KeyError, TypeError, ValueError) as e:
+            client.failed(f"{url}: no usable Content-Length ({e!r})", url=url)
+        tardis_md5 = (r.headers.get("x-md5") or "").strip('"')
+        free = shutil.disk_usage(part.parent).free
+        if free < expected + DISK_MARGIN:
+            raise DiskSpaceError(f"{url} needs {expected} bytes plus 1 GiB; {free} free")
+        with open(part, "wb") as f:
+            while True:
+                try:
+                    chunk = r.read(CHUNK)
+                except (OSError, http.client.HTTPException) as e:
+                    client.failed(f"transfer of {url} failed: {e!r}", url=url)
+                if not chunk:
+                    break
                 f.write(chunk)
                 sha.update(chunk)
                 md5.update(chunk)
                 n += len(chunk)
-    except (OSError, KeyError, ValueError) as e:  # connection lost or headers missing
-        client.failed(f"transfer of {url} failed: {e!r}")
     if n != expected:
-        client.failed(f"{url}: got {n} bytes, Content-Length said {expected}")
+        client.failed(f"{url}: got {n} bytes, Content-Length said {expected}", url=url)
     if tardis_md5 and md5.hexdigest() != tardis_md5:
-        client.failed(f"{url}: md5 {md5.hexdigest()} does not match x-md5 {tardis_md5}")
+        client.failed(f"{url}: md5 {md5.hexdigest()} does not match x-md5 {tardis_md5}", url=url)
     return n, sha.hexdigest()
 
 
@@ -107,6 +128,7 @@ def download_day(
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         part = dest.with_name(dest.name + ".part")
+        part.unlink(missing_ok=True)  # a hard kill can leave one, read-only
         url = dataset_url(day, data_type)
         try:
             n, sha = _stream(url, part, client)
@@ -129,13 +151,14 @@ def download_day(
                 # leave an unpinned file that blocks every later run.
                 entries.append(entry)
                 save_manifest(manifest, entries)
+            # Read-only before it is placed, so no crash can leave a writable raw file.
+            part.chmod(0o444)
             os.link(part, dest)  # unlike rename, link fails if dest exists: never overwrite
         except RequestFailed as e:
             print(f"failed, not retried in this run: {e}", file=sys.stderr)
             continue
         finally:
             part.unlink(missing_ok=True)
-        dest.chmod(0o444)
         out.append(entry)
     return out
 
@@ -151,7 +174,7 @@ def main(argv: list[str]) -> int:
         except SplitLockError as e:
             print(f"refused: {e}", file=sys.stderr)
             return 1
-        except StopRequests as e:
+        except (StopRequests, DiskSpaceError) as e:
             print(f"stopped: {e}", file=sys.stderr)
             return 1
         for e in entries:

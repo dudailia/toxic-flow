@@ -10,6 +10,7 @@ start of that milestone and approved by Ilia before the implementation exists.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -94,22 +95,55 @@ def m0(r: Results) -> None:
         span = f"{sym[0]['availableSince']} to {sym[0]['availableTo']}" if sym else "no BTCUSDT"
         r.add("AC0.1 Tardis metadata covers all 34 dates", covered, span)
 
+        # The HEADs recon sent to test-day URLs before the decision are pinned: exactly these
+        # 32 rows (HEAD, 404, no size), so deleting or editing one fails the check as well.
+        # Every request sent since goes through TardisClient and is logged before it is sent.
         decision = datetime(2026, 10, 22, 20, 0, tzinfo=UTC)
-        contacts = [f for f in recon.get("files", []) if f.get("date") in test_dates]
+        frags = {d: "/" + d.replace("-", "/") + "/" for d in test_dates}
+
+        def test_days_in(text: str) -> list[str]:
+            return [d for d, frag in frags.items() if frag in text]
+
+        contacts = sorted(
+            (
+                f
+                for f in recon.get("files", [])
+                if f.get("date") in test_dates or test_days_in(str(f.get("url", "")))
+            ),
+            key=lambda f: (str(f.get("date")), str(f.get("data_type"))),
+        )
+        pin = hashlib.sha256(json.dumps(contacts, sort_keys=True).encode()).hexdigest()
         bad = [
             (f.get("date"), f.get("data_type"))
             for f in contacts
             if f.get("method") != "HEAD"
+            or f.get("status") != 404
             or "get_headers" in f
             or f.get("content_length") is not None
             or utc(f.get("checked_at") or "9999-12-31T00:00:00Z") >= decision
         ]
-        rest = json.dumps({k: v for k, v in recon.items() if k != "files"})
-        urls = [d for d in test_dates if "/" + d.replace("-", "/") + "/" in rest]
+        rest = test_days_in(json.dumps({k: v for k, v in recon.items() if k != "files"}))
+        log = ROOT / "data" / "tardis_requests.jsonl"
+        logged = test_days_in(log.read_text()) if log.exists() else ["log missing"]
+        # stdout of the recon run whose recon.json was discarded: "date type status size".
+        old = [
+            ln
+            for p in sorted((ROOT / "data" / "recon_logs").glob("*.log"))
+            for ln in p.read_text().splitlines()
+            if ln.split(" ")[0] in test_dates
+        ]
+        old_bad = [ln for ln in old if not ln.endswith(" 404 None")]
+        pinned = "6b150af712158efb098beb1f3a7a4cc5cc32e6c5ff16b21d18c9b8446361b7c6"
         r.add(
             "AC0.1 no test-day request beyond the recorded HEADs",
-            not bad and not urls,
-            f"{len(contacts)} recorded HEADs; bad {bad[:4]} {urls[:4]}",
+            len(contacts) == 32
+            and pin == pinned
+            and not bad
+            and not rest
+            and not logged
+            and not old_bad,
+            f"{len(contacts)} pinned in recon.json, {len(old)} in recon_logs; "
+            f"bad {bad[:2]} {rest[:2]} {logged[:2]} {old_bad[:2]}",
         )
         meta_ok = (
             recon.get("exchange") == "binance-futures"

@@ -1,5 +1,8 @@
 data/raw/
-data/converted/
+# Converted parts are rebuilt by make data; each day's convert.json is the record of its
+# conversion (row counts, cuts, inferred tick and lot) and is committed.
+data/converted/*/*
+!data/converted/*/convert.json
 results/*/fills*.parquet
 .claude/state/
 .claude/settings.local.json

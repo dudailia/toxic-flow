@@ -138,3 +138,54 @@ def test_real_slice_matches_tardis_convert(tmp_path):
     got = np.concatenate(parts)
     assert len(info["cuts"]) == 3
     assert np.array_equal(got, expected)
+
+
+def test_failed_conversion_leaves_no_staging_directory(tmp_path, monkeypatch):
+    import shutil
+
+    from hftbacktest.types import event_dtype
+
+    import toxic_flow.data.convert as cv
+    from toxic_flow.data.download import save_manifest, sha256_file
+
+    trades, depth = synthetic_day(tmp_path)
+    raw = tmp_path / "raw" / "2024-01-01"
+    raw.mkdir(parents=True)
+    entries = []
+    for src in (trades, depth):
+        shutil.copy(src, raw / src.name)
+        entries.append(
+            {"date": "2024-01-01", "data_type": src.name.split(".")[0], "sha256": sha256_file(src)}
+        )
+    save_manifest(tmp_path / "m.json", entries)
+
+    def fail_after_one_part(*args, sink=None, **kwargs):
+        sink(0, np.zeros(3, event_dtype))
+        raise ConversionError("simulated")
+
+    monkeypatch.setattr(cv, "convert_parts", fail_after_one_part)
+    out = tmp_path / "converted"
+    with pytest.raises(ConversionError):
+        cv.convert_day(
+            "2024-01-01", raw_dir=tmp_path / "raw", out_dir=out, manifest=tmp_path / "m.json"
+        )
+    assert not list(out.iterdir())
+
+
+def test_snapshot_block_span_is_min_to_max():
+    from toxic_flow.data.convert import _snapshot_blocks
+
+    exch = np.array([100, 50, 120, 130], np.int64)
+    side = np.array([1, -1, 1, 1], np.int8)
+    snap = np.array([1, 1, 1, 0], np.int8)
+    lo, hi, close, nb, na, _ = _snapshot_blocks(exch, side, snap, 1000)
+    assert (lo[0], hi[0], close[0], nb[0], na[0]) == (50, 120, 130, 2, 1)
+
+
+def test_header_only_file_raises_conversion_error(tmp_path):
+    from synthetic import TRADE_HEADER, write_gz
+
+    _, depth = synthetic_day(tmp_path)
+    write_gz(tmp_path / "trades.csv.gz", TRADE_HEADER, [])
+    with pytest.raises(ConversionError):
+        convert_parts(tmp_path / "trades.csv.gz", depth, n_parts=1)

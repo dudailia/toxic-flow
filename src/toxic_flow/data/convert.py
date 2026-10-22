@@ -21,7 +21,6 @@ import gzip
 import json
 import math
 import os
-import resource
 import shutil
 import sys
 import time
@@ -47,6 +46,7 @@ from toxic_flow.data.download import (
 from toxic_flow.data.split_lock import SplitLockError, assert_allowed, normalise
 from toxic_flow.data.tardis import DATA_TYPES
 from toxic_flow.data.validate import infer_from_rows
+from toxic_flow.machine import peak_rss_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 CONVERTED = ROOT / "data" / "converted"
@@ -84,6 +84,8 @@ def _read(path: Path, schema: dict, chunk_bytes: int, to_array) -> np.ndarray:
     """Fill one preallocated array chunk by chunk; a list of chunks plus np.concatenate
     would hold the 3.3 GB depth array twice."""
     n = _count_rows(path, chunk_bytes)
+    if n == 0:
+        raise ConversionError(f"{path} has a header and no rows")
     out, pos = None, 0
     for df in _csv_chunks(path, schema, chunk_bytes):
         arr = to_array(df)
@@ -158,8 +160,8 @@ def _depth_rows(df: pl.DataFrame) -> np.ndarray:
 def _snapshot_blocks(exch_ts, side, is_snapshot, buffer_size):
     """Scan snapshot blocks in file order the way _convert_depth does.
 
-    Returns per emitted block (first exch_ts, last exch_ts, exch_ts of the row that closes
-    it, bid rows, ask rows) and the index of the first block that the one-shot
+    Returns per emitted block (earliest exch_ts, latest exch_ts, exch_ts of the row that
+    closes it, bid rows, ask rows) and the index of the first block that the one-shot
     _convert_depth would truncate, or -1. A block is emitted when its closing row is read.
     _convert_depth reslices its snapshot buffers to each emitted block's size (even to 0),
     so a later block with more rows on a side than the smallest earlier one is cut short.
@@ -178,8 +180,8 @@ def _snapshot_blocks(exch_ts, side, is_snapshot, buffer_size):
     for i in range(len(is_snapshot)):
         if is_snapshot[i] == 1:
             if not in_block:
-                in_block, b, a, first = True, 0, 0, exch_ts[i]
-            last = exch_ts[i]
+                in_block, b, a, first, last = True, 0, 0, exch_ts[i], exch_ts[i]
+            first, last = min(first, exch_ts[i]), max(last, exch_ts[i])  # rows may be unsorted
             if side[i] == 1:
                 b += 1
             else:
@@ -371,14 +373,18 @@ def convert_day(
         np.savez_compressed(staging / f"part-{k:02d}.npz", data=part)
 
     start = time.perf_counter()
-    # Trades first, as tardis.convert asks, so a trade reduces queue position before the
-    # depth update it caused.
-    _, info = convert_parts(
-        raw_dir / day / "trades.csv.gz",
-        raw_dir / day / "incremental_book_L2.csv.gz",
-        events_per_part=events_per_part,
-        sink=save,
-    )
+    try:
+        # Trades first, as tardis.convert asks, so a trade reduces queue position before the
+        # depth update it caused.
+        _, info = convert_parts(
+            raw_dir / day / "trades.csv.gz",
+            raw_dir / day / "incremental_book_L2.csv.gz",
+            events_per_part=events_per_part,
+            sink=save,
+        )
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)  # parts already written can be GBs
+        raise
     files = sorted(staging.glob("part-*.npz"))
     conversion_seconds = round(time.perf_counter() - start, 1)
     info.update(
@@ -390,9 +396,9 @@ def convert_day(
             "files": [f.name for f in files],
             "converted_bytes": sum(f.stat().st_size for f in files),
             "conversion_seconds": conversion_seconds,
-            # ru_maxrss is bytes on macOS. Peak of this process so far, so with several
-            # days in one make data call it is the largest day up to this one.
-            "process_peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+            # Peak of this process so far, so with several days in one make data call it
+            # is the largest day up to this one.
+            "process_peak_rss_bytes": peak_rss_bytes(),
         }
     )
     (staging / "convert.json").write_text(json.dumps(info, indent=2) + "\n")
