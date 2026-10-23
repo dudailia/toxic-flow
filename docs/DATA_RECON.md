@@ -211,9 +211,9 @@ available, so 2 runs of 3.87 GiB fit side by side although there are 8 cores.
     hftbacktest, so it is not exclusion rule 2. What should happen on such a day? Proposed:
     dry-run the splitter on all 18 train and val days in M1 and pre-register the fallback
     (for example a wider window or fewer parts) before the tag.
-14. The split lock accepts a lightweight tag and any remote named origin. Add checks that
-    prereg-v1 is an annotated tag and that origin is the public GitHub repo? Both files
-    are protected, so this needs your approval.
+14. Decided 2026-10-22: the lock must require an annotated tag, origin equal to
+    configs/repo.yaml, and the same tag hash on both sides. configs/repo.yaml is
+    committed; the protected files are proposed in docs/proposals/Q14/ with test runs.
 15. Deferred from code review, minor: `order_size` uses the lot as the minimum quantity
     (they are equal on all 34 dates); two `make data` runs on the same day at once would
     share a `.part` file; the converter reads each gzip file twice (row count, then
@@ -225,12 +225,8 @@ available, so 2 runs of 3.87 GiB fit side by side although there are 8 cores.
     run and is remembered in data/tardis_wait.json), never retries a failed file in the
     same run, and stops at the third failure. M1 downloads 36 files: how many per session,
     and is an API key worth getting?
-17. AC0.1's exception names the HEADs "as recorded in recon.json" (32). Run D's 32 are
-    recorded in data/recon_logs/ and checked; runs A and B lost their output (up to 64,
-    probably far fewer). All were HEADs with 404 and no body. Do they fall under the same
-    exception?
-18. Exclusion rule 1 (PREREGISTRATION.md section 2: "does not return HTTP 200") cannot tell
-    a missing file from a rate limit: the free tier sent 429 for a day here, and M5 needs
-    32 test files. Proposed before the tag: exclude only on 404 or 400 from a GET seen on
-    two attempts at least 24 hours apart; 429, 5xx and timeouts are retried later and
-    never exclude a day. data/tardis_requests.jsonl records each status.
+17. Decided 2026-10-22: the AC0.1 exception covers every HEAD to a test-day URL,
+    recorded or not, and PREREGISTRATION.md section 2 discloses them.
+18. Decided 2026-10-22: exclusion rule 1 in PREREGISTRATION.md section 2 now counts a
+    file as missing only after a GET returns 404 or 400 twice, at least 24 hours apart;
+    429, 5xx, network errors and HEAD responses never count.

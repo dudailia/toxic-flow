@@ -37,8 +37,18 @@ Exact dates are in configs/splits.yaml. Test-day files are not downloaded before
 exists on the public remote. Evidence: the tag's push time on GitHub, download
 timestamps in data/manifest.json, and the split-lock tests.
 
+Disclosure. During recon on 2026-10-22, before the tag, HEAD requests went to test-day
+URLs: 64 recorded (32 in data/recon.json, 32 in data/recon_logs/) and at most 64 more
+from two runs whose output was lost, so at most 128 in all. Every one returned HTTP 404
+with no body; the server answers HEAD with 404 for every URL, including symbols that do
+not exist, so the responses carried no information about the files. No GET was sent to
+a test-day URL and no test-day byte was received. The runs are listed in
+data/recon_logs/2026-10-22_recon_runs.txt.
+
 Exclusion rules, applied by script before any strategy result for that day exists:
-1. The Tardis file is missing or does not return HTTP 200.
+1. The Tardis file is missing: a GET of it returns HTTP 404 or 400 twice, at least 24
+   hours apart. A 429, a 5xx or a network error never counts as missing; the downloader
+   tries again on a later run. A HEAD response never counts.
 2. hftbacktest conversion fails.
 3. Either stream has a gap longer than 10 minutes inside the quoting window.
 
