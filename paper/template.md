@@ -8,7 +8,7 @@ Every number in this page is filled from results/summary.json; none is typed by 
 On {{n_test_days}} test days, does a causal Hawkes estimate of market-order intensity raise
 the break-even maker fee of a GLFT market maker, compared with a decay-weighted trade count
 built from the same events? The hypotheses, analysis and stopping rules were frozen at the
-tag prereg-v1, pushed on {{prereg_pushed_at}}.
+tag prereg-v1, created on {{prereg_tagged_at}}.
 
 ## Data and simulation
 

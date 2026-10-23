@@ -56,9 +56,12 @@ def _by_day(m, label, queue, latency, col) -> dict:
 def compare(m, a: str, b: str, queue: str = PRIMARY[0], latency: str = PRIMARY[1], col=BEF):
     """D_i = a - b per day in one cell (section 8): mean, bootstrap and t intervals,
     days dropped for zero fills, days with D > 0, and D per day."""
-    days, d, dropped = paired_differences(
-        _by_day(m, a, queue, latency, col), _by_day(m, b, queue, latency, col)
-    )
+    va, vb = _by_day(m, a, queue, latency, col), _by_day(m, b, queue, latency, col)
+    if set(va) != set(vb):
+        # Section 8 drops only zero-fill days; a day one side lacks is a missing run.
+        raise ValueError(f"days differ between {a} and {b} in {queue}/{latency}: "
+                         f"{sorted(set(va) ^ set(vb))}")  # fmt: skip
+    days, d, dropped = paired_differences(va, vb)
     enough = len(d) >= 2
     nan2 = (float("nan"), float("nan"))
     return {
@@ -82,16 +85,22 @@ def h1(m: pl.DataFrame, mde_bp: float) -> dict:
     """H1, B3 against B2b: the primary cell, the sign in all 8 cells, the section 11
     statement and the selectivity check."""
     primary = compare(m, "B3", "B2b")
-    cell_means = {f"{q}/{lat}": compare(m, "B3", "B2b", q, lat)["mean"] for q, lat in CELLS}
+    cells = {f"{q}/{lat}": compare(m, "B3", "B2b", q, lat) for q, lat in CELLS}
+    empty = [c for c, r in cells.items() if r["n"] == 0]
+    if empty:
+        raise ValueError(f"no paired days for B3 and B2b in {empty}: every cell must be present")
+    cell_means = {c: r["mean"] for c, r in cells.items()}
     out = conclusion(
         primary["bootstrap_ci"], primary["t_ci"], primary["mean"], list(cell_means.values()), mde_bp
     )
     q, lat = PRIMARY
-    days = list(primary["per_day"])
     n3, n2 = (
         _by_day(m, "B3", q, lat, "traded_notional"),
         _by_day(m, "B2b", q, lat, "traded_notional"),
     )
+    # Every test day, including those dropped from D because B3 did not trade: those are
+    # the most selective days (section 8, "on the median test day").
+    days = sorted(d for d in n3 if n2[d][0] > 0)
     sel = selectivity([n3[d][0] for d in days], [n2[d][0] for d in days])
     if sel["flag"]:
         out["statement"] += SELECTIVITY_TEXT
@@ -171,15 +180,11 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
             "matches_b3": matches,
             "decay_not_driver": any(known) if known else None,
         }
-        if out["C4"]["decay_not_driver"] is None:
-            text.append("C4, wrong decay: no interval, so no verdict.")
-        elif out["C4"]["decay_not_driver"]:
-            text.append(
-                "A wrong-decay variant matched B3 within the interval, so the fitted decay is "
-                "not what drives any gain."
-            )
-        else:
-            text.append("Both wrong-decay variants differed from B3.")
+        word = {True: "matched B3 within the interval", False: "differed from B3",
+                None: "has no interval"}  # fmt: skip
+        text.append("; ".join(f"{v} {word[x]}" for v, x in matches.items()) + ".")
+        if out["C4"]["decay_not_driver"]:
+            text.append("So the fitted decay is not what drives any gain.")
     out["statement"] = " ".join(text)
     return out
 
@@ -191,6 +196,8 @@ def mde_inputs(train: pl.DataFrame, val: pl.DataFrame, n_test: int = 16) -> dict
         name: float(np.std(list(compare(m, "B3", "B2b")["per_day"].values()), ddof=1))
         for name, m in (("train", train), ("val", val))
     }
+    if not all(np.isfinite(list(sd.values()))):
+        raise ValueError(f"s needs both estimates (train and val), got {sd}")
     s = max(sd.values())
     return {"s_train_bp": sd["train"], "s_val_bp": sd["val"], "s_bp": s,
             "mde_bp": mde(s, n_test), "n_test": n_test}  # fmt: skip
@@ -204,6 +211,14 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
     h = h1(m, mde_bp)
     c = canaries(m, mde_bp)
     p = h["primary"]
+    if c.get("C1", {}).get("pass") is False:
+        # Section 11: when C1 fails, the primary result is reported but not interpreted.
+        lo, hi = p["bootstrap_ci"]
+        h["statement"] = (
+            f"Mean difference {p['mean']:.2f} bp, interval [{lo:.2f}, {hi:.2f}]. The signal's "
+            "gain does not depend on event signs, so it is not order-flow information. "
+            "Primary result reported but not interpreted."
+        )
     return {
         "h1_statement": h["statement"],
         "h1_mean_bp": p["mean"],
@@ -218,18 +233,27 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
         "n_train_days": meta["n_train_days"],
         "n_val_days": meta["n_val_days"],
         "hftbacktest_version": meta["hftbacktest"],
-        "prereg_pushed_at": meta["prereg_pushed_at"],
+        "prereg_tagged_at": meta["prereg_tagged_at"],
         "h1": h,
         "exploratory": exploratory(m),
         "canaries": c,
     }
 
 
-def confirmatory_problem(metas: list[dict], run_days: list[str], test_days: list[str]):
-    """Why these runs may not write results/summary.json, or None if they may: every run
-    must be non-smoke and together they must cover exactly the non-excluded test days."""
-    if any(meta.get("label") == "smoke" for meta in metas):
-        return "a smoke run is never the confirmatory result"
-    if sorted(run_days) != sorted(test_days):
-        return f"the runs cover {len(run_days)} days, not the {len(test_days)} test days"
+def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str]):
+    """Why these runs may not write results/summary.json, or None if they may. Every run
+    comes from configs/runs/confirmatory.yaml and is not smoke, and every label has every
+    non-excluded test day in every cell it runs in. The caller checks s, the config hash
+    and the commit against the tag."""
+    for meta in metas:
+        if meta.get("label") == "smoke":
+            return "a smoke run is never the confirmatory result"
+        if meta.get("config") != "configs/runs/confirmatory.yaml":
+            return f"{meta.get('config')} is not configs/runs/confirmatory.yaml"
+    want = set(test_days)
+    if set(m["day"]) != want:
+        return f"the runs cover {m['day'].n_unique()} days, not the {len(want)} test days"
+    for (label, q, lat), g in _labelled(m).group_by(["label", "queue", "latency"]):
+        if set(g["day"]) != want:
+            return f"{label} in {q}/{lat} lacks {sorted(want - set(g['day']))}"
     return None

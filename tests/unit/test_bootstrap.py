@@ -51,6 +51,8 @@ def test_mde_is_2_80_s_over_root_n():
         ((-0.1, 0.3), (-0.2, 0.4), [1] * 8, 0.1, 0.2, "no_detectable_difference"),
         ((-0.1, 0.9), (-0.2, 1.0), [1] * 8, 0.4, 0.2, "inconclusive"),
         ((0.01, 0.5), (-0.05, 0.6), [1] * 8, 0.3, 0.2, "inconclusive"),  # intervals disagree
+        # They disagree with |mean| below the MDE: section 11's "large" sentence would be false.
+        ((0.01, 0.2), (-0.01, 0.21), [1] * 8, 0.1, 0.5, "intervals_disagree"),
     ],
 )
 def test_pre_committed_conclusions(boot, t, signs, mean, m, key):

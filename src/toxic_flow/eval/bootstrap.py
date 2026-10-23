@@ -24,8 +24,14 @@ STATEMENTS = {
     "holds_negative": "The Hawkes overlay did worse than a decay-weighted trade count by {mean} bp, "
     "interval [{lo}, {hi}].",
 }
-# Not a section 11 outcome: with fewer than two paired days there is no interval to judge.
+# Not section 11 outcomes. With fewer than two paired days there is no interval to judge.
+# When the intervals disagree about 0 but |mean| < MDE, section 8 says "inconclusive" and
+# section 11's sentence ("the point estimate is large") would be false (Q36).
 NOT_COMPUTED = "No conclusion: fewer than two paired days, so there is no interval."
+STATEMENTS["intervals_disagree"] = (
+    "Inconclusive: the bootstrap and t intervals disagree on whether 0 is inside, and the "
+    "point estimate, {mean} bp, is below the minimum detectable effect of {mde} bp."
+)
 
 
 def paired_differences(a: dict, b: dict) -> tuple[list[str], np.ndarray, list[str]]:
@@ -68,7 +74,8 @@ def conclusion(boot_ci, t_ci, mean: float, cell_signs, mde_bp: float) -> dict:
         return {"key": "not_computed", "statement": NOT_COMPUTED}  # NaN would read as "excludes 0"
     excludes = [not (lo <= 0 <= hi) for lo, hi in (boot_ci, t_ci)]
     if excludes[0] != excludes[1]:
-        key = "inconclusive"  # section 8: the two intervals disagree about 0
+        # Section 8: the two intervals disagree about 0.
+        key = "inconclusive" if abs(mean) >= mde_bp else "intervals_disagree"
     elif excludes[0]:
         same = all(np.sign(s) == np.sign(mean) for s in cell_signs)
         key = ("holds_positive" if mean > 0 else "holds_negative") if same else "does_not_hold"

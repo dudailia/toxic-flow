@@ -129,7 +129,7 @@ def test_summary_has_every_key_the_paper_template_needs():
         + rows("C4_x0.1", [0.0] * 12)
     )  # fmt: skip
     mde = {"s_bp": 1.0, "mde_bp": 0.7, "n_test": 16}
-    meta = {"hftbacktest": "2.4.4", "prereg_pushed_at": "2026-11-01T00:00:00+00:00",
+    meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "2026-11-01T00:00:00+00:00",
             "n_train_days": 12, "n_val_days": 6}  # fmt: skip
     summary = analysis.summary(m, mde, meta)
     assert needed <= set(summary)
@@ -137,13 +137,12 @@ def test_summary_has_every_key_the_paper_template_needs():
 
 
 def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():
-    test_days = ["2025-07-01", "2025-08-01"]
-    ok = analysis.confirmatory_problem([{"label": "confirmatory"}], test_days, test_days)
-    assert ok is None
-    assert "smoke" in analysis.confirmatory_problem([{"label": "smoke"}], test_days, test_days)
-    assert "test days" in analysis.confirmatory_problem(
-        [{"label": "confirmatory"}], test_days[:1], test_days
-    )
+    test_days = DAYS[:2]
+    m = pl.DataFrame(rows("B3", [1.0] * 12)).filter(pl.col("day").is_in(test_days))
+    conf = {"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"}
+    assert analysis.confirmatory_problem([conf], m, test_days) is None
+    assert "smoke" in analysis.confirmatory_problem([{**conf, "label": "smoke"}], m, test_days)
+    assert "test days" in analysis.confirmatory_problem([conf], m, DAYS[:3])
 
 
 def test_a_repeated_day_is_kept_once_if_identical_and_refused_if_not():
@@ -168,3 +167,66 @@ def test_without_an_interval_there_is_no_conclusion():
     c = analysis.canaries(m, mde_bp=1.0)
     assert c["C1"]["pass"] is None
     assert "not order-flow information" not in c["statement"]
+
+
+# Fixes after the review of 2026-10-23.
+
+
+def test_a_day_one_side_lacks_is_an_error_not_a_silent_drop():
+    m = pl.DataFrame(rows("B3", [1.0] * 12) + rows("B2b", [0.0] * 12)[:8])
+    with pytest.raises(ValueError, match="days differ"):
+        analysis.compare(m, "B3", "B2b")
+
+
+def test_a_missing_cell_is_an_error_not_does_not_hold():
+    b2b = [r for r in grid("B2b", [0.0] * 12) if (r["queue"], r["latency"]) != ("log", "high")]
+    m = pl.DataFrame(grid("B3", list(1.0 + NOISE)) + b2b)
+    with pytest.raises(ValueError):
+        analysis.h1(m, mde_bp=0.5)
+
+
+def test_selectivity_counts_days_on_which_b3_did_not_trade():
+    b3 = grid("B3", list(1.0 + NOISE), notional=6e5)
+    for r in b3:
+        if r["day"] in DAYS[:6]:
+            r["fills"], r["traded_notional"] = 0, 0.0
+    m = pl.DataFrame(grid("B2b", [0.0] * 12) + b3)
+    sel = analysis.h1(m, mde_bp=0.5)["selectivity"]
+    assert sel["median_notional_ratio"] == pytest.approx(0.3) and sel["flag"]
+
+
+def test_a_failed_c1_replaces_the_interpretation_of_h1():
+    m = pl.DataFrame(
+        grid("B1", [0.0] * 12) + grid("B2", [0.0] * 12) + grid("B2b", [0.0] * 12)
+        + grid("B3", list(1.0 + NOISE)) + rows("C1", list(1.0 + NOISE))
+    )  # fmt: skip
+    meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "x", "n_train_days": 12, "n_val_days": 6}
+    s = analysis.summary(m, {"s_bp": 1.0}, meta)
+    assert "not interpreted" in s["h1_statement"]
+    assert "added" not in s["h1_statement"]
+
+
+def test_s_needs_both_estimates():
+    train = pl.DataFrame(rows("B3", list(NOISE)) + rows("B2b", [0.0] * 12))
+    one_day = train.filter(pl.col("day") == DAYS[0])
+    with pytest.raises(ValueError, match="both"):
+        analysis.mde_inputs(train, one_day)
+
+
+def test_c4_names_each_variant():
+    m = pl.DataFrame(rows("B3", [0.3] * 12) + rows("C4_x10", list(0.3 + NOISE)))
+    text = analysis.canaries(m, mde_bp=1.0)["statement"]
+    assert "Both" not in text and "C4_x10" in text
+
+
+def test_the_guard_wants_complete_cells_from_the_confirmatory_config():
+    test_days = DAYS[:2]
+    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"}]
+    full = pl.DataFrame(rows("B3", [1.0] * 12) + rows("B2b", [0.0] * 12)).filter(
+        pl.col("day").is_in(test_days)
+    )
+    assert analysis.confirmatory_problem(meta, full, test_days) is None
+    other = [{"label": "mine", "config": "configs/runs/hand_written.yaml"}]
+    assert "confirmatory.yaml" in analysis.confirmatory_problem(other, full, test_days)
+    gap = full.filter(~((pl.col("label") == "B2b") & (pl.col("day") == test_days[1])))
+    assert "B2b" in analysis.confirmatory_problem(meta, gap, test_days)
