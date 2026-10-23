@@ -1,0 +1,68 @@
+{
+  "date": "2024-01-01",
+  "label": "smoke run on one training day; no parameter is chosen from it",
+  "bbo_rows": 3600321,
+  "updates_with_nonzero_e": 1121394,
+  "replay": {
+    "batches": 3600333,
+    "crossed": 0,
+    "one_sided": 0
+  },
+  "decision_steps_in_quoting_window": 845400,
+  "windows": {
+    "1s": {
+      "ofi": {
+        "mean": -0.1387,
+        "std": 20.7698,
+        "p1": -71.438,
+        "p50": -0.0,
+        "p99": 68.598
+      },
+      "u": {
+        "mean": -0.0011,
+        "std": 0.4319,
+        "p1": -0.998,
+        "p50": -0.0,
+        "p99": 0.9975
+      },
+      "share_of_steps_with_ofi_zero": 0.0002,
+      "corr_ofi_with_same_window_mid_change": 0.6497
+    },
+    "5s": {
+      "ofi": {
+        "mean": -0.6939,
+        "std": 58.4037,
+        "p1": -178.006,
+        "p50": -0.029,
+        "p99": 168.637
+      },
+      "u": {
+        "mean": -0.0021,
+        "std": 0.5263,
+        "p1": -0.9957,
+        "p50": -0.0006,
+        "p99": 0.9949
+      },
+      "share_of_steps_with_ofi_zero": 0.0,
+      "corr_ofi_with_same_window_mid_change": 0.7371
+    },
+    "30s": {
+      "ofi": {
+        "mean": -4.1667,
+        "std": 169.0432,
+        "p1": -473.5084,
+        "p50": -0.62,
+        "p99": 423.631
+      },
+      "u": {
+        "mean": -0.0058,
+        "std": 0.5907,
+        "p1": -0.9926,
+        "p50": -0.004,
+        "p99": 0.9894
+      },
+      "share_of_steps_with_ofi_zero": 0.0,
+      "corr_ofi_with_same_window_mid_change": 0.7667
+    }
+  }
+}

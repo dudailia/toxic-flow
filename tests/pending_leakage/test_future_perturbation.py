@@ -53,3 +53,30 @@ def test_the_perturbation_test_catches_a_one_second_look_ahead():
 
     past = DECISIONS <= CUT
     assert not np.array_equal(peeking(ts, side)[0][past], peeking(ts2, side2)[0][past])
+
+
+def random_bbo(rng, start, end, n):
+    from toxic_flow.data.book import BBO_DTYPE
+
+    rows = np.zeros(n, BBO_DTYPE)
+    rows["local_ts"] = np.sort(rng.integers(start, end, n))
+    mid = 100 + np.cumsum(rng.choice([-0.1, 0.0, 0.1], n))
+    rows["bid_px"], rows["ask_px"] = mid - 0.05, mid + 0.05
+    rows["bid_qty"], rows["ask_qty"] = rng.uniform(0.1, 5, n), rng.uniform(0.1, 5, n)
+    return rows
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_ac3_1_future_book_updates_do_not_change_ofi_up_to_t(seed):
+    from toxic_flow.signals.ofi import ofi_signal
+
+    rng = np.random.default_rng(seed)
+    rows = random_bbo(rng, 0, 100 * S, 4000)
+    keep = rows[rows["local_ts"] <= CUT]
+    rows2 = np.concatenate([keep, random_bbo(rng, CUT + 1, 100 * S, 6000)])
+    before = ofi_signal(rows, DECISIONS, window_s=5.0, norm_steps=50)
+    after = ofi_signal(rows2, DECISIONS, window_s=5.0, norm_steps=50)
+    past = DECISIONS <= CUT
+    for x, y in zip(before, after, strict=True):
+        assert np.array_equal(x[past], y[past])
+        assert not np.array_equal(x[~past], y[~past])
