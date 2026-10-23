@@ -19,6 +19,10 @@ from itertools import product
 C_GRID = D_GRID = (0.0, 0.5, 1.0)  # section 4
 OFI_WINDOWS_S = TAUS_S = (1.0, 5.0, 30.0)
 B0_H = (1, 2, 3, 5)
+# B1 grid (section 4): factors of two around the GLFT tutorial's gamma 0.05 and 10-minute
+# window; every window fits inside the 30-minute warm-up.
+B1_GAMMAS = (0.025, 0.05, 0.1, 0.2)
+B1_WINDOWS_S = (300, 600, 1200)
 C4_FACTORS = (10.0, 0.1)
 PRIMARY = ["risk_averse", "high"]
 COMMON = {
@@ -52,8 +56,10 @@ def _overlay(name: str, b1: dict, c: float, d: float, constants: dict, **signal)
     elif name == "B2b":
         s["K"] = constants["K"][f"B2b_ewma_{signal['tau_s']:g}s"]
     else:
-        # C4 keeps B3's K (Q25 is open).
-        s |= {"K": constants["K"]["B3_hawkes"], **constants["hawkes"]["params"]}
+        # C4 has its own K from the training days, since its decay is a different
+        # parameter setting (Q25, decided 2026-10-23).
+        key = f"C4_x{signal['decay_factor']:g}" if name == "C4" else "B3_hawkes"
+        s |= {"K": constants["K"][key], **constants["hawkes"]["params"]}
     return s
 
 
@@ -70,13 +76,20 @@ def _config(name: str, days, strategies, queues, latencies) -> dict:
             "queue_models": queues, "latencies": latencies, **COMMON}  # fmt: skip
 
 
-def training(gammas, windows_s, days) -> dict:
-    """M2: B0 over its h grid and B1 over Ilia's gamma and window grid (Q23), 8 cells."""
+def training(days) -> dict:
+    """M2 selection: B0 over its h grid and B1 over its gamma and window grid (section 4),
+    on training days in the primary cell."""
     strategies = [{"name": "B0", "h": h} for h in B0_H] + [
         {"name": "B1", "gamma": g, "window_s": w, "update_every": 50}
-        for g, w in product(gammas, windows_s)
+        for g, w in product(B1_GAMMAS, B1_WINDOWS_S)
     ]
-    return _config("train_b0_b1", days, strategies, ALL_QUEUES, ["low", "high"])
+    return _config("train_select", days, strategies, [PRIMARY[0]], [PRIMARY[1]])
+
+
+def training_chosen(selected: dict, days) -> dict:
+    """M2: the chosen B0 and B1 on training days in all 8 cells (AC2.1, AC2.4)."""
+    s = [{"name": "B0", "h": selected["B0"]["h"]}, {"name": "B1", **_b1(selected)}]
+    return _config("train_chosen", days, s, ALL_QUEUES, ["low", "high"])
 
 
 def tuning(constants: dict, selected: dict, days) -> dict:

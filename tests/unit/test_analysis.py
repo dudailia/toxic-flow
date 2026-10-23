@@ -230,3 +230,12 @@ def test_the_guard_wants_complete_cells_from_the_confirmatory_config():
     assert "confirmatory.yaml" in analysis.confirmatory_problem(other, full, test_days)
     gap = full.filter(~((pl.col("label") == "B2b") & (pl.col("day") == test_days[1])))
     assert "B2b" in analysis.confirmatory_problem(meta, gap, test_days)
+
+
+def test_c1_against_b3_is_reported_as_descriptive():
+    # Q28: the pass rule stays C1 against B1; C1 against B3 is reported beside it.
+    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("B3", [0.5] * 12) + rows("C1", list(NOISE)))
+    c1 = analysis.canaries(m, mde_bp=1.0)["C1"]
+    assert c1["pass"] is True
+    assert c1["vs_B3"]["label"] == "descriptive"
+    assert c1["vs_B3"]["mean"] == pytest.approx(NOISE.mean() - 0.5)

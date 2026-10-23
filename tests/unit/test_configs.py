@@ -10,7 +10,8 @@ from toxic_flow.engine.grid import expand
 HAWKES = {"mu_b": 1.0, "mu_s": 1.1, "alpha_bb": 4.0, "alpha_bs": 0.4, "alpha_sb": 0.3,
           "alpha_ss": 4.1, "beta": 8.0}  # fmt: skip
 K = {f"B2_ofi_{w}s": 10 + w for w in (1, 5, 30)} | {f"B2b_ewma_{t}s": 20 + t for t in (1, 5, 30)}
-CONSTANTS = {"label": "train", "hawkes": {"params": HAWKES}, "K": K | {"B3_hawkes": 3.5}}
+K |= {"B3_hawkes": 3.5, "C4_x10": 7.7, "C4_x0.1": 2.0}
+CONSTANTS = {"label": "train", "hawkes": {"params": HAWKES}, "K": K}
 SELECTED = {
     "B0": {"h": 2},
     "B1": {"gamma": 0.1, "window_s": 300, "update_every": 50},
@@ -58,8 +59,16 @@ def test_smoke_constants_never_make_a_study_config():
         configs.tuning({**CONSTANTS, "label": "SMOKE: one day"}, SELECTED, VAL)
 
 
-def test_training_grid_needs_the_b1_grid_from_ilia():
-    cfg = configs.training([0.05, 0.1], [300, 600], ["2024-01-01"])
+def test_training_selection_is_the_preregistered_grid_in_the_primary_cell():
+    cfg = configs.training(["2024-01-01"])
     names = Counter(s["name"] for s in cfg["strategies"])
-    assert names == {"B0": 4, "B1": 4}
-    assert len(expand(cfg)) == 8 * 8
+    assert names == {"B0": 4, "B1": 12}  # h in {1, 2, 3, 5}; 4 gammas x 3 windows
+    assert len(expand(cfg)) == 16  # primary cell only
+    assert {s["window_s"] for s in cfg["strategies"] if s["name"] == "B1"} == {300, 600, 1200}
+
+
+def test_the_chosen_b0_and_b1_run_in_all_8_cells():
+    cfg = configs.training_chosen(SELECTED, ["2024-01-01"])
+    assert [s["name"] for s in cfg["strategies"]] == ["B0", "B1"]
+    assert cfg["strategies"][0]["h"] == 2 and cfg["strategies"][1]["gamma"] == 0.1
+    assert len(expand(cfg)) == 2 * 8

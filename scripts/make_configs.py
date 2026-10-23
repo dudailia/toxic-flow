@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Write a study run config into configs/runs/ (builders in engine/configs.py).
 
-  uv run python scripts/make_configs.py training --gammas 0.05,0.1 --windows 300,600
-  uv run python scripts/make_configs.py tuning | canaries | mde_train | confirmatory
+  uv run python scripts/make_configs.py training
+  uv run python scripts/make_configs.py training_chosen | tuning | canaries | mde_train | confirmatory
 
-training needs only Ilia's B1 grid (Q23). The others read docs/signals/train_constants.json
+training is the section 4 selection grid. training_chosen reads configs/selected.yaml; the
+others also read docs/signals/train_constants.json
 (from scripts/fit_signals.py) and configs/selected.yaml (written by hand after Ilia approves
 a selection table). Days are the split's days less any excluded day. The script never
 writes configs/selected.yaml and never overwrites an existing config: a changed config is a
@@ -22,8 +23,8 @@ from toxic_flow.data.split_lock import load_splits
 from toxic_flow.engine import configs
 
 ROOT = Path(__file__).resolve().parents[1]
-SPLIT = {"training": "train", "tuning": "val", "canaries": "val", "mde_train": "train",
-         "confirmatory": "test"}  # fmt: skip
+SPLIT = {"training": "train", "training_chosen": "train", "tuning": "val", "canaries": "val",
+         "mde_train": "train", "confirmatory": "test"}  # fmt: skip
 
 
 def kept(split: str) -> list[str]:
@@ -34,24 +35,17 @@ def kept(split: str) -> list[str]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("kind", choices=list(SPLIT))
-    p.add_argument("--gammas")
-    p.add_argument("--windows")
     args = p.parse_args()
     days = kept(SPLIT[args.kind])
     if args.kind == "training":
-        if not (args.gammas and args.windows):
-            raise SystemExit(
-                "the B1 gamma and window grid is Ilia's choice (Q23): pass --gammas and --windows"
-            )
-        cfg = configs.training(
-            [float(g) for g in args.gammas.split(",")],
-            [int(w) for w in args.windows.split(",")],
-            days,
-        )
+        cfg = configs.training(days)
     else:
-        constants = json.loads((ROOT / "docs" / "signals" / "train_constants.json").read_text())
         selected = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
-        cfg = getattr(configs, args.kind)(constants, selected, days)
+        if args.kind == "training_chosen":
+            cfg = configs.training_chosen(selected, days)
+        else:
+            constants = json.loads((ROOT / "docs" / "signals" / "train_constants.json").read_text())
+            cfg = getattr(configs, args.kind)(constants, selected, days)
     out = ROOT / "configs" / "runs" / f"{cfg['name']}.yaml"
     if out.exists():
         raise SystemExit(f"{out} exists; a changed config needs a new name")

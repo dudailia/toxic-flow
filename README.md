@@ -26,14 +26,16 @@ Setup:
        uv run python -m toxic_flow.events.market_orders YYYY-MM-DD
        uv run python -m toxic_flow.data.exclusions
 
-2. B0 and B1 on the training days, all 8 cells. The B1 grid is Ilia's choice.
+2. B0 and B1 selection on the training days in the primary cell (grids in section 4),
+   then the chosen pair in all 8 cells:
 
-       uv run python scripts/make_configs.py training --gammas G1,G2 --windows W1,W2
-       make run CFG=configs/runs/train_b0_b1.yaml
+       uv run python scripts/make_configs.py training
+       make run CFG=configs/runs/train_select.yaml
        uv run python scripts/select_params.py results/<hash> B0 docs/selection/B0_train.md
        uv run python scripts/select_params.py results/<hash> B1 docs/selection/B1_train.md
-
-   (Ilia) write B0 and B1 into configs/selected.yaml from those tables.
+       (write B0 and B1 into configs/selected.yaml from those tables)
+       uv run python scripts/make_configs.py training_chosen
+       make run CFG=configs/runs/train_chosen.yaml
 
 3. Signal constants from the training days (pooled Hawkes fit, K):
 

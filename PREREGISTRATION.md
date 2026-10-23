@@ -56,7 +56,7 @@ An excluded day is listed with its rule number. No other reason excludes a day.
 
 ## 3. Simulation
 
-- Engine: hftbacktest [TBD M0: exact version]. Replay-based, so our orders do not move
+- Engine: hftbacktest 2.4.4, pinned in uv.lock. Replay-based, so our orders do not move
   the market. Order size is the minimum the venue allows, which keeps that assumption
   close to true.
 - Exchange model: [TBD M0: partial-fill or no-partial-fill, with reason].
@@ -77,7 +77,11 @@ An excluded day is listed with its rule number. No other reason excludes a day.
   log function. Exact API names: [TBD M0]. The fill-count ordering on training days is
   reported.
 - Latency, both reported: low sets order entry and response latency from the day's
-  observed feed latency (local timestamp minus exchange timestamp) [TBD M0: API].
+  observed feed latency (local timestamp minus exchange timestamp), sampled once per
+  second of local time by hftbacktest's `generate_order_latency` with multiplier 1 for
+  entry and response, and loaded with `intp_order_latency`. Order latency at time t is
+  interpolated between the samples on either side of t, so it uses feed latency up to
+  one second ahead; the strategy never reads latency, so this cannot inform a decision.
   High is three times low and stands for a slower participant without co-location.
   Zero latency runs only as canary C3.
 - Fees: simulated at zero and applied in evaluation as fee rate times traded notional.
@@ -113,7 +117,11 @@ moves to best ask minus one tick, and the mirror rule applies to the ask. No bid
 quoted when q >= Q and no ask when q <= -Q. With c = d = 0 every overlay reduces to B1.
 
 Choosing B0 and B1 parameters, on training days in the primary cell: maximise the mean
-daily break-even fee. Chosen values: [TBD M2].
+daily break-even fee. B0 grid: h in {1, 2, 3, 5}. B1 grid, 12 combinations: gamma in
+{0.025, 0.05, 0.1, 0.2} and estimation window in {5, 10, 20} minutes, with A and k
+refitted every 5 s. The hftbacktest GLFT tutorial uses gamma = 0.05, which it calls
+arbitrarily chosen, and a 10-minute window; the grid spans factors of two around both,
+and every window fits inside the 30-minute warm-up. Chosen values: [TBD M2].
 
 Tuning grids for overlays, on validation days in the primary cell:
 - c in {0, 0.5, 1} and d in {0, 0.5, 1} for all three.
@@ -233,7 +241,8 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
 
 - C1, shuffled signs: B3 with the selected settings, but the side of each market-order
   event is randomly permuted within the day before it enters the intensity. Pass: the
-  interval for C1 minus B1 includes 0.
+  interval for C1 minus B1 includes 0. C1 minus B3 is reported beside it as
+  descriptive.
 - C2, oracle: B1 overlay with u = sign of the mid change over the next 5 s and m = 0, c = 1.
   The only strategy allowed to see the future. Pass: mean gain over B1 is larger than
   3 times the MDE. If C2 fails, the harness cannot convert information into PnL, and the
@@ -241,7 +250,8 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
 - C3, zero latency: B3 selected settings at zero latency. Reported as an upper bound.
   Flag if any non-zero-latency run of B3 beats it on the mean.
 - C4, wrong decay: B3 with beta multiplied by 10 and divided by 10, alpha rescaled so the
-  branching ratio stays at its fitted value. Reported. If either variant matches B3
+  branching ratio stays at its fitted value, and K computed on training days for each
+  variant by the section 5 rule, since each is a different parameter setting. Reported. If either variant matches B3
   within the interval, the conclusion says the fitted decay is not what drives any gain.
 
 On test days all canaries are reported in full whatever they show.

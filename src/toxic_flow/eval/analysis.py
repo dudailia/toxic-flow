@@ -135,6 +135,10 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
     if _has(m, "C1"):
         c = compare(m, "C1", "B1")
         out["C1"] = {**c, "pass": _contains_zero(c["bootstrap_ci"])}
+        if _has(m, "B3"):
+            # Q28: the pass rule is C1 against B1 (section 10); C1 against B3 isolates the
+            # sign information and is reported beside it, as descriptive.
+            out["C1"]["vs_B3"] = {**compare(m, "C1", "B3"), "label": "descriptive"}
         if out["C1"]["pass"] is None:
             text.append("C1, shuffled signs: no interval, so no verdict.")
         elif out["C1"]["pass"]:
