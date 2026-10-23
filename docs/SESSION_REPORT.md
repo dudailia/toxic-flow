@@ -293,3 +293,95 @@ Commands run at the end of this block:
 - Q31. B3 rests on both sides in 42% of steps against B1's 95%, because its quotes move
   more often and a replace waits for its cancel to land (one order per side). That
   lowers B3's fills, and it bears on the section 8 selectivity check. Keep the rule?
+
+# Continued again, 2026-10-23 (items 19 to 29)
+
+Same rules, all kept: no protected path edited, no tardis.dev request, a commit and push
+after each item. No new data: everything runs on 2024-01-01 or on synthetic tables, and
+the pipeline for the steps that need more days is written and tested but not run.
+
+## What was done
+
+| # | Item | Commit |
+|---|---|---|
+| 19 | Re-ran the three smoke configs so quote presence is valid | ffebfca |
+| 20 | Fills sorted by local time and order id before metrics (audit finding 6) | 64fea2b |
+| 21 | Pre-registered analysis, eval/analysis.py and scripts/analyse.py | f18d6b4, 6fcd135 |
+| 22 | Training-day signal constants, scripts/fit_signals.py | 8013192 |
+| 23 | Config builders for every study run; per-strategy cells in the grid | 8b7654b, cee250c |
+| 24 | Proposal: canary decisions with exact PREREGISTRATION.md text | b12fae3 |
+| 25 | Proposed checks for M4 and M5, with dry run and positive control | 84a94e0 |
+| 26 | README: how to reproduce the study (AC6.4) | 654fdb0 |
+| 27 | Bound on overfilled fills under the no-partial-fill exchange (Q3) | 644a1ee |
+| 28 | Proposal: text for the five M0 [TBD]s in PREREGISTRATION.md | 5bd711b |
+| 29 | Independent review of the analysis code; its findings fixed | f1c2f94 |
+
+### Highlights
+
+19. Same configs, same hashes. Fills, notional and the engine's cash and position are
+    identical to the first runs; floats derived from them differ by at most 1.6e-12 USDT,
+    from fill order. Quote presence in the primary cell: B0 0.71, B1 0.95, B2 0.71,
+    B2b 0.69, B3 0.42, C2 0.93.
+21. H1 in the primary cell with its sign in all 8 cells, H2 to H4 and markout
+    differences labelled exploratory, selectivity, canaries C1 to C4, s and the MDE, and
+    the summary the paper template reads (a test checks every template key is there).
+    Running it on the smoke results found a bug: with one day the intervals are NaN, and
+    NaN read as "excludes 0", so it printed a section 11 statement. Fixed: no conclusion
+    and no canary verdict without an interval.
+22. It refuses until all 12 training days are on disk. In smoke mode on 2024-01-01 it
+    reproduces the earlier fit and K exactly and adds K for every W and tau of the grid
+    and for the C4 variants (7.665 and 2.006 against B3's 3.464).
+23. Builders for the training, tuning, canary, MDE and confirmatory configs, from
+    docs/signals/train_constants.json and configs/selected.yaml (format proposed in
+    engine/configs.py). The confirmatory grid is one config (AC5.3): a strategy entry
+    can name its own cells, so canaries sit in the primary cell and C3 at zero latency.
+    Existing configs expand and hash as before. scripts/make_configs.py never writes
+    selected.yaml and never overwrites a config.
+25. The checks fail where they should on the repo as it is, and AC4.1 to AC4.3 pass on
+    a synthetic temporary root. The M2 proposal was fixed on the way: its m2_runs would
+    have overwritten the new strategy label column.
+27. On 2024-01-01 in the primary cell, fills where the prints at the order's price total
+    less than the order (a lower bound): B0 14 of 28,830, B1 1 of 4,502, B3 0 of 2,556.
+    Fills made only by prints at the order's price (the upper bound): 5.2%, 17.4% and
+    8.5%. Their 10 s markouts are close to those of fills where the price traded
+    through, so there is no sign that they are much less adverse.
+29. A reviewer read the analysis, selection and config code against the
+    preregistration and found seven issues. Fixed with tests:
+    - the paper summary guard trusted any s and any non-smoke run on the test days; it
+      now needs configs/runs/confirmatory.yaml as committed, a commit after prereg-v1,
+      every label on every test day in each of its cells, and s equal to section 9;
+    - a day one side lacked was dropped silently, and a missing cell read as "does not
+      hold"; both are now errors;
+    - a failed C1 did not stop the H1 statement from interpreting the result;
+    - selectivity left out the days B3 did not trade;
+    - s could silently be the training estimate alone;
+    - the C4 sentence said "both" when it did not know both;
+    - the paper called the tag's creation time its push time.
+    Left for decisions: Q34 to Q36 below.
+
+## Test results
+
+- `make check`: exit 0, 246 passed, 17 deselected (slow).
+- Slow tests run in this stretch: tests/unit/test_accounting.py (3 passed, with the new
+  fill-order check), the quote-presence test and the C2 loop test.
+
+## Open questions, new
+
+- Q30 duplicates Q11 in docs/DATA_RECON.md (the order latency look-ahead); docs/ENGINE.md
+  already states it. Treat them as one.
+- Q32. The configs/selected.yaml format proposed in src/toxic_flow/engine/configs.py.
+- Q33. The confirmatory grid as one config with per-strategy cells, and B2b added to the
+  validation canary run so s comes from one run per split.
+- Q34. C1's pass and C4's match use only the bootstrap interval, which section 8 says is
+  too narrow at 16 days. Require both intervals, as H1 does?
+- Q35. "Ratio of B3 to B2b traded notional on the median test day": the code takes the
+  median of daily ratios, counting days B3 did not trade as 0. Or the ratio of medians?
+- Q36. When the two intervals disagree about 0 and |mean| is below the MDE, section 11's
+  sentence ("the point estimate is large") is false. The code now says: "Inconclusive:
+  the bootstrap and t intervals disagree on whether 0 is inside, and the point estimate
+  is below the minimum detectable effect." Accept that wording for section 11?
+- Q37. The paper now gives the tag's creation time. The push time is your first entry in
+  DEVIATIONS.md; should the paper read it from there?
+- Q38. Markouts add the horizon to the fill's exchange time but read the mid on the
+  local-time decision grid, so the clocks differ by the feed latency, a few ms. State it,
+  or move the lookup onto exchange time?
