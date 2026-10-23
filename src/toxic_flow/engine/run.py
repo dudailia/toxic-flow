@@ -28,10 +28,11 @@ from toxic_flow.data.venue import venue_for
 from toxic_flow.engine.grid import LATENCY_MUL, QUEUE_MODELS, config_hash, expand
 from toxic_flow.eval.markouts import HORIZONS_S, markouts
 from toxic_flow.eval.metrics import day_metrics
+from toxic_flow.signals.hawkes_fit import rescale_decay
 from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
 from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
-from toxic_flow.strategies.overlay import EWMA, HAWKES, OFI, run_b1, run_overlay
+from toxic_flow.strategies.overlay import EWMA, EXTERNAL, HAWKES, OFI, run_b1, run_overlay
 
 ROOT = Path(__file__).resolve().parents[3]
 RESULTS = ROOT / "results"
@@ -86,9 +87,29 @@ def ofi_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
     return data["ts"], np.concatenate([[0.0], np.cumsum(data["e"])])
 
 
-def _overlay_args(s: dict, day: str) -> tuple:
-    """Signal mode and inputs for an overlay strategy config (B2, B2b or B3)."""
+def shuffled_sides(side: np.ndarray, seed: int = 1729) -> np.ndarray:
+    """Canary C1: the day's event sides randomly permuted, so counts stay and signs carry
+    no information (PREREGISTRATION.md section 10)."""
+    return np.random.default_rng(seed).permutation(side)
+
+
+def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
+    """Signal mode and inputs for an overlay config: B2, B2b, B3, or the canaries C1 (B3 on
+    shuffled sides), C2 and C4 (B3 with the decay rescaled). C3 is B3 at zero latency.
+
+    C2 is the B1 overlay with c = 1 and m = 0 on an oracle series (time, u, m) that the
+    caller supplies, because the only code allowed to look ahead lives in tests/canary/
+    (SPEC.md AC3.6). The engine never builds that series itself.
+    """
     mu, alpha, beta = np.zeros(2), np.zeros((2, 2)), 1.0
+    if s["name"] == "C2":
+        if oracle is None:
+            raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
+        ts, u, m = oracle(day, cfg)
+        return (
+            EXTERNAL, 1.0, 0.0, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), np.zeros(1),
+            1.0, 1, mu, alpha, beta, u, m, np.zeros((0, 3)),
+        )  # fmt: skip
     tau, ofi_window = 1.0, 1
     if s["name"] == "B2":
         mode = OFI
@@ -100,18 +121,22 @@ def _overlay_args(s: dict, day: str) -> tuple:
         cum = np.zeros(1)
         if s["name"] == "B2b":
             mode, tau = EWMA, float(s["tau_s"])
-        elif s["name"] == "B3":
+        elif s["name"] in ("B3", "C1", "C4"):
             mode = HAWKES
-            mu = np.array([s["mu_b"], s["mu_s"]], float)
+            p = rescale_decay(s, float(s["decay_factor"])) if s["name"] == "C4" else s
+            mu = np.array([p["mu_b"], p["mu_s"]], float)
             alpha = np.array(
-                [[s["alpha_bb"], s["alpha_bs"]], [s["alpha_sb"], s["alpha_ss"]]], float
+                [[p["alpha_bb"], p["alpha_bs"]], [p["alpha_sb"], p["alpha_ss"]]], float
             )
-            beta = float(s["beta"])
+            beta = float(p["beta"])
+            if s["name"] == "C1":
+                sig_side = shuffled_sides(sig_side, int(s.get("seed", 1729)))
         else:
             raise ValueError(f"unknown strategy {s['name']}")
     return (
         mode, float(s["c"]), float(s["d"]), float(s["K"]), NORM_STEPS,
-        sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta, np.zeros((0, 3)),
+        sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta,
+        np.zeros(0), np.zeros(0), np.zeros((0, 3)),
     )  # fmt: skip
 
 
@@ -136,9 +161,12 @@ def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=
     return HashMapMarketDepthBacktest([asset])
 
 
-def run_cell(cell: dict, cfg: dict, maker_fee_bps: float = 0.0) -> tuple[dict, pl.DataFrame]:
+def run_cell(
+    cell: dict, cfg: dict, maker_fee_bps: float = 0.0, oracle=None
+) -> tuple[dict, pl.DataFrame]:
     """One day of one strategy in one queue-model and latency cell. Returns (metrics row,
-    fills with markouts). maker_fee_bps puts a fee into hftbacktest itself (AC2.3 test)."""
+    fills with markouts). maker_fee_bps puts a fee into hftbacktest itself (AC2.3 test);
+    oracle is C2's series builder (see _overlay_args)."""
     day = cell["day"]
     assert_allowed(day)
     venue = venue_for(day)
@@ -165,7 +193,7 @@ def run_cell(cell: dict, cfg: dict, maker_fee_bps: float = 0.0) -> tuple[dict, p
         else:
             window = int(float(s["window_s"]) * 1e9 / step)
             run_overlay(hbt, float(s["gamma"]), window, int(s.get("update_every", 50)), *common,
-                        start, end, step, steps, fills, out, *_overlay_args(s, day))  # fmt: skip
+                        start, end, step, steps, fills, out, *_overlay_args(s, day, cfg, oracle))  # fmt: skip
     finally:
         hbt.close()
     wall = time.perf_counter() - t0
@@ -182,6 +210,8 @@ def run_cell(cell: dict, cfg: dict, maker_fee_bps: float = 0.0) -> tuple[dict, p
     row = {
         "day": day,
         "strategy": s["name"],
+        # Tells apart two entries of one strategy, such as C4 at x10 and x0.1.
+        "label": s.get("label", s["name"]),
         "params": json.dumps(s, sort_keys=True),
         "queue": cell["queue"],
         "latency": cell["latency"],
@@ -214,13 +244,15 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True).stdout
 
 
-def run_config(cfg_path: Path) -> Path:
+def run_config(cfg_path: Path, oracle=None) -> Path:
     rel = Path(cfg_path).resolve().relative_to(ROOT).as_posix()
     if not _git("ls-files", "--", rel).strip():
         raise SystemExit(f"{rel} is not tracked by git; commit the config first")
     if _git("status", "--porcelain").strip():
         raise SystemExit("working tree has changes; results must map to a commit")
     cfg = yaml.safe_load(Path(cfg_path).read_text())
+    if oracle is None and any(s["name"] == "C2" for s in cfg["strategies"]):
+        raise SystemExit("C2 needs its oracle series: run it with tests/canary/run_c2.py")
     out_dir = RESULTS / config_hash(cfg)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "config.yaml").write_text(Path(cfg_path).read_text())
@@ -234,8 +266,8 @@ def run_config(cfg_path: Path) -> Path:
     }
     rows = []
     for cell in expand(cfg):
-        row, fills = run_cell(cell, cfg)
-        name = f"{row['strategy']}_{cell['queue']}_{cell['latency']}_{cell['day']}"
+        row, fills = run_cell(cell, cfg, oracle=oracle)
+        name = f"{row['label']}_{cell['queue']}_{cell['latency']}_{cell['day']}"
         fills.write_parquet(out_dir / f"fills_{name}.parquet")
         rows.append(row)
         print(

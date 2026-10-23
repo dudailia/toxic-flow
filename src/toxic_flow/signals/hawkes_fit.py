@@ -166,3 +166,13 @@ def residual_report(times, types, mu, alpha, beta) -> dict:
             "ks_pvalue": float(ks.pvalue),
         }
     return out
+
+
+def rescale_decay(params: dict, factor: float) -> dict:
+    """Canary C4: beta times factor, and every alpha times the same factor, so alpha / beta
+    and with it the branching ratio stay at their fitted values (section 10)."""
+    out = dict(params)
+    out["beta"] = params["beta"] * factor
+    for name in ("alpha_bb", "alpha_bs", "alpha_sb", "alpha_ss"):
+        out[name] = params[name] * factor
+    return out

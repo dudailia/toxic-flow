@@ -56,7 +56,8 @@ def run(day, mode, c, d):
     t0 = T0 * 1000
     run_overlay(
         hbt, 0.05, 20, 5, 0.001, 100.0, 10, t0 + 2 * 10**9, t0 + 6 * 10**9, 100_000_000,
-        steps, fills, out, mode, c, d, K, N, sig_ts, sig_side, cum, TAU, W_NS, MU, ALPHA, BETA, diag,
+        steps, fills, out, mode, c, d, K, N, sig_ts, sig_side, cum, TAU, W_NS, MU, ALPHA, BETA,
+        np.zeros(0), np.zeros(0), diag,
     )  # fmt: skip
     hbt.close()
     n = int(np.count_nonzero(diag[:, 0]))

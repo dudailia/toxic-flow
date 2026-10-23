@@ -11,6 +11,10 @@ Signal inputs are precomputed streams that the loop consumes only once their loc
 at or before now: market-order events for EWMA and HAWKES, best-level OFI contributions for
 OFI. The normalisers (Ring) are updated at every 100 ms step from the start of the data,
 warm-up included, so they are full when quoting starts.
+
+EXTERNAL takes u and m from a series (time, u, m), again only from points at or before now.
+Only the oracle canary C2 uses it, and it builds that series in tests/canary/ (SPEC.md
+AC3.6): no strategy or signal file computes anything forward-looking.
 """
 
 import numpy as np
@@ -28,7 +32,7 @@ from toxic_flow.strategies.b1_glft import (
 )
 from toxic_flow.strategies.common import finish_day, place_quotes, record_fills
 
-NONE, OFI, EWMA, HAWKES = 0, 1, 2, 3
+NONE, OFI, EWMA, HAWKES, EXTERNAL = 0, 1, 2, 3, 4
 
 
 @njit(cache=True)
@@ -68,6 +72,8 @@ def run_overlay(
     mu,
     alpha,
     beta,
+    ext_u,
+    ext_m,
     diag,
 ):
     """GLFT with an overlay. out as in strategies.b0_fixed.run_b0; diag receives
@@ -145,9 +151,14 @@ def run_overlay(
             s = ofi_ring.std()
             u = np.tanh(ofi / s) if s > 0 else 0.0
             a = abs(ofi)
-        a_ring.push(a)
-        abar = a_ring.mean()
-        m = min(max((a / abar - 1.0) / K, 0.0), 1.0) if abar > 0 else 0.0
+        if mode == EXTERNAL:
+            while j < len(sig_ts) and sig_ts[j] <= now:
+                j += 1
+            u, m = (ext_u[j - 1], ext_m[j - 1]) if j > 0 else (0.0, 0.0)
+        else:
+            a_ring.push(a)
+            abar = a_ring.mean()
+            m = min(max((a / abar - 1.0) / K, 0.0), 1.0) if abar > 0 else 0.0
         if n_diag < len(diag):
             diag[n_diag, 0], diag[n_diag, 1], diag[n_diag, 2] = now, u, m
             n_diag += 1
@@ -207,5 +218,5 @@ def run_b1(
         hbt, gamma, window_steps, update_every, lot_size, min_notional, max_lots,
         quote_start_ns, quote_end_ns, step_ns, steps, fills, out,
         NONE, 0.0, 0.0, 1.0, 18_000, empty_i, empty_i, np.zeros(1), 1.0, 1,
-        np.zeros(2), np.zeros((2, 2)), 1.0, np.zeros((0, 3)),
+        np.zeros(2), np.zeros((2, 2)), 1.0, np.zeros(0), np.zeros(0), np.zeros((0, 3)),
     )  # fmt: skip

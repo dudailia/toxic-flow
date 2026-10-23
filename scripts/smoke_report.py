@@ -18,6 +18,9 @@ def main(run_dir: Path, out: Path) -> None:
     if meta.get("label") != "smoke":
         raise SystemExit(f"{run_dir} is not labelled smoke")
     m = pl.read_parquet(run_dir / "metrics.parquet")
+    if "label" not in m.columns:  # runs from before the label column
+        m = m.with_columns(label=pl.col("strategy"))
+    queues = [q for q in QUEUES if q in set(m["queue"])]
     lines = [
         f"# SMOKE run {meta['config_hash']}: {', '.join(sorted(set(m['day'])))}",
         "",
@@ -28,17 +31,17 @@ def main(run_dir: Path, out: Path) -> None:
         "",
         "## Fills per queue model (AC2.4 preview)",
         "",
-        "| Strategy | Latency | " + " | ".join(QUEUES) + " | Fewest |",
-        "|---|---|" + "---|" * len(QUEUES) + "---|",
+        "| Strategy | Latency | " + " | ".join(queues) + " | Fewest |",
+        "|---|---|" + "---|" * len(queues) + "---|",
     ]
-    for (strategy, latency), g in m.sort(["strategy", "latency"]).group_by(
-        ["strategy", "latency"], maintain_order=True
+    for (label, latency), g in m.sort(["label", "latency"]).group_by(
+        ["label", "latency"], maintain_order=True
     ):
-        fills = {q: int(g.filter(pl.col("queue") == q)["fills"][0]) for q in QUEUES}
-        fewest = min(fills, key=fills.get)
+        fills = {q: int(g.filter(pl.col("queue") == q)["fills"][0]) for q in queues}
+        fewest = min(fills, key=fills.get) if len(queues) > 1 else "(one model)"
         lines.append(
-            f"| {strategy} | {latency} | "
-            + " | ".join(str(fills[q]) for q in QUEUES)
+            f"| {label} | {latency} | "
+            + " | ".join(str(fills[q]) for q in queues)
             + f" | {fewest} |"
         )
     lines += [
@@ -49,9 +52,9 @@ def main(run_dir: Path, out: Path) -> None:
         "Quote presence | Markout 10 s bp | Max inventory (order sizes) |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
-    for r in m.sort(["strategy", "queue", "latency"]).iter_rows(named=True):
+    for r in m.sort(["label", "queue", "latency"]).iter_rows(named=True):
         lines.append(
-            f"| {r['strategy']} | {r['queue']} | {r['latency']} | {r['fills']} | "
+            f"| {r['label']} | {r['queue']} | {r['latency']} | {r['fills']} | "
             f"{r['break_even_fee_bps']:.3f} | {r['net_pnl_standard_maker']:.2f} | "
             f"{r['quote_presence']:.3f} | {r['mean_markout_10s_bps']:.3f} | {r['max_inventory_lots']} |"
         )

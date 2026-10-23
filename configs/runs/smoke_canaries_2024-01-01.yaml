@@ -1,0 +1,34 @@
+# SMOKE RUN. Canaries C1 to C4 on one training day in the primary cell (risk-averse queue,
+# high latency), plus zero latency for C3, with the placeholder settings of
+# smoke_overlays_2024-01-01.yaml. One day gives no interval, so nothing here passes or fails
+# a canary (PREREGISTRATION.md section 10 judges them on validation days). C3 is the B3 row
+# at latency zero. Run with tests/canary/run_c2.py, since C2 needs the oracle series.
+name: smoke_canaries_2024-01-01
+label: smoke
+days: [2024-01-01]
+strategies:
+  - {name: B1, gamma: 0.05, window_s: 600, update_every: 50}
+  - {name: B3, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5, d: 0.5, K: 3.464269,
+     mu_b: 1.3202130002881391, mu_s: 1.444586185789969, alpha_bb: 4.26915470755978,
+     alpha_bs: 0.3968057660734126, alpha_sb: 0.2930527288399371,
+     alpha_ss: 4.342663341559424, beta: 7.828919905090641}
+  - {name: C1, seed: 1729, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5, d: 0.5,
+     K: 3.464269, mu_b: 1.3202130002881391, mu_s: 1.444586185789969,
+     alpha_bb: 4.26915470755978, alpha_bs: 0.3968057660734126,
+     alpha_sb: 0.2930527288399371, alpha_ss: 4.342663341559424, beta: 7.828919905090641}
+  - {name: C2, gamma: 0.05, window_s: 600, update_every: 50}
+  - {name: C4, label: C4_x10, decay_factor: 10.0, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5,
+     d: 0.5, K: 3.464269, mu_b: 1.3202130002881391, mu_s: 1.444586185789969,
+     alpha_bb: 4.26915470755978, alpha_bs: 0.3968057660734126,
+     alpha_sb: 0.2930527288399371, alpha_ss: 4.342663341559424, beta: 7.828919905090641}
+  - {name: C4, label: C4_x0.1, decay_factor: 0.1, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5,
+     d: 0.5, K: 3.464269, mu_b: 1.3202130002881391, mu_s: 1.444586185789969,
+     alpha_bb: 4.26915470755978, alpha_bs: 0.3968057660734126,
+     alpha_sb: 0.2930527288399371, alpha_ss: 4.342663341559424, beta: 7.828919905090641}
+queue_models: [risk_averse]
+latencies: [high, zero]
+quote_start: "00:30:00"
+quote_end: "23:59:00"
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps: {standard_maker: venue, zero: 0.0, lp_tier1: -0.1}
