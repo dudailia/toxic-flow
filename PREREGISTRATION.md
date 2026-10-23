@@ -63,7 +63,11 @@ An excluded day is listed with its rule number. No other reason excludes a day.
 - Order size: smallest size meeting the minimum quantity and minimum notional for that
   date in configs/venue.yaml. Inventory cap Q = 10 order sizes.
 - Decision step: every 100 ms of simulated time. Quotes are post-only limit orders,
-  cancelled and replaced when the target price changes.
+  cancelled and replaced when the target price changes. The cancel and its replacement
+  go out in the same step, identically for every strategy and canary. A replacement
+  waits only while an earlier order on that side is unacknowledged, or while the
+  inventory cap would not hold if every open order on that side filled, cancels in
+  flight included.
 - Day structure: estimators warm up from 00:00 to 00:30 UTC with no quoting. Quoting runs
   from 00:30:00 to 23:59:00 UTC. At 23:59:00 all orders are cancelled and inventory is
   marked at mid. There is no flattening trade.

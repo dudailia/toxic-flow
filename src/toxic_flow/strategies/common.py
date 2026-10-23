@@ -2,7 +2,7 @@
 one order per side, and the end of the quoting window. All numba, for hftbacktest."""
 
 import numpy as np
-from hftbacktest import BUY, FILLED, GTX, LIMIT, NEW
+from hftbacktest import BUY, CANCELED, FILLED, GTX, LIMIT, NEW
 from numba import njit
 
 STEP_DTYPE = np.dtype(
@@ -60,28 +60,45 @@ def both_resting(hbt):
 
 
 @njit
-def place_quotes(hbt, bid_tick, ask_tick, want_bid, want_ask, qty, next_id):
-    """At most one order per side. Cancel an order whose price is stale or whose side is no
-    longer wanted; send a new one only when that side has no order of ours at all, so a
-    replace waits for its cancel and in-flight orders cannot breach the inventory cap.
-    Returns (next order id, our buy orders, our sell orders) as seen before sending."""
+def place_quotes(hbt, bid_tick, ask_tick, want_bid, want_ask, qty, next_id, q_lots, max_lots):
+    """At most one working order per side, replaced in the same step (Q31). Each step,
+    per side: an order at the target price stays; a stale one is cancelled and, in the
+    same step, its replacement is sent. Two things hold a replacement back: an earlier
+    order on that side not yet acknowledged (it cannot be cancelled yet), and the
+    inventory cap, which counts every open order on the side, cancels in flight
+    included, as if all of them filled: a bid goes out only if q + open bids + 1 <= Q.
+    q_lots is the inventory in order sizes. Returns (next order id, our buy orders, our
+    sell orders) as seen before sending."""
     n_buy, n_sell = 0, 0
+    keep_buy, keep_sell = False, False  # an order already at the target price
+    wait_buy, wait_sell = False, False  # an unacknowledged order that cannot be cancelled
     values = hbt.orders(0).values()
     while values.has_next():
         o = values.get()
-        if o.side == BUY:
+        buy = o.side == BUY
+        if buy:
             n_buy += 1
-            stale = not want_bid or o.price_tick != bid_tick
         else:
             n_sell += 1
-            stale = not want_ask or o.price_tick != ask_tick
-        if stale and o.cancellable:
+        if o.req == CANCELED:
+            continue  # its cancel is in flight; it still counts against the cap
+        want, target = (want_bid, bid_tick) if buy else (want_ask, ask_tick)
+        if want and o.price_tick == target:
+            if buy:
+                keep_buy = True
+            else:
+                keep_sell = True
+        elif o.cancellable:
             hbt.cancel(0, o.order_id, False)
+        elif buy:
+            wait_buy = True
+        else:
+            wait_sell = True
     tick = hbt.depth(0).tick_size
-    if want_bid and n_buy == 0:
+    if want_bid and not keep_buy and not wait_buy and q_lots + n_buy + 1 <= max_lots:
         hbt.submit_buy_order(0, next_id, bid_tick * tick, qty, GTX, LIMIT, False)
         next_id += 1
-    if want_ask and n_sell == 0:
+    if want_ask and not keep_sell and not wait_sell and -q_lots + n_sell + 1 <= max_lots:
         hbt.submit_sell_order(0, next_id, ask_tick * tick, qty, GTX, LIMIT, False)
         next_id += 1
     return next_id, n_buy, n_sell

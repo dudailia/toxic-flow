@@ -88,8 +88,9 @@ def run_b0(
             out[7] = max(out[7], abs(round(position / order_qty)))
             both = both_resting(hbt)
             next_id, n_buy, n_sell = place_quotes(
-                hbt, bid_tick, ask_tick, want_bid, want_ask, order_qty, next_id
-            )
+                hbt, bid_tick, ask_tick, want_bid, want_ask, order_qty, next_id,
+                round(position / order_qty), max_lots,
+            )  # fmt: skip
             out[6] = max(out[6], n_buy, n_sell)
             out[8] = now
         if n_steps < len(steps):

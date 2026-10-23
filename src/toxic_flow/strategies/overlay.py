@@ -177,12 +177,15 @@ def run_overlay(
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
             both = both_resting(hbt)
             next_id, n_buy, n_sell = place_quotes(
-                hbt, int(bid_t), int(ask_t), want_bid, want_ask, order_qty, next_id
-            )
+                hbt, int(bid_t), int(ask_t), want_bid, want_ask, order_qty, next_id,
+                round(position / order_qty), max_lots,
+            )  # fmt: skip
             out[6] = max(out[6], n_buy, n_sell)
             out[7] = max(out[7], abs(round(position / order_qty)))
         else:
-            next_id, _, _ = place_quotes(hbt, 0, 0, False, False, 1.0, next_id)  # cancel all
+            next_id, _, _ = place_quotes(
+                hbt, 0, 0, False, False, 1.0, next_id, 0, max_lots
+            )  # cancel all
         if n_steps < len(steps):
             steps[n_steps].ts = now
             steps[n_steps].mid = mid_tick * tick

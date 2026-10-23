@@ -106,9 +106,11 @@ def test_run_b0_quotes_through_the_window(tmp_path):
 def test_run_b0_one_order_per_side_when_latency_exceeds_the_step(tmp_path):
     # 250 ms each way is longer than the 100 ms step, so cancels and new orders are in
     # flight when the target moves. B0 must still hold at most one order per side.
+    # Since Q31 a replacement goes out with its cancel, so a side can briefly hold the
+    # order being cancelled and its replacement; the cap counts both.
     out = run_window(synthetic_backtest(tmp_path, 250_000_000), 1, 6)
     assert out[0] > 0
-    assert out[6] == 1
+    assert out[6] <= 3
     assert out[7] <= 10
 
 
@@ -140,3 +142,23 @@ def test_quote_presence_counts_only_orders_resting_in_the_book(tmp_path):
     quoted = steps["both_quoted"][: int(out[0])]
     assert not quoted[:5].any()
     assert quoted[5:].any()
+
+
+@pytest.mark.slow
+def test_a_replacement_goes_out_in_the_same_step_as_its_cancel(tmp_path):
+    # Q31: at zero order latency an order sent at one step rests by the next, so once the
+    # first orders are in, both sides are quoted at every step even as the target moves.
+    # Five ticks out and no effective cap, so fills and the cap rarely empty a side.
+    import numpy as np
+    from synthetic import T0
+
+    from toxic_flow.strategies.b0_fixed import run_b0
+    from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
+
+    hbt = synthetic_backtest(tmp_path, 0)
+    out, t0 = np.zeros(13), T0 * 1000
+    steps, fills = np.zeros(1000, STEP_DTYPE), np.zeros(1000, FILL_DTYPE)
+    run_b0(hbt, 5, 0.001, 100.0, 1000, t0 + 10**9, t0 + 6 * 10**9, 100_000_000, steps, fills, out)
+    hbt.close()
+    quoted = steps["both_quoted"][1 : int(out[0])]
+    assert quoted.mean() > 0.95
