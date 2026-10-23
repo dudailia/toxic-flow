@@ -11,7 +11,10 @@ read, and splits the day at clean cuts: instants B where every message sent befo
 received before every message sent after B. At a clean cut the exchange-time and
 local-time orders do not interleave across B, so the parts, concatenated, equal the
 one-shot output. tests/unit/test_convert.py checks that against tardis.convert itself.
-Anything that would make the parts differ raises ConversionError instead.
+Anything that would make the parts differ raises ConversionError instead, with one
+deliberate exception (Q13, 2026-10-23): when a later snapshot block has more levels than
+an earlier one, the one-shot pass cuts it short, and here it is kept whole. That happened
+on 2024-02-01 and 2024-03-01.
 
 A ConversionError is a failure of this splitter, not of hftbacktest, so it is not
 exclusion rule 2 of PREREGISTRATION.md section 2. It stops the pipeline for Ilia.
@@ -262,14 +265,11 @@ def convert_parts(
     if n_parts is None:
         n_parts = max(1, math.ceil((len(trades) + len(depth)) / events_per_part))
 
-    lo, hi, close, nb, na, truncated = _snapshot_blocks(
+    # The one-shot convert would cut a later block larger than an earlier one (see the
+    # loop below); here every block is kept whole, so only the block sizes are used.
+    lo, hi, close, nb, na, _ = _snapshot_blocks(
         depth["exch_ts"], depth["side"], depth["is_snapshot"], SS_BUFFER_SIZE
     )
-    if truncated >= 0:
-        raise ConversionError(
-            f"snapshot block {truncated} has more levels than an earlier one; "
-            "hftbacktest's one-shot convert would truncate it"
-        )
 
     # correct_local_timestamp with base_latency = 0: shift every local_ts by the most
     # negative feed latency of the whole day. It must be the day's value, not a part's.
@@ -289,9 +289,19 @@ def convert_parts(
         n_snap = int(d_seg["is_snapshot"].sum())
         tmp = np.empty(len(t_seg) + len(d_seg) + 2 * n_snap, event_dtype)
         tmp[: len(t_seg)] = t_seg
-        ss_bid = np.empty(SS_BUFFER_SIZE, event_dtype)
-        ss_ask = np.empty(SS_BUFFER_SIZE, event_dtype)
-        n = _convert_depth(tmp, d_seg, len(t_seg), ss_bid, ss_ask, 0)
+        # One _convert_depth call per snapshot block, each with fresh buffers (Q13).
+        # _convert_depth reslices its buffers to every block it emits, so in one call a
+        # later block larger than an earlier one is cut short. A block is closed by the
+        # first non-snapshot row after it, which comes before the next block starts, so
+        # splitting where a block starts never separates a block from its closing row.
+        snap = d_seg["is_snapshot"] == 1
+        starts = np.flatnonzero(snap[1:] & ~snap[:-1]) + 1
+        bounds = [0, *starts.tolist(), len(d_seg)]
+        n = len(t_seg)
+        for a, b in zip(bounds[:-1], bounds[1:], strict=True):
+            ss_bid = np.empty(SS_BUFFER_SIZE, event_dtype)
+            ss_ask = np.empty(SS_BUFFER_SIZE, event_dtype)
+            n = _convert_depth(tmp, d_seg[a:b], n, ss_bid, ss_ask, 0)
         tmp = tmp[:n]
         del d_seg, t_seg
         if n == 0:

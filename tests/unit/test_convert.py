@@ -101,11 +101,20 @@ def test_no_clean_cut_raises(tmp_path):
         convert_parts(trades, depth, n_parts=3, search_windows_us=(1_000,))
 
 
-def test_later_snapshot_larger_than_first_raises(tmp_path):
-    # hftbacktest's one-shot convert would silently truncate this snapshot to 20 levels.
+@pytest.mark.parametrize("n_parts", [1, 2])
+def test_a_later_snapshot_larger_than_an_earlier_one_is_kept_whole(tmp_path, n_parts):
+    # hftbacktest's one-shot convert would cut this 25-level snapshot to 20 levels, as it
+    # reslices its buffers to each block. One call per block keeps every level (Q13);
+    # convert_parts itself checks the emitted rows against the full block sizes.
+    from hftbacktest.types import DEPTH_SNAPSHOT_EVENT
+
     trades, depth = synthetic_day(tmp_path, mid_snapshot=(25, 20))
-    with pytest.raises(ConversionError):
-        convert_parts(trades, depth, n_parts=1)
+    parts, info = convert_parts(trades, depth, n_parts=n_parts)
+    data = np.concatenate(parts)
+    snap = (data["ev"] & 0xFF) == DEPTH_SNAPSHOT_EVENT
+    rows = sum(b + a for b, a in info["snapshot_levels_bid_ask"])
+    # correct_event_order may write a row twice (EXCH and LOCAL), so at least that many.
+    assert snap.sum() >= rows
 
 
 RAW_DAY = Path(__file__).resolve().parents[2] / "data" / "raw" / "2024-01-01"
