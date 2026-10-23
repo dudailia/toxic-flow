@@ -38,7 +38,11 @@ def main(run_dir: Path, out: Path) -> None:
         ["label", "latency"], maintain_order=True
     ):
         fills = {q: int(g.filter(pl.col("queue") == q)["fills"][0]) for q in queues}
-        fewest = min(fills, key=fills.get) if len(queues) > 1 else "(one model)"
+        low = min(fills.values())
+        # A tie shows every model at the minimum, so a shared minimum is visible.
+        fewest = (
+            " = ".join(q for q in queues if fills[q] == low) if len(queues) > 1 else "(one model)"
+        )
         lines.append(
             f"| {label} | {latency} | "
             + " | ".join(str(fills[q]) for q in queues)

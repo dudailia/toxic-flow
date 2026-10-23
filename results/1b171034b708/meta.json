@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/smoke_overlays_2024-01-01.yaml",
+  "config_hash": "1b171034b708",
+  "commit": "bcf355c5cb9461cdff09e6c2c5a17be18bf9a926",
+  "started_at": "2026-10-23T15:03:23+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "smoke",
+  "finished_at": "2026-10-23T15:15:05+00:00"
+}

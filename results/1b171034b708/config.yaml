@@ -1,0 +1,23 @@
+# SMOKE RUN. One training day, placeholder parameters, to run the overlays end to end. Not
+# a result and chooses nothing. c, d, the OFI window, tau, K and the Hawkes parameters are
+# placeholders: K and the Hawkes fit come from 2024-01-01 alone
+# (docs/smoke/signals_2024-01-01.json), not from the 12 training days the study uses.
+name: smoke_overlays_2024-01-01
+label: smoke
+days: [2024-01-01]
+strategies:
+  - {name: B2, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5, d: 0.5,
+     ofi_window_s: 5.0, K: 4.845929}
+  - {name: B2b, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5, d: 0.5,
+     tau_s: 5.0, K: 3.042518}
+  - {name: B3, gamma: 0.05, window_s: 600, update_every: 50, c: 0.5, d: 0.5, K: 3.464269,
+     mu_b: 1.3202130002881391, mu_s: 1.444586185789969, alpha_bb: 4.26915470755978,
+     alpha_bs: 0.3968057660734126, alpha_sb: 0.2930527288399371,
+     alpha_ss: 4.342663341559424, beta: 7.828919905090641}
+queue_models: [risk_averse, power3, power2, log]
+latencies: [low, high]
+quote_start: "00:30:00"
+quote_end: "23:59:00"
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps: {standard_maker: venue, zero: 0.0, lp_tier1: -0.1}
