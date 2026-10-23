@@ -514,3 +514,18 @@ What would unblock items 1 to 3, your choice:
 
 - Q39. Disk and memory: which of the options under Blockers?
 - Q40. Confirm the Q13 converter fix (keep a larger later snapshot whole).
+
+## Second attempt at items 2 and 3 (21:20 to 21:25 UTC)
+
+Disk came back to 2.1 GB while swap shrank, and the waiting files were committed
+(303a478). The engine now waits for 1.5 GB of free disk before converting a day in memory
+(9ddd074), and scripts/m2_report.py is ready for the AC2.4 table. The M1 loop then waited
+for 1.5 GB before each day and ran it under the 700 MB watchdog. The watchdog killed
+2024-12-01 twice: swap stayed at 12.1 to 12.2 GB of 12.8 GB with 76% of RAM free, and each
+conversion allocated another 1 GB swap file. The loop was stopped. Nothing was lost and
+nothing under data/ was removed.
+
+So items 1 (conversion), 2 (15 of 18 quality files) and 3 (all of M2) cannot be done on
+this machine as it stands, and repeating the attempt only thrashes it. Q39 holds: about
+15 GB more free disk, or permission to delete derived parts after use, or fewer
+programs holding swapped-out memory.
