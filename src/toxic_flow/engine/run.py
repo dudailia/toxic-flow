@@ -46,6 +46,21 @@ def utc_ns(day: str, hms: str) -> int:
 
 
 _IN_MEMORY: dict[str, list] = {}  # at most one day converted in memory, see day_parts
+MIN_FREE_BYTES = 1_500_000_000
+
+
+def wait_for_room(min_free: int = MIN_FREE_BYTES, timeout_s: float = 1200) -> None:
+    """Wait until the disk has min_free bytes free, or raise after timeout_s. A day in memory
+    is about 6 GB, and macOS swap lives on the same disk, so converting with almost no free
+    disk can fill it; waiting lets swap shrink first."""
+    import shutil
+
+    waited = 0.0
+    while shutil.disk_usage(ROOT).free < min_free:
+        if waited >= timeout_s:
+            raise RuntimeError(f"less than {min_free} bytes of free disk after {timeout_s} s")
+        time.sleep(10)
+        waited += 10
 
 
 def day_parts(day: str) -> list:
@@ -59,6 +74,7 @@ def day_parts(day: str) -> list:
         from toxic_flow.data.convert import convert_day_in_memory
 
         _IN_MEMORY.clear()  # one day at a time
+        wait_for_room()
         _IN_MEMORY[day] = convert_day_in_memory(day)[0]
     return _IN_MEMORY[day]
 
