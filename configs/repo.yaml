@@ -1,0 +1,3 @@
+# The public repository whose tag opens the test-day lock (src/toxic_flow/data/split_lock.py).
+# The lock compares this with `git remote get-url origin`, character for character.
+origin: https://github.com/dudailia/toxic-flow.git
