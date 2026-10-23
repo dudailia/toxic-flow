@@ -19,6 +19,9 @@ Choices to confirm:
 - AC2.2 reads every run, smoke included, because the accounting must hold everywhere.
 - AC2.5 recomputes the selection from the results rather than trusting the table in
   configs/selected.yaml, so a hand-edited table cannot pass it.
+- m2_runs stores the run's label as run_label. Changed on 2026-10-23: metrics now have a
+  label column of their own (the strategy label, such as C4_x10), which the earlier
+  version would have overwritten.
 
 ## Proposed code
 
@@ -33,7 +36,7 @@ def m2_runs(include_smoke: bool) -> "pl.DataFrame | None":
         meta = json.loads((p.parent / "meta.json").read_text())
         if include_smoke or meta.get("label") != "smoke":
             frames.append(
-                pl.read_parquet(p).with_columns(pl.lit(meta.get("label", "")).alias("label"))
+                pl.read_parquet(p).with_columns(pl.lit(meta.get("label", "")).alias("run_label"))
             )
     return pl.concat(frames, how="diagonal") if frames else None
 
