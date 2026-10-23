@@ -48,7 +48,8 @@ def test_confirmatory_grid_is_one_config_with_canaries_in_the_primary_cell():
 def test_canary_config_for_validation_days():
     cfg = configs.canaries(CONSTANTS, SELECTED, VAL)
     labels = Counter(s.get("label", s["name"]) for s in cfg["strategies"])
-    assert labels == {"B1": 1, "B3": 2, "C1": 1, "C2": 1, "C4_x10": 1, "C4_x0.1": 1}
+    # B2b too, so the validation estimate of s (section 9) comes from this one run.
+    assert labels == {"B1": 1, "B2b": 1, "B3": 2, "C1": 1, "C2": 1, "C4_x10": 1, "C4_x0.1": 1}
     assert {c["latency"] for c in expand(cfg)} == {"high", "zero"}
 
 

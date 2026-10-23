@@ -104,9 +104,11 @@ def _canary_entries(constants: dict, selected: dict, cells=None) -> list[dict]:
 
 
 def canaries(constants: dict, selected: dict, days) -> dict:
-    """M4: canaries on validation days, with B1 and B3 at the selected settings."""
+    """M4: canaries on validation days, with B1, B2b and B3 at the selected settings, so
+    this one run gives the canary comparisons and the validation estimate of s."""
     _check(constants)
-    s = [{"name": "B1", **_b1(selected)}, _selected_overlay("B3", constants, selected)]
+    s = [{"name": "B1", **_b1(selected)}]
+    s += [_selected_overlay(n, constants, selected) for n in ("B2b", "B3")]
     return _config(
         "canaries_val", days, s + _canary_entries(constants, selected), [PRIMARY[0]], [PRIMARY[1]]
     )
