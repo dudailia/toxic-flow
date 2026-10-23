@@ -60,9 +60,12 @@ def load_manifest(path: Path) -> list[dict]:
 
 
 def save_manifest(path: Path, entries: list[dict]) -> None:
+    """Write the raw entries; any other key (the converter's "converted" record) is kept."""
     entries = sorted(entries, key=lambda e: (e["date"], e["data_type"]))
+    doc = json.loads(path.read_text()) if path.exists() else {}
+    doc["files"] = entries
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps({"files": entries}, indent=2) + "\n")
+    tmp.write_text(json.dumps(doc, indent=2) + "\n")
     os.replace(tmp, path)
 
 

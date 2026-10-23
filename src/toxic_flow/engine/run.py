@@ -45,50 +45,14 @@ def utc_ns(day: str, hms: str) -> int:
     return int(datetime.fromisoformat(f"{day}T{hms}+00:00").timestamp()) * 10**9
 
 
-_IN_MEMORY: dict[str, list] = {}  # at most one day converted in memory, see day_parts
-MIN_ROOM_BYTES = 4_000_000_000
+def day_parts(day: str) -> list[str]:
+    """A day's converted parts, from the cache in data/converted/<day>. A day not in the
+    cache is converted from its hashed raw files first, which needs 15 GB of free disk and
+    is checked against the part hashes in the manifest (data/convert.py)."""
+    from toxic_flow.data.convert import convert_day
 
-
-def _swap_free() -> int:
-    """Unused bytes in the swap files already on disk (macOS); 0 elsewhere."""
-    try:
-        out = subprocess.run(["sysctl", "-n", "vm.swapusage"], capture_output=True, text=True)
-        return int(float(out.stdout.split("free = ")[1].split("M")[0]) * 2**20)
-    except (IndexError, ValueError, OSError):
-        return 0
-
-
-def wait_for_room(min_free: int = MIN_ROOM_BYTES, timeout_s: float = 1800) -> None:
-    """Wait until free disk plus unused swap is min_free bytes, or raise after timeout_s.
-    A day in memory is about 6 GB and macOS swap lives on the same disk, so converting
-    with little room makes swap grow into the last free space. On 2026-10-23 days that
-    started with about 4 GB of room converted; days with about 3 GB filled the disk."""
-    import shutil
-
-    waited = 0.0
-    while shutil.disk_usage(ROOT).free + _swap_free() < min_free:
-        if waited >= timeout_s:
-            raise RuntimeError(
-                f"less than {min_free} bytes of free disk and swap after {timeout_s} s"
-            )
-        time.sleep(10)
-        waited += 10
-
-
-def day_parts(day: str) -> list:
-    """A day's converted parts: file paths when data/converted/<day> holds them, else
-    arrays converted in memory from the hashed raw files (the disk cannot keep every
-    converted day, Q4). expand() is day-major, so each day is converted once per run."""
-    conv = CONVERTED / day / "convert.json"
-    if conv.exists():
-        return [str(CONVERTED / day / f) for f in json.loads(conv.read_text())["files"]]
-    if day not in _IN_MEMORY:
-        from toxic_flow.data.convert import convert_day_in_memory
-
-        _IN_MEMORY.clear()  # one day at a time
-        wait_for_room()
-        _IN_MEMORY[day] = convert_day_in_memory(day)[0]
-    return _IN_MEMORY[day]
+    dest = convert_day(day)
+    return [str(dest / f) for f in json.loads((dest / "convert.json").read_text())["files"]]
 
 
 def _as_feed_file(part):
@@ -322,7 +286,8 @@ def run_config(cfg_path: Path, oracle=None) -> Path:
         "label": cfg.get("label", ""),
     }
     rows = []
-    for cell in expand(cfg):
+    cells = expand(cfg)
+    for n, cell in enumerate(cells):
         row, fills = run_cell(cell, cfg, oracle=oracle)
         name = f"{row['label']}_{cell['queue']}_{cell['latency']}_{cell['day']}"
         fills.write_parquet(out_dir / f"fills_{name}.parquet")
@@ -330,6 +295,11 @@ def run_config(cfg_path: Path, oracle=None) -> Path:
         print(
             f"{name}: {row['fills']} fills, BEF {row['break_even_fee_bps']:.3f} bp, {row['wall_seconds']} s"
         )
+        if n + 1 == len(cells) or cells[n + 1]["day"] != cell["day"]:
+            # expand() is day-major: the day's last cell is done, so its parts may go.
+            from toxic_flow.data.convert import evict_converted
+
+            evict_converted(cell["day"])
     pl.DataFrame(rows).write_parquet(out_dir / "metrics.parquet")
     meta["finished_at"] = datetime.now(UTC).isoformat(timespec="seconds")
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")

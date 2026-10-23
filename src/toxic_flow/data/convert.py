@@ -21,6 +21,7 @@ exclusion rule 2 of PREREGISTRATION.md section 2. It stops the pipeline for Ilia
 """
 
 import gzip
+import hashlib
 import json
 import math
 import os
@@ -41,6 +42,7 @@ from numba import njit
 from toxic_flow.data.download import (
     MANIFEST,
     RAW,
+    DiskSpaceError,
     ManifestError,
     load_manifest,
     resolve_days,
@@ -54,6 +56,11 @@ from toxic_flow.machine import peak_rss_bytes
 ROOT = Path(__file__).resolve().parents[3]
 CONVERTED = ROOT / "data" / "converted"
 SS_BUFFER_SIZE = 1_000_000  # tardis.convert's default ss_buffer_size
+# Converted days are a cache of the raw files (Ilia, 2026-10-23). Decimal GB, as df -H.
+# A conversion takes about 1.4 times the day's raw bytes on disk and up to 7.5 GB of memory
+# (100M events); on a full disk macOS swap, which lives on the same disk, can fill the rest.
+MIN_FREE_TO_CONVERT = 15 * 10**9
+KEEP_FREE_AFTER_RUNS = 30 * 10**9
 I64 = np.iinfo(np.int64)
 
 
@@ -353,19 +360,71 @@ def convert_parts(
     return parts, info
 
 
+def part_sha256(part: np.ndarray) -> str:
+    """SHA-256 of a part's events. The array, not the .npz: the zip container stores a write
+    time, so the file's hash changes on every rebuild while its events do not."""
+    return hashlib.sha256(np.ascontiguousarray(part).tobytes()).hexdigest()
+
+
+def _converted_record(manifest: Path) -> dict:
+    return json.loads(manifest.read_text()).get("converted", {}) if manifest.exists() else {}
+
+
+def _record_converted(manifest: Path, day: str, parts: dict[str, str]) -> None:
+    doc = json.loads(manifest.read_text())
+    doc.setdefault("converted", {})[day] = {
+        "parts": dict(sorted(parts.items())),
+        "hftbacktest_version": hftbacktest.__version__,
+    }
+    tmp = manifest.with_name(manifest.name + ".tmp")
+    tmp.write_text(json.dumps(doc, indent=2) + "\n")
+    os.replace(tmp, manifest)
+
+
+def check_room(path: Path, min_free: int) -> None:
+    free = shutil.disk_usage(path).free
+    if free < min_free:
+        raise DiskSpaceError(f"{free} bytes free, a conversion needs {min_free}")
+
+
+def evict_converted(
+    day: str, out_dir: Path = CONVERTED, manifest: Path = MANIFEST, keep_free=KEEP_FREE_AFTER_RUNS
+) -> bool:
+    """After a day's runs: delete its parts and convert.json unless the disk has more than
+    keep_free bytes free. Only parts whose hashes are in the manifest go, so a rebuild can be
+    checked; the small caches (OFI, order latency) stay. Returns whether it deleted."""
+    dest = out_dir / normalise(day)
+    if not (dest / "convert.json").exists() or shutil.disk_usage(out_dir).free > keep_free:
+        return False
+    recorded = _converted_record(manifest).get(normalise(day), {}).get("parts", {})
+    on_disk = {p.name for p in dest.glob("part-*.npz")}
+    if not recorded or on_disk - set(recorded):
+        raise ConversionError(f"{day}: no recorded hashes for {sorted(on_disk - set(recorded))}")
+    (dest / "convert.json").unlink()  # first, so a half-evicted day never looks converted
+    for name in on_disk:
+        (dest / name).unlink()
+    if not any(dest.iterdir()):
+        dest.rmdir()
+    return True
+
+
 def convert_day(
     day: str,
     raw_dir: Path = RAW,
     out_dir: Path = CONVERTED,
     manifest: Path = MANIFEST,
     events_per_part: int = 15_000_000,
+    min_free: int = MIN_FREE_TO_CONVERT,
 ) -> Path:
-    """Write data/converted/<date>/part-NN.npz and convert.json. Return the directory."""
+    """Write data/converted/<date>/part-NN.npz and convert.json, record each part's SHA-256
+    in the manifest, or check a rebuild against the recorded ones. Return the directory."""
     assert_allowed(day)  # first: converting reads the raw file
     day = normalise(day)
     dest = out_dir / day
     if (dest / "convert.json").exists():
         return dest
+    out_dir.mkdir(parents=True, exist_ok=True)
+    check_room(out_dir, min_free)
     pinned = {(e["date"], e["data_type"]): e for e in load_manifest(manifest)}
     raw = {}
     for data_type in DATA_TYPES:
@@ -379,8 +438,11 @@ def convert_day(
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True)
 
+    hashes = {}
+
     def save(k: int, part: np.ndarray) -> None:
         np.savez_compressed(staging / f"part-{k:02d}.npz", data=part)
+        hashes[f"part-{k:02d}.npz"] = part_sha256(part)
 
     start = time.perf_counter()
     try:
@@ -412,7 +474,18 @@ def convert_day(
         }
     )
     (staging / "convert.json").write_text(json.dumps(info, indent=2) + "\n")
-    os.rename(staging, dest)
+    recorded = _converted_record(manifest).get(day)
+    if recorded is None:
+        _record_converted(manifest, day, hashes)
+    elif recorded["parts"] != hashes:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise ConversionError(f"{day}: rebuilt parts do not match the hashes in the manifest")
+    if dest.exists():  # caches of an evicted day; the parts join them
+        for f in staging.iterdir():
+            os.replace(f, dest / f.name)
+        staging.rmdir()
+    else:
+        os.rename(staging, dest)
     return dest
 
 
@@ -429,11 +502,14 @@ def min_feed_latency_ns(day: str, raw_dir: Path = RAW, chunk_bytes: int = 64 << 
     return best
 
 
-def convert_day_in_memory(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST):
-    """(parts, info) for one day, held in memory only: the same conversion as convert_day,
-    for when the disk cannot keep every converted day (Q4). Raw hashes are checked first."""
+def convert_day_in_memory(
+    day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, min_free: int = MIN_FREE_TO_CONVERT
+):
+    """(parts, info) for one day, held in memory only: the same conversion as convert_day.
+    Raw hashes are checked first; the disk guard applies too, since swap grows into it."""
     assert_allowed(day)  # first: converting reads the raw file
     day = normalise(day)
+    check_room(raw_dir, min_free)
     pinned = {(e["date"], e["data_type"]): e for e in load_manifest(manifest)}
     for data_type in DATA_TYPES:
         path, entry = raw_dir / day / f"{data_type}.csv.gz", pinned.get((day, data_type))

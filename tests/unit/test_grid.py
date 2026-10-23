@@ -41,23 +41,3 @@ def test_a_strategy_can_name_its_own_cells():
     cells = [(c["strategy"]["name"], c["queue"], c["latency"]) for c in expand(cfg)]
     assert len(cells) == 2 * 8 + 2
     assert ("C1", "risk_averse", "high") in cells and ("B3", "risk_averse", "zero") in cells
-
-
-def test_in_memory_conversion_waits_for_disk_room_and_then_gives_up(monkeypatch):
-    # Swap lives on the same disk: converting a day in memory with almost no free disk
-    # can fill it, so day_parts waits for room first and stops with an error if none comes.
-    import shutil
-    from collections import namedtuple
-
-    import pytest
-
-    from toxic_flow.engine import run
-
-    usage = namedtuple("usage", "total used free")
-    monkeypatch.setattr(shutil, "disk_usage", lambda _: usage(1, 1, 10))
-    monkeypatch.setattr(run.time, "sleep", lambda s: None)
-    monkeypatch.setattr(run, "_swap_free", lambda: 0)
-    with pytest.raises(RuntimeError, match="disk"):
-        run.wait_for_room(min_free=100, timeout_s=0)
-    monkeypatch.setattr(shutil, "disk_usage", lambda _: usage(1, 1, 1000))
-    run.wait_for_room(min_free=100, timeout_s=0)

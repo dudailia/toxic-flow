@@ -176,7 +176,11 @@ def test_failed_conversion_leaves_no_staging_directory(tmp_path, monkeypatch):
     out = tmp_path / "converted"
     with pytest.raises(ConversionError):
         cv.convert_day(
-            "2024-01-01", raw_dir=tmp_path / "raw", out_dir=out, manifest=tmp_path / "m.json"
+            "2024-01-01",
+            raw_dir=tmp_path / "raw",
+            out_dir=out,
+            manifest=tmp_path / "m.json",
+            min_free=0,  # a synthetic day of a few KB; the 15 GB guard is tested apart
         )
     assert not list(out.iterdir())
 

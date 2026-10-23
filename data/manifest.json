@@ -360,5 +360,19 @@
       "sha256": "43de7fe038b31e413ae934b8dc35fb2f4d170fd60b60ac88f8e37a8c1c48ccdf",
       "downloaded_at": "2026-10-23T20:41:37+00:00"
     }
-  ]
+  ],
+  "converted": {
+    "2024-01-01": {
+      "parts": {
+        "part-00.npz": "1123be6ea7d634ee5f9e0cbee9101096f601c6676f5ad5d993a782f6d649abbc",
+        "part-01.npz": "cb8ea98dc6967d7cc69534b61f2266d3b89e93d482112db044da62c9dcded8ed",
+        "part-02.npz": "706aa0d549ceb469ee2c92e2b26acf6e4cadf915873fa555ab8c38154aae7aa7",
+        "part-03.npz": "d282c4d95fafc0d9ef66166a91ddac0780e7315a097972bb2b32ccc2f6ac5172",
+        "part-04.npz": "5e068d4d650536f95b63c3b053eaac9e9841b1dc4ae13568b1273143cd48ba2f",
+        "part-05.npz": "f9280a966df8ce302bdb7287a92755539969c312e29ee1b3500b936758a2cca1",
+        "part-06.npz": "f4a6430c4d08fb61ad393b9b3e9031a1c04816ea1fac6873434b3ff294ef8e56"
+      },
+      "hftbacktest_version": "2.4.4"
+    }
+  }
 }
