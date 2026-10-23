@@ -174,7 +174,10 @@ maximum likelihood pooled over the 12 training days, each day an independent
 realisation, on exchange timestamps of collapsed events. The spectral radius of the
 matrix alpha / beta must be below 1; if not, the study stops and this section is revised
 before the tag. Time-rescaling residuals and KS statistics on validation days are
-reported whatever they show. Fitted values with standard errors: [TBD M3].
+reported whatever they show. Fitted values with standard errors, from 11,847,459 events
+on the 12 training days (docs/hawkes_fit.md): mu_b 1.968 (0.002), mu_s 1.879 (0.002),
+alpha_bb 8.149 (0.011), alpha_bs 1.012 (0.004), alpha_sb 1.223 (0.004), alpha_ss 8.125
+(0.012), beta 13.80 (0.02), all per second; branching ratio 0.670.
 
 Known limitation, stated now: a constant baseline mu ignores intraday seasonality, which
 tends to inflate the fitted branching ratio.

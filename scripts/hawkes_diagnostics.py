@@ -95,12 +95,21 @@ def main() -> None:
             lines.append(
                 f"| {d} | {k} | {v['n']:,} | {v['mean']:.4f} | {v['ks_statistic']:.4f} | {v['ks_pvalue']:.3g} |"
             )
+    means = [v["mean"] for r in res.values() for v in r.values()]
+    lo_m, hi_m = min(means), max(means)
     worst = max(v["ks_statistic"] for r in res.values() for v in r.values())
     lines += [
         "",
         f"Largest KS statistic: {worst:.4f}. With hundreds of thousands of events per day the",
         "KS test detects small departures, so the statistic is the more useful number; the",
         "constant baseline is the expected source of misfit.",
+        "",
+        f"Mean residual from {lo_m:.3f} to {hi_m:.3f}. A mean above 1 means the fitted model",
+        "expected more events than the day had, so the training fit runs hot on these days.",
+        "",
+        "B2's K (OFI windows of 1, 5 and 30 s) is not computed: its input needs a replay of the",
+        "whole book per day, which this machine has neither the disk nor the memory to hold",
+        f"(K_not_computed in train_constants.json: {', '.join(c['K_not_computed']) or 'none'}).",
     ]
     (ROOT / "docs" / "hawkes_fit.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))

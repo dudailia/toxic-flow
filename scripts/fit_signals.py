@@ -49,14 +49,20 @@ def hawkes_arrays(p: dict):
     return mu, alpha, p["beta"]
 
 
-def day_ratios(day: str, params: dict) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """(a, abar) over the day's quoting window for every signal and parameter."""
+def day_ratios(day: str, params: dict, with_ofi: bool) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """(a, abar) over the day's quoting window for every signal and parameter; B2 only
+    with_ofi, since its input needs a replay of the whole book."""
     start = utc_ns(day, "00:00:00")
     grid = np.arange(start, utc_ns(day, "23:59:00"), STEP_NS, dtype=np.int64)
     quoting = grid >= utc_ns(day, QUOTE_START)
     ev_ts, ev_side = event_inputs(day)
-    ofi_ts, cum = ofi_inputs(day)
-    a = {f"B2_ofi_{w:g}s": np.abs(ofi_window(ofi_ts, np.diff(cum), grid, w)) for w in OFI_WINDOWS_S}
+    a = {}
+    if with_ofi:
+        ofi_ts, cum = ofi_inputs(day)
+        a = {
+            f"B2_ofi_{w:g}s": np.abs(ofi_window(ofi_ts, np.diff(cum), grid, w))
+            for w in OFI_WINDOWS_S
+        }
     a |= {f"B2b_ewma_{t:g}s": ewma_at(ev_ts, ev_side, grid, t)[1] for t in TAUS_S}
     a["B3_hawkes"] = hawkes_signal(ev_ts, ev_side, grid, *hawkes_arrays(params))[1]
     for f in C4_FACTORS:
@@ -82,12 +88,11 @@ def fit_days(days: list[str]) -> dict:
 def main(smoke: bool) -> int:
     train = load_splits()["train"]
     days = [d for d in train if d not in excluded_days(train)]
-    # A day is ready once its events and OFI contributions exist, whether its parts are
-    # on disk (make data) or were converted in memory (scripts/prepare_day.py).
-    on_disk = [
-        d for d in days
-        if (EVENTS / f"{d}.parquet").exists() and (CONVERTED / d / "ofi_contributions.npz").exists()
-    ]  # fmt: skip
+    # A day is ready once its market-order events exist. B2's input, the OFI
+    # contributions, needs a replay of the whole book; unless every day has it, B2's K is
+    # left out and said so.
+    on_disk = [d for d in days if (EVENTS / f"{d}.parquet").exists()]
+    with_ofi = all((CONVERTED / d / "ofi_contributions.npz").exists() for d in on_disk)
     if not smoke and on_disk != days:
         missing = sorted(set(days) - set(on_disk))
         raise SystemExit(f"{len(missing)} training days not on disk: {missing}; use --smoke")
@@ -95,7 +100,7 @@ def main(smoke: bool) -> int:
     for d in days:
         assert_allowed(d)
     hawkes = fit_days(days)
-    ratios = [day_ratios(d, hawkes["params"]) for d in days]
+    ratios = [day_ratios(d, hawkes["params"], with_ofi) for d in days]
     k = {
         name: round(k_constant(np.concatenate([r[name][0] for r in ratios]),
                                np.concatenate([r[name][1] for r in ratios])), 6)
@@ -109,6 +114,7 @@ def main(smoke: bool) -> int:
         "days": days,
         "hawkes": hawkes,
         "K": k,
+        "K_not_computed": [] if with_ofi else [f"B2_ofi_{w:g}s" for w in OFI_WINDOWS_S],
         "ac3_4_branching_ratio_below_1": not stop,
     }
     path = ROOT / (
