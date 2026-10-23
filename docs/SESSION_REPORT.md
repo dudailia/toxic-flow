@@ -435,3 +435,82 @@ after each item, no M4 work.
   the latency API with its one-second look-ahead (section 3). Left for you, because each
   is a design choice: the exchange model (Q3), the queue-model variants (Q2), the third
   fee level (Q6), and the analysis wording in Q34 to Q36.
+
+## Item by item
+
+| # | Item | State | Commit |
+|---|---|---|---|
+| Q31 | Same-step replacement, section 3; smoke grid re-run with presence before and after | done | 7d24a8b, 9cb4bb2 |
+| 1 | Download and hash the 17 days | done: 36 files for 18 days in the manifest, with bytes (AC1.6); 68 requests, none to a test-day URL | 86b69b1 |
+| 1 | Convert them | not on disk: no room (see Blockers) | |
+| 2 | Market-order events for all 18 days | done, from the raw trades with a streamed offset; every offset is 0 | 1c7bdbe |
+| 2 | Data-quality files | 3 of 18 days (2024-01-01, 2024-06-01, 2025-01-01) | this commit |
+| 2 | Exclusion rules | rule 1 clear on all 18 (every GET returned 200); rules 2 and 3 need the quality files, so 3 of 18 assessed, none excluded | |
+| 3 | M2 selection, selected.yaml, chosen B0 and B1 in 8 cells | not started: needs the training days converted (see Blockers) | |
+| 4 | M3: pooled Hawkes fit, K, validation diagnostics in docs/hawkes_fit.md | done except B2's K | 8dd2e1c |
+| Q13 | Converter refused 2024-02-01 and 2024-03-01; fixed so a larger later snapshot is kept whole | done, unit-tested; not yet run on those two days | f87ca92 |
+
+## Results
+
+Q31, risk-averse cell on 2024-01-01 (docs/smoke/q31_presence_2024-01-01.md): quote
+presence rose from 0.416 to 0.995 for B3, 0.710 to 0.994 for B2, 0.690 to 0.995 for B2b
+and 0.946 to 0.994 for B1; B0 from 0.709 to 0.727, held by its inventory cap. Fills rose
+with it (B3 2,556 to 4,314). Every run now does better at zero latency than at high, and
+every break-even fee is negative except the oracle C2 (+0.27 bp, below the 2 bp maker
+fee), so no audit was triggered.
+
+M3 (docs/hawkes_fit.md): 11,847,459 events on the 12 training days; branching ratio 0.670,
+so AC3.4 holds; beta 13.80 per second. K: B2b 3.450, 2.650 and 2.142 at tau 1, 5 and
+30 s; B3 3.878; C4 9.303 (x10) and 2.197 (x0.1). On all 6 validation days the KS test
+rejects Exp(1) residuals (statistics 0.050 to 0.152) and the residual mean is 1.02 to
+1.34: the training fit expects more events than these days had. The fit values are now
+in PREREGISTRATION.md section 5; "Constants K" stays [TBD] until B2's K exists.
+
+Data quality, 3 days: largest gap in the quoting window 9.0 s (trades, 2024-06-01) and
+6.9 s (trades, 2025-01-01), below the rule 3 threshold; no crossed or one-sided book
+batches. Feed latency p50 of the book 9.1 ms on 2024-06-01 and 2.6 ms on 2025-01-01.
+
+## Blockers
+
+Disk and memory, not code. The raw files for 18 days take 11.2 GB, and with them the
+disk has about 0.4 to 3 GB free, varying with swap. macOS swap is 12.5 GB of 13 in use and
+lives on the same disk, so every multi-GB job grows swap into the last free space.
+
+- Deleting the derived converted parts of 2024-01-01 to make room was denied by the
+  permission check, so nothing under data/ was removed.
+- Instead, M1 converts in memory (scripts/prepare_day.py; on 2024-01-01 it reproduces the
+  on-disk report, events and OFI file byte for byte). That worked for 2 more days, then
+  a watchdog killed 2024-12-01 at 433 MB free, before the disk could fill. An earlier
+  run without the watchdog did fill the disk; it was stopped and nothing was lost.
+- The engine can also run from memory (day_parts in engine/run.py), but M2 needs 12 such
+  conversions per config.
+- make check needs 1 GiB free: the downloader's disk guard tests refuse below that. So
+  the last files of this block may wait for disk before they can be committed.
+
+What would unblock items 1 to 3, your choice:
+- About 15 GB more free disk: convert every train and val day once (make data), then M2
+  runs as written.
+- Or permission to delete data/converted/<day>/part-*.npz after a day's runs: they are
+  derived, and reconversion from the hashed raw files is deterministic (byte-identical
+  outputs on 2024-01-01). Then one day at a time fits.
+- Either way, closing idle apps would shrink swap and give memory back.
+
+## Judgment calls
+
+- Q23: the GLFT tutorial has no grid, so the grid spans factors of two around its gamma
+  (0.05) and window (10 min).
+- Q31: a replacement waits while an earlier order on its side is unacknowledged, and the
+  cap counts cancels in flight, so in-flight orders cannot breach the cap.
+- Q13: when a later snapshot has more levels than an earlier one, the converter keeps it
+  whole, departing from hftbacktest's one-shot output, which would cut it short. Both
+  alternatives were worse: excluding the day breaks section 2, and copying the cut
+  reproduces a library bug.
+- Events built from raw trades with a streamed offset equal the converter's; the offset
+  was 0 on every day.
+- M3 ran without B2's K rather than wait; it is listed as not computed.
+- Q2, Q3, Q6, Q34 to Q36 were left open: each involves design (see the decisions above).
+
+## Open questions, new
+
+- Q39. Disk and memory: which of the options under Blockers?
+- Q40. Confirm the Q13 converter fix (keep a larger later snapshot whole).
