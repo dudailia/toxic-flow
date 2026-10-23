@@ -1,0 +1,134 @@
+{
+  "day": "2024-01-01",
+  "runs": [
+    "683bdb67ceee",
+    "5b1da521ba25"
+  ],
+  "cell": "risk_averse/high",
+  "label": "SMOKE: one training day, lower bound on overfilled fills (Q3)",
+  "B0": {
+    "run": "5b1da521ba25",
+    "fills": 28830,
+    "at_price_upper_bound_share": 0.0522,
+    "through": {
+      "fills": 21431,
+      "share": 0.7434,
+      "mean_markout_1s_bps": -0.7874,
+      "mean_markout_10s_bps": -1.0455,
+      "mean_markout_60s_bps": -1.0406
+    },
+    "no_print": {
+      "fills": 5894,
+      "share": 0.2044,
+      "mean_markout_1s_bps": -0.5957,
+      "mean_markout_10s_bps": -0.8427,
+      "mean_markout_60s_bps": -0.8423
+    },
+    "at_price": {
+      "fills": 1491,
+      "share": 0.0517,
+      "mean_markout_1s_bps": -0.633,
+      "mean_markout_10s_bps": -0.9821,
+      "mean_markout_60s_bps": -1.1666
+    },
+    "at_price_overfilled": {
+      "fills": 14,
+      "share": 0.0005,
+      "mean_markout_1s_bps": -0.3646,
+      "mean_markout_10s_bps": -0.2785,
+      "mean_markout_60s_bps": 0.5024
+    }
+  },
+  "B1": {
+    "run": "683bdb67ceee",
+    "fills": 4502,
+    "at_price_upper_bound_share": 0.1737,
+    "at_price": {
+      "fills": 781,
+      "share": 0.1735,
+      "mean_markout_1s_bps": -0.5038,
+      "mean_markout_10s_bps": -0.9079,
+      "mean_markout_60s_bps": -0.6674
+    },
+    "through": {
+      "fills": 3360,
+      "share": 0.7463,
+      "mean_markout_1s_bps": -0.784,
+      "mean_markout_10s_bps": -0.9388,
+      "mean_markout_60s_bps": -0.9053
+    },
+    "no_print": {
+      "fills": 360,
+      "share": 0.08,
+      "mean_markout_1s_bps": -0.594,
+      "mean_markout_10s_bps": -0.6222,
+      "mean_markout_60s_bps": -1.0229
+    },
+    "at_price_overfilled": {
+      "fills": 1,
+      "share": 0.0002,
+      "mean_markout_1s_bps": -0.0118,
+      "mean_markout_10s_bps": -0.0118,
+      "mean_markout_60s_bps": -6.4543
+    }
+  },
+  "B3": {
+    "run": "683bdb67ceee",
+    "fills": 2556,
+    "at_price_upper_bound_share": 0.0853,
+    "through": {
+      "fills": 2062,
+      "share": 0.8067,
+      "mean_markout_1s_bps": -0.8134,
+      "mean_markout_10s_bps": -0.9041,
+      "mean_markout_60s_bps": -0.92
+    },
+    "no_print": {
+      "fills": 276,
+      "share": 0.108,
+      "mean_markout_1s_bps": -0.4444,
+      "mean_markout_10s_bps": -0.5813,
+      "mean_markout_60s_bps": -0.7997
+    },
+    "at_price": {
+      "fills": 218,
+      "share": 0.0853,
+      "mean_markout_1s_bps": -0.6437,
+      "mean_markout_10s_bps": -1.1958,
+      "mean_markout_60s_bps": -1.0612
+    }
+  },
+  "C2": {
+    "run": "683bdb67ceee",
+    "fills": 6511,
+    "at_price_upper_bound_share": 0.2943,
+    "no_print": {
+      "fills": 804,
+      "share": 0.1235,
+      "mean_markout_1s_bps": -0.39,
+      "mean_markout_10s_bps": 0.5389,
+      "mean_markout_60s_bps": 0.3189
+    },
+    "at_price": {
+      "fills": 1910,
+      "share": 0.2933,
+      "mean_markout_1s_bps": -0.0805,
+      "mean_markout_10s_bps": 0.8909,
+      "mean_markout_60s_bps": 0.8925
+    },
+    "at_price_overfilled": {
+      "fills": 6,
+      "share": 0.0009,
+      "mean_markout_1s_bps": -1.3163,
+      "mean_markout_10s_bps": -1.0554,
+      "mean_markout_60s_bps": -0.3977
+    },
+    "through": {
+      "fills": 3791,
+      "share": 0.5822,
+      "mean_markout_1s_bps": -0.6454,
+      "mean_markout_10s_bps": 0.0153,
+      "mean_markout_60s_bps": 0.0848
+    }
+  }
+}
