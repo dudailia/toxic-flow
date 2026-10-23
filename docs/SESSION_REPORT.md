@@ -390,3 +390,21 @@ the pipeline for the steps that need more days is written and tested but not run
 - Q38. Markouts add the horizon to the fill's exchange time but read the mid on the
   local-time decision grid, so the clocks differ by the feed latency, a few ms. State it,
   or move the lookup onto exchange time?
+
+## Items 30 and 31
+
+| # | Item | Commit |
+|---|---|---|
+| 30 | Paper figures (per-day D_i, mean D in all 8 cells) and the one-page PDF (AC6.2) | a9a6c5c |
+| 31 | Q31 corrected: B3's quote presence is set by cancel-then-replace, not latency | f6e9cb5 |
+
+30. paper/figures.py builds both figures and summary.pdf from results/summary.json only,
+    and make paper runs it after the text. matplotlib is now declared in pyproject.toml
+    at the version hftbacktest had already locked (3.11.2), so uv.lock gained only the
+    direct-dependency entry. Tested on a summary that eval/analysis.py built from a
+    synthetic table; no study figure exists yet.
+
+What remains needs the 17 missing training and validation days (Q22) or a decision from
+the lists above. In order of what blocks the tag: Q22 (downloads), Q23 (B1 grid), Q28
+(C1's comparator), Q25 (C4's K), Q2, Q3 and Q6 (the M0 text in
+docs/proposals/prereg_m0_tbds.md), then Q34 to Q36 (analysis wording).
