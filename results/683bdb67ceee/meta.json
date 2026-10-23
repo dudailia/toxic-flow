@@ -1,9 +1,9 @@
 {
   "config": "configs/runs/smoke_canaries_2024-01-01.yaml",
   "config_hash": "683bdb67ceee",
-  "commit": "f406e2bec22a34d7195f76fcf9c6d7b445b3c62e",
-  "started_at": "2026-10-23T18:30:33+00:00",
+  "commit": "a429684db4e078ee3c26830a1fd8e44723b5db71",
+  "started_at": "2026-10-23T20:52:05+00:00",
   "hftbacktest": "2.4.4",
   "label": "smoke",
-  "finished_at": "2026-10-23T18:36:26+00:00"
+  "finished_at": "2026-10-23T20:54:56+00:00"
 }
