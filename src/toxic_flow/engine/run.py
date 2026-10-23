@@ -8,6 +8,7 @@ metrics.parquet (one row per day and cell) and fills_<cell>.parquet (gitignored)
 Fees are zero in the simulation and applied in evaluation (PREREGISTRATION.md section 3).
 """
 
+import io
 import json
 import subprocess
 import sys
@@ -44,16 +45,44 @@ def utc_ns(day: str, hms: str) -> int:
     return int(datetime.fromisoformat(f"{day}T{hms}+00:00").timestamp()) * 10**9
 
 
+_IN_MEMORY: dict[str, list] = {}  # at most one day converted in memory, see day_parts
+
+
+def day_parts(day: str) -> list:
+    """A day's converted parts: file paths when data/converted/<day> holds them, else
+    arrays converted in memory from the hashed raw files (the disk cannot keep every
+    converted day, Q4). expand() is day-major, so each day is converted once per run."""
+    conv = CONVERTED / day / "convert.json"
+    if conv.exists():
+        return [str(CONVERTED / day / f) for f in json.loads(conv.read_text())["files"]]
+    if day not in _IN_MEMORY:
+        from toxic_flow.data.convert import convert_day_in_memory
+
+        _IN_MEMORY.clear()  # one day at a time
+        _IN_MEMORY[day] = convert_day_in_memory(day)[0]
+    return _IN_MEMORY[day]
+
+
+def _as_feed_file(part):
+    """generate_order_latency np.loads its argument, so an array goes in as an npz buffer."""
+    if isinstance(part, str):
+        return part
+    buf = io.BytesIO()
+    np.savez(buf, data=part)
+    buf.seek(0)
+    return buf
+
+
 def latency_file(day: str, setting: str) -> Path:
     """Order latency from feed latency at the setting's multiplier, built once per day."""
     path = CONVERTED / day / f"order_latency_{setting}.npz"
     if not path.exists():
         mul = LATENCY_MUL[setting]
-        parts = json.loads((CONVERTED / day / "convert.json").read_text())["files"]
         lat = [
-            generate_order_latency(str(CONVERTED / day / f), mul_entry=mul, mul_resp=mul)
-            for f in parts
+            generate_order_latency(_as_feed_file(p), mul_entry=mul, mul_resp=mul)
+            for p in day_parts(day)
         ]
+        path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(path, data=np.concatenate(lat))
     return path
 
@@ -77,10 +106,7 @@ def ofi_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
     path = CONVERTED / day / "ofi_contributions.npz"
     if not path.exists():
         venue = venue_for(day)
-        parts = json.loads((CONVERTED / day / "convert.json").read_text())["files"]
-        bbo, _ = replay_bbo(
-            [CONVERTED / day / f for f in parts], venue["tick_size"], venue["lot_size"]
-        )
+        bbo, _ = replay_bbo(day_parts(day), venue["tick_size"], venue["lot_size"])
         ts, e = ofi_contributions(bbo)
         np.savez_compressed(path, ts=ts, e=e)
     data = np.load(path)
@@ -142,8 +168,8 @@ def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
 
 def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=0.0):
     venue = venue_for(day)
-    parts = json.loads((CONVERTED / day / "convert.json").read_text())["files"]
-    asset = BacktestAsset().data([str(CONVERTED / day / f) for f in parts]).linear_asset(1.0)
+    # Paths, or arrays that _IN_MEMORY keeps alive: hftbacktest does not copy an array.
+    asset = BacktestAsset().data(day_parts(day)).linear_asset(1.0)
     if latency == "zero":
         asset = asset.constant_order_latency(0, 0)
     else:

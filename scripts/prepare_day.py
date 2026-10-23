@@ -18,26 +18,16 @@ import time
 
 import numpy as np
 
-from toxic_flow.data.convert import CONVERTED, convert_parts
-from toxic_flow.data.download import MANIFEST, RAW, load_manifest, sha256_file
-from toxic_flow.data.split_lock import assert_allowed, normalise
-from toxic_flow.data.tardis import DATA_TYPES
+from toxic_flow.data.convert import CONVERTED, convert_day_in_memory
+from toxic_flow.data.split_lock import normalise
 from toxic_flow.data.validate import write_report
 from toxic_flow.signals.ofi import ofi_contributions
 
 
 def main(day: str) -> None:
-    assert_allowed(day)  # first: everything below reads raw files
     day = normalise(day)
-    pinned = {(e["date"], e["data_type"]): e for e in load_manifest(MANIFEST)}
-    for t in DATA_TYPES:
-        path, entry = RAW / day / f"{t}.csv.gz", pinned.get((day, t))
-        if entry is None or sha256_file(path) != entry["sha256"]:
-            raise SystemExit(f"{path} is missing or does not match data/manifest.json")
     t0 = time.perf_counter()
-    parts, info = convert_parts(
-        RAW / day / "trades.csv.gz", RAW / day / "incremental_book_L2.csv.gz"
-    )
+    parts, info = convert_day_in_memory(day)  # split lock and raw hashes checked first
     info["conversion_seconds"] = round(time.perf_counter() - t0, 1)
     bbo = []
     report = write_report(day, parts=parts, info=info, bbo_out=bbo)

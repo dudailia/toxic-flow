@@ -406,6 +406,34 @@ def convert_day(
     return dest
 
 
+def min_feed_latency_ns(day: str, raw_dir: Path = RAW, chunk_bytes: int = 64 << 20) -> int:
+    """min(local_ts - exch_ts) in ns over both raw files, streamed chunk by chunk: the
+    value convert_parts turns into the local-timestamp offset, with no day held in memory."""
+    assert_allowed(day)  # first: this reads the raw files
+    day = normalise(day)
+    best = None
+    for name, schema in (("trades", trade_schema), ("incremental_book_L2", depth_schema)):
+        for df in _csv_chunks(raw_dir / day / f"{name}.csv.gz", schema, chunk_bytes):
+            v = int((df["local_timestamp"] - df["timestamp"]).min()) * 1000  # us to ns
+            best = v if best is None else min(best, v)
+    return best
+
+
+def convert_day_in_memory(day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST):
+    """(parts, info) for one day, held in memory only: the same conversion as convert_day,
+    for when the disk cannot keep every converted day (Q4). Raw hashes are checked first."""
+    assert_allowed(day)  # first: converting reads the raw file
+    day = normalise(day)
+    pinned = {(e["date"], e["data_type"]): e for e in load_manifest(manifest)}
+    for data_type in DATA_TYPES:
+        path, entry = raw_dir / day / f"{data_type}.csv.gz", pinned.get((day, data_type))
+        if entry is None or not path.exists() or sha256_file(path) != entry["sha256"]:
+            raise ManifestError(f"{path} is missing or does not match data/manifest.json")
+    return convert_parts(
+        raw_dir / day / "trades.csv.gz", raw_dir / day / "incremental_book_L2.csv.gz"
+    )
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 1:
         print(__doc__)

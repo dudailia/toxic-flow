@@ -6,8 +6,6 @@ so the look-ahead is entirely in future_mid below. If C2 cannot beat B1 by a wid
 the harness cannot turn information into PnL and a null result would mean nothing.
 """
 
-import json
-
 import numpy as np
 
 HORIZON_S = 5.0
@@ -29,13 +27,11 @@ def oracle_series(bbo: np.ndarray, grid: np.ndarray, horizon_s: float = HORIZON_
 def oracle_for_day(day: str, cfg: dict):
     """The oracle series on the config's decision grid for one day (engine's oracle hook)."""
     from toxic_flow.data.book import replay_bbo
-    from toxic_flow.data.convert import CONVERTED
     from toxic_flow.data.venue import venue_for
-    from toxic_flow.engine.run import utc_ns
+    from toxic_flow.engine.run import day_parts, utc_ns
 
     venue = venue_for(day)
-    parts = json.loads((CONVERTED / day / "convert.json").read_text())["files"]
-    bbo, _ = replay_bbo([CONVERTED / day / f for f in parts], venue["tick_size"], venue["lot_size"])
+    bbo, _ = replay_bbo(day_parts(day), venue["tick_size"], venue["lot_size"])
     step = int(cfg["step_ns"])
     grid = np.arange(utc_ns(day, "00:00:00"), utc_ns(day, "23:59:00"), step, dtype=np.int64)
     return oracle_series(bbo, grid)
