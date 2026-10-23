@@ -10,3 +10,4 @@ __pycache__/
 .venv/
 *.npz
 data/tardis_wait.json
+data/events/
