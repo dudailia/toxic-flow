@@ -152,3 +152,19 @@ def test_a_repeated_day_is_kept_once_if_identical_and_refused_if_not():
     differs = rows("B3", [1.0] * 12) + rows("B3", [2.0] * 12) + rows("B2b", [0.0] * 12)
     with pytest.raises(ValueError, match="twice"):
         analysis.compare(pl.DataFrame(differs), "B3", "B2b")
+
+
+def test_without_an_interval_there_is_no_conclusion():
+    # One paired day gives no interval; NaN must not read as "excludes 0".
+    one = pl.DataFrame(rows("B3", [1.0] * 12) + rows("B2b", [0.0] * 12)).filter(
+        pl.col("day") == DAYS[0]
+    )
+    nan = (float("nan"), float("nan"))
+    from toxic_flow.eval.bootstrap import conclusion
+
+    assert conclusion(nan, nan, 1.0, [1.0] * 8, 0.5)["key"] == "not_computed"
+    m = pl.concat([one, pl.DataFrame(rows("B1", [0.0] * 12) + rows("C1", [1.0] * 12))
+                  .filter(pl.col("day") == DAYS[0])], how="diagonal_relaxed")  # fmt: skip
+    c = analysis.canaries(m, mde_bp=1.0)
+    assert c["C1"]["pass"] is None
+    assert "not order-flow information" not in c["statement"]

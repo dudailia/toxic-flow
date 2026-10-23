@@ -112,7 +112,10 @@ def _has(m, label, queue=PRIMARY[0], latency=PRIMARY[1]) -> bool:
     return _rows(m, label, queue, latency).height > 0
 
 
-def _contains_zero(ci) -> bool:
+def _contains_zero(ci) -> bool | None:
+    """None without an interval (fewer than two paired days): no verdict either way."""
+    if not np.all(np.isfinite(ci)):
+        return None
     return bool(ci[0] <= 0 <= ci[1])
 
 
@@ -123,12 +126,15 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
     if _has(m, "C1"):
         c = compare(m, "C1", "B1")
         out["C1"] = {**c, "pass": _contains_zero(c["bootstrap_ci"])}
-        text.append(
-            "C1, shuffled signs, did not differ detectably from B1."
-            if out["C1"]["pass"]
-            else "The signal's gain does not depend on event signs, so it is not order-flow "
-            "information. Primary result reported but not interpreted."
-        )
+        if out["C1"]["pass"] is None:
+            text.append("C1, shuffled signs: no interval, so no verdict.")
+        elif out["C1"]["pass"]:
+            text.append("C1, shuffled signs, did not differ detectably from B1.")
+        else:
+            text.append(
+                "The signal's gain does not depend on event signs, so it is not order-flow "
+                "information. Primary result reported but not interpreted."
+            )
     if _has(m, "C2"):
         c = compare(m, "C2", "B1")
         out["C2"] = {**c, "threshold_bp": 3 * mde_bp, "pass": c["mean"] > 3 * mde_bp}
@@ -159,13 +165,21 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
     if variants:
         res = {v: compare(m, v, "B3") for v in variants}
         matches = {v: _contains_zero(r["bootstrap_ci"]) for v, r in res.items()}
-        out["C4"] = {**res, "matches_b3": matches, "decay_not_driver": any(matches.values())}
-        text.append(
-            "A wrong-decay variant matched B3 within the interval, so the fitted decay is not "
-            "what drives any gain."
-            if out["C4"]["decay_not_driver"]
-            else "Both wrong-decay variants differed from B3."
-        )
+        known = [v for v in matches.values() if v is not None]
+        out["C4"] = {
+            **res,
+            "matches_b3": matches,
+            "decay_not_driver": any(known) if known else None,
+        }
+        if out["C4"]["decay_not_driver"] is None:
+            text.append("C4, wrong decay: no interval, so no verdict.")
+        elif out["C4"]["decay_not_driver"]:
+            text.append(
+                "A wrong-decay variant matched B3 within the interval, so the fitted decay is "
+                "not what drives any gain."
+            )
+        else:
+            text.append("Both wrong-decay variants differed from B3.")
     out["statement"] = " ".join(text)
     return out
 

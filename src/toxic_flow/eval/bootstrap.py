@@ -24,6 +24,8 @@ STATEMENTS = {
     "holds_negative": "The Hawkes overlay did worse than a decay-weighted trade count by {mean} bp, "
     "interval [{lo}, {hi}].",
 }
+# Not a section 11 outcome: with fewer than two paired days there is no interval to judge.
+NOT_COMPUTED = "No conclusion: fewer than two paired days, so there is no interval."
 
 
 def paired_differences(a: dict, b: dict) -> tuple[list[str], np.ndarray, list[str]]:
@@ -62,6 +64,8 @@ def conclusion(boot_ci, t_ci, mean: float, cell_signs, mde_bp: float) -> dict:
 
     cell_signs: the sign of the point estimate in each of the 8 queue and latency cells.
     """
+    if not np.all(np.isfinite([*boot_ci, *t_ci, mean])):
+        return {"key": "not_computed", "statement": NOT_COMPUTED}  # NaN would read as "excludes 0"
     excludes = [not (lo <= 0 <= hi) for lo, hi in (boot_ci, t_ci)]
     if excludes[0] != excludes[1]:
         key = "inconclusive"  # section 8: the two intervals disagree about 0
