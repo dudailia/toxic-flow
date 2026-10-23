@@ -19,6 +19,346 @@
       "bytes": 20848659,
       "sha256": "8387c9d605f986bb6bde754735f5f9c2440ec76908f0d143af1b9282cefe981a",
       "downloaded_at": "2026-10-22T14:10:35+00:00"
+    },
+    {
+      "date": "2024-02-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/02/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-02-01/incremental_book_L2.csv.gz",
+      "bytes": 543563627,
+      "sha256": "94d818cce21b37e4cdf2e1062c121206dff11f4fc9cc9db43d2db3da1703ad69",
+      "downloaded_at": "2026-10-23T20:24:50+00:00"
+    },
+    {
+      "date": "2024-02-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/02/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-02-01/trades.csv.gz",
+      "bytes": 29935161,
+      "sha256": "52cc6509702087d39e46964e789d4a904e832896103c9c24c0670d0a56acb86c",
+      "downloaded_at": "2026-10-23T20:24:54+00:00"
+    },
+    {
+      "date": "2024-03-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/03/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-03-01/incremental_book_L2.csv.gz",
+      "bytes": 699758947,
+      "sha256": "6ca88914e377077f9abc76ac59ece819e9c6cb932e1b3fe42a2be1f9cfd39732",
+      "downloaded_at": "2026-10-23T20:26:00+00:00"
+    },
+    {
+      "date": "2024-03-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/03/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-03-01/trades.csv.gz",
+      "bytes": 38250629,
+      "sha256": "5ace8214ca1ad04e8247f34021adaa43e8b70340c701977fb97bf2af5bdbe4a3",
+      "downloaded_at": "2026-10-23T20:26:04+00:00"
+    },
+    {
+      "date": "2024-04-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/04/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-04-01/incremental_book_L2.csv.gz",
+      "bytes": 703042208,
+      "sha256": "9263054af6c40080297e11d26c51fccd5f93fe452cd21fe87913f7f28b942176",
+      "downloaded_at": "2026-10-23T20:27:09+00:00"
+    },
+    {
+      "date": "2024-04-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/04/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-04-01/trades.csv.gz",
+      "bytes": 36211468,
+      "sha256": "c6d5704d9ea9f8c770f478e7122629591fdfbf02b6311aed6fdf30482563cb82",
+      "downloaded_at": "2026-10-23T20:27:12+00:00"
+    },
+    {
+      "date": "2024-05-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-05-01/incremental_book_L2.csv.gz",
+      "bytes": 941657804,
+      "sha256": "ddb45b72fa9fe7068d354930a4bfc4bb8032c354a077419df69b2d2545d3d555",
+      "downloaded_at": "2026-10-23T20:28:35+00:00"
+    },
+    {
+      "date": "2024-05-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/05/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-05-01/trades.csv.gz",
+      "bytes": 68127645,
+      "sha256": "dc1b4192723868c0a5b89b2bef83deb0a620424c197c30fb9aeaecd629b734ed",
+      "downloaded_at": "2026-10-23T20:28:42+00:00"
+    },
+    {
+      "date": "2024-06-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/06/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-06-01/incremental_book_L2.csv.gz",
+      "bytes": 250916612,
+      "sha256": "ed0aa4a3c41f007204610ee9d58dad05741dfd169d54c871fb0cf57ea223f62d",
+      "downloaded_at": "2026-10-23T20:29:04+00:00"
+    },
+    {
+      "date": "2024-06-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/06/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-06-01/trades.csv.gz",
+      "bytes": 8478257,
+      "sha256": "e06e6902673882789246f2bd3931b46e6027f88030d298ebc922ac6381fc2687",
+      "downloaded_at": "2026-10-23T20:29:06+00:00"
+    },
+    {
+      "date": "2024-07-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/07/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-07-01/incremental_book_L2.csv.gz",
+      "bytes": 472205818,
+      "sha256": "1f2bda016462070c81f9c9ae640c8053745d16d79bb25406d9d7debf366d567c",
+      "downloaded_at": "2026-10-23T20:29:46+00:00"
+    },
+    {
+      "date": "2024-07-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/07/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-07-01/trades.csv.gz",
+      "bytes": 21281017,
+      "sha256": "58f06d337fae55be7fa1019ca4f62383ea2381bf69bc7a7e58497d96e34a0d0c",
+      "downloaded_at": "2026-10-23T20:29:49+00:00"
+    },
+    {
+      "date": "2024-08-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/08/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-08-01/incremental_book_L2.csv.gz",
+      "bytes": 814943134,
+      "sha256": "6c35a1c42e5c83f805ad611ce318a5a3d78734646e64b499f0fc2cf182d6f4f8",
+      "downloaded_at": "2026-10-23T20:31:05+00:00"
+    },
+    {
+      "date": "2024-08-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/08/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-08-01/trades.csv.gz",
+      "bytes": 39694804,
+      "sha256": "4ab6ac6462f3b4e20a87f2634958b73d92e95d08aeb1e97f034428b06354bd3d",
+      "downloaded_at": "2026-10-23T20:31:09+00:00"
+    },
+    {
+      "date": "2024-09-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/09/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-09-01/incremental_book_L2.csv.gz",
+      "bytes": 552747012,
+      "sha256": "89d30baf99b271e56c168f122793b7d60ab337f62221f7a93ac80bdd611d398e",
+      "downloaded_at": "2026-10-23T20:32:13+00:00"
+    },
+    {
+      "date": "2024-09-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/09/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-09-01/trades.csv.gz",
+      "bytes": 28371011,
+      "sha256": "d704f37d42ebf46b55a8f7dcaf0fea464e0915b333b167ce08811aa179274ed4",
+      "downloaded_at": "2026-10-23T20:32:16+00:00"
+    },
+    {
+      "date": "2024-10-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/10/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-10-01/incremental_book_L2.csv.gz",
+      "bytes": 679012865,
+      "sha256": "d16e412467f3ee318e14757a069f00891b03109cbe59cc46e62bef255fd17eb1",
+      "downloaded_at": "2026-10-23T20:33:38+00:00"
+    },
+    {
+      "date": "2024-10-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/10/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-10-01/trades.csv.gz",
+      "bytes": 47881495,
+      "sha256": "7b59454dbc5f8eac0b88d093b73adb016a7a4493940399a5ecd14d29d2cb3ec4",
+      "downloaded_at": "2026-10-23T20:33:44+00:00"
+    },
+    {
+      "date": "2024-11-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/11/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-11-01/incremental_book_L2.csv.gz",
+      "bytes": 673268474,
+      "sha256": "ca1244948a66f39760b38b9d00225ebffddf319b1fb64ae18675ff4fc9c6ff52",
+      "downloaded_at": "2026-10-23T20:34:58+00:00"
+    },
+    {
+      "date": "2024-11-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/11/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-11-01/trades.csv.gz",
+      "bytes": 42700288,
+      "sha256": "25f250e32b91518939ffd62caa6573726c69e53ec2880bbea9ad89be757bd026",
+      "downloaded_at": "2026-10-23T20:35:03+00:00"
+    },
+    {
+      "date": "2024-12-01",
+      "data_type": "incremental_book_L2",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/12/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-12-01/incremental_book_L2.csv.gz",
+      "bytes": 456563062,
+      "sha256": "3ea8ba4d98d0bce6c64b177f9f098abe9b567f7777d1e97a953f9950e3a03993",
+      "downloaded_at": "2026-10-23T20:35:57+00:00"
+    },
+    {
+      "date": "2024-12-01",
+      "data_type": "trades",
+      "split": "train",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2024/12/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2024-12-01/trades.csv.gz",
+      "bytes": 17408459,
+      "sha256": "21e30e4b7fa691789eef1855ae5f7f67c75f0bbbfcfcdbead6ebb9be7c5c8ce2",
+      "downloaded_at": "2026-10-23T20:36:00+00:00"
+    },
+    {
+      "date": "2025-01-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/01/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-01-01/incremental_book_L2.csv.gz",
+      "bytes": 411297451,
+      "sha256": "82d2b07f1907ebca7dc43639dd253f5f205aedf7207883f13ae056d3ded81dc1",
+      "downloaded_at": "2026-10-23T20:36:43+00:00"
+    },
+    {
+      "date": "2025-01-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/01/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-01-01/trades.csv.gz",
+      "bytes": 16993821,
+      "sha256": "99132fafe2f92430c22cc5dd55120495db29a421b33e39651e2efcbae942f549",
+      "downloaded_at": "2026-10-23T20:36:46+00:00"
+    },
+    {
+      "date": "2025-02-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/02/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-02-01/incremental_book_L2.csv.gz",
+      "bytes": 421757848,
+      "sha256": "e9cf34ce0fdaeab5678d96eb6318e19be6798fe62a658ebc5c438ac3a2cf5d1b",
+      "downloaded_at": "2026-10-23T20:37:31+00:00"
+    },
+    {
+      "date": "2025-02-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/02/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-02-01/trades.csv.gz",
+      "bytes": 19404936,
+      "sha256": "58c85c189f5338618c45c01f4ede2bdf9f73e323b92fadb8d84fdc21b5a60b1c",
+      "downloaded_at": "2026-10-23T20:37:34+00:00"
+    },
+    {
+      "date": "2025-03-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/03/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-03-01/incremental_book_L2.csv.gz",
+      "bytes": 641166282,
+      "sha256": "d4431cc10022868c29c98da36eb766e9888b1125f88c4f99122297c780cb521f",
+      "downloaded_at": "2026-10-23T20:38:42+00:00"
+    },
+    {
+      "date": "2025-03-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/03/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-03-01/trades.csv.gz",
+      "bytes": 27949678,
+      "sha256": "2aa65da5a6b83fe432838908f7055860012f6db163fb81f6a9707e0f5da37b6e",
+      "downloaded_at": "2026-10-23T20:38:45+00:00"
+    },
+    {
+      "date": "2025-04-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/04/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-04-01/incremental_book_L2.csv.gz",
+      "bytes": 756056671,
+      "sha256": "543ba97a56fd325acabeadb7247301008d6faa9c4bb34b98d54cf224d34143dd",
+      "downloaded_at": "2026-10-23T20:39:58+00:00"
+    },
+    {
+      "date": "2025-04-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/04/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-04-01/trades.csv.gz",
+      "bytes": 29898882,
+      "sha256": "dfe2b6571c76db2c2881503ca158659bc1ab0c59200fd63ca82cf71f94fd1fe8",
+      "downloaded_at": "2026-10-23T20:40:01+00:00"
+    },
+    {
+      "date": "2025-05-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/05/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-05-01/incremental_book_L2.csv.gz",
+      "bytes": 547317311,
+      "sha256": "bde397d9885025ce4f82d84668f2d1f2e60f7ce2d78e09aed5740a8d46d43ff9",
+      "downloaded_at": "2026-10-23T20:40:52+00:00"
+    },
+    {
+      "date": "2025-05-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/05/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-05-01/trades.csv.gz",
+      "bytes": 26178488,
+      "sha256": "4ba4e6db08533479bb867bf627d8fa3edb5943833414f4c0a3778aab0e0d7840",
+      "downloaded_at": "2026-10-23T20:40:55+00:00"
+    },
+    {
+      "date": "2025-06-01",
+      "data_type": "incremental_book_L2",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/06/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-06-01/incremental_book_L2.csv.gz",
+      "bytes": 457199183,
+      "sha256": "08b3eb7c3bcbc9fa4731286e2edafce7103bcc1009b71e1f04d043d133339572",
+      "downloaded_at": "2026-10-23T20:41:34+00:00"
+    },
+    {
+      "date": "2025-06-01",
+      "data_type": "trades",
+      "split": "val",
+      "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/06/01/BTCUSDT.csv.gz",
+      "path": "data/raw/2025-06-01/trades.csv.gz",
+      "bytes": 17819800,
+      "sha256": "43de7fe038b31e413ae934b8dc35fb2f4d170fd60b60ac88f8e37a8c1c48ccdf",
+      "downloaded_at": "2026-10-23T20:41:37+00:00"
     }
   ]
 }
