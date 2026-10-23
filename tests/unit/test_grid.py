@@ -25,3 +25,19 @@ def test_zero_latency_only_when_asked():
 def test_config_hash_ignores_key_order_and_changes_with_content():
     assert config_hash(CFG) == config_hash(dict(reversed(list(CFG.items()))))
     assert config_hash(CFG) != config_hash({**CFG, "days": ["2024-02-01"]})
+
+
+def test_a_strategy_can_name_its_own_cells():
+    # Canaries run only in the primary cell and C3 only at zero latency, inside the one
+    # confirmatory grid (SPEC.md AC5.3).
+    cfg = {
+        **CFG,
+        "strategies": [
+            *CFG["strategies"],
+            {"name": "C1", "cells": [["risk_averse", "high"]]},
+            {"name": "B3", "cells": [["risk_averse", "zero"]]},
+        ],
+    }
+    cells = [(c["strategy"]["name"], c["queue"], c["latency"]) for c in expand(cfg)]
+    assert len(cells) == 2 * 8 + 2
+    assert ("C1", "risk_averse", "high") in cells and ("B3", "risk_averse", "zero") in cells

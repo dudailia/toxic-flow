@@ -23,12 +23,19 @@ def config_hash(cfg: dict) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:12]
 
 
+def _cells(cfg: dict, s: dict) -> list[tuple[str, str]]:
+    """The config's queue and latency grid, or the strategy's own list of [queue, latency]
+    pairs, so canaries can sit in the primary cell of one confirmatory grid (AC5.3)."""
+    if "cells" in s:
+        return [(q, lat) for q, lat in s["cells"]]
+    return [(q, lat) for q in cfg["queue_models"] for lat in cfg["latencies"]]
+
+
 def expand(cfg: dict) -> list[dict]:
     """One cell per day, strategy, queue model and latency setting."""
     return [
         {"day": str(day), "strategy": s, "queue": q, "latency": lat}
         for day in cfg["days"]
         for s in cfg["strategies"]
-        for q in cfg["queue_models"]
-        for lat in cfg["latencies"]
+        for q, lat in _cells(cfg, s)
     ]
