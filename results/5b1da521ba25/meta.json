@@ -1,9 +1,9 @@
 {
   "config": "configs/runs/smoke_2024-01-01.yaml",
   "config_hash": "5b1da521ba25",
-  "commit": "f406e2bec22a34d7195f76fcf9c6d7b445b3c62e",
-  "started_at": "2026-10-23T18:30:33+00:00",
+  "commit": "4976ef0d3371dad41b2ec96c7982379f3a34e018",
+  "started_at": "2026-10-23T20:43:21+00:00",
   "hftbacktest": "2.4.4",
   "label": "smoke",
-  "finished_at": "2026-10-23T18:37:00+00:00"
+  "finished_at": "2026-10-23T20:46:36+00:00"
 }
