@@ -27,5 +27,7 @@ run:
 	@test -n "$(CFG)" || (echo "usage: make run CFG=configs/runs/<name>.yaml" && exit 2)
 	uv run python -m toxic_flow.engine.run $(CFG)
 
+# Builds paper/build/paper.md from results/summary.json, then runs the AC6.1 check.
 paper:
-	@echo "make paper is a stub until M6." && exit 1
+	uv run python paper/build_paper.py
+	uv run python paper/check_paper.py

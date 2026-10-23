@@ -11,3 +11,4 @@ __pycache__/
 *.npz
 data/tardis_wait.json
 data/events/
+paper/build/
