@@ -119,3 +119,24 @@ def test_run_b0_stops_deciding_at_quote_end_and_marks_there(tmp_path):
     out = run_window(synthetic_backtest(tmp_path, "feed"), 1, 4)
     end = T0 * 1000 + 4 * 10**9
     assert out[8] < end <= out[9] < end + 100_000_000
+
+
+@pytest.mark.slow
+def test_quote_presence_counts_only_orders_resting_in_the_book(tmp_path):
+    # Section 6: the share of time both sides are quoted. At 250 ms each way, the first
+    # orders are acknowledged 500 ms after they are sent, so the first five steps have
+    # nothing resting in the book and must not count as quoted.
+    import numpy as np
+    from synthetic import T0
+
+    from toxic_flow.strategies.b0_fixed import run_b0
+    from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
+
+    hbt = synthetic_backtest(tmp_path, 250_000_000)
+    out, t0 = np.zeros(13), T0 * 1000
+    steps, fills = np.zeros(1000, STEP_DTYPE), np.zeros(1000, FILL_DTYPE)
+    run_b0(hbt, 1, 0.001, 100.0, 10, t0 + 10**9, t0 + 6 * 10**9, 100_000_000, steps, fills, out)
+    hbt.close()
+    quoted = steps["both_quoted"][: int(out[0])]
+    assert not quoted[:5].any()
+    assert quoted[5:].any()

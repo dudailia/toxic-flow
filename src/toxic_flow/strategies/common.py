@@ -2,7 +2,7 @@
 one order per side, and the end of the quoting window. All numba, for hftbacktest."""
 
 import numpy as np
-from hftbacktest import BUY, FILLED, GTX, LIMIT
+from hftbacktest import BUY, FILLED, GTX, LIMIT, NEW
 from numba import njit
 
 STEP_DTYPE = np.dtype(
@@ -39,6 +39,24 @@ def record_fills(hbt, fills, n):
             fills[n].order_id = o.order_id
             n += 1
     return n
+
+
+@njit
+def both_resting(hbt):
+    """Whether an order of ours rests in the book on both sides, as the local side last
+    heard: status NEW, so acknowledged and not yet seen filled or cancelled. Called before
+    the step sends anything; an order just sent rests only once its ack comes back.
+    Quote presence (PREREGISTRATION.md section 6) is the share of steps where this holds."""
+    bid, ask = False, False
+    values = hbt.orders(0).values()
+    while values.has_next():
+        o = values.get()
+        if o.status == NEW:
+            if o.side == BUY:
+                bid = True
+            else:
+                ask = True
+    return bid and ask
 
 
 @njit

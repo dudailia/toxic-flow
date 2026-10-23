@@ -30,7 +30,7 @@ from toxic_flow.strategies.b1_glft import (
     linear_regression,
     measure_trading_intensity,
 )
-from toxic_flow.strategies.common import finish_day, place_quotes, record_fills
+from toxic_flow.strategies.common import both_resting, finish_day, place_quotes, record_fills
 
 NONE, OFI, EWMA, HAWKES, EXTERNAL = 0, 1, 2, 3, 4
 
@@ -175,10 +175,10 @@ def run_overlay(
             r = mid_tick - c2 * sigma * (position / order_qty)
             bid_t, ask_t = overlay_ticks(r, half, u, m, c, d, bb, ba)
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
+            both = both_resting(hbt)
             next_id, n_buy, n_sell = place_quotes(
                 hbt, int(bid_t), int(ask_t), want_bid, want_ask, order_qty, next_id
             )
-            both = (n_buy > 0 or want_bid) and (n_sell > 0 or want_ask)
             out[6] = max(out[6], n_buy, n_sell)
             out[7] = max(out[7], abs(round(position / order_qty)))
         else:

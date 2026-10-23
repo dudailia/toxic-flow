@@ -10,7 +10,7 @@ import math
 import numpy as np
 from numba import njit
 
-from toxic_flow.strategies.common import finish_day, place_quotes, record_fills
+from toxic_flow.strategies.common import both_resting, finish_day, place_quotes, record_fills
 
 
 @njit(cache=True)
@@ -86,11 +86,11 @@ def run_b0(
             bid_tick, ask_tick = quote_ticks(bb, ba, h)
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
             out[7] = max(out[7], abs(round(position / order_qty)))
+            both = both_resting(hbt)
             next_id, n_buy, n_sell = place_quotes(
                 hbt, bid_tick, ask_tick, want_bid, want_ask, order_qty, next_id
             )
             out[6] = max(out[6], n_buy, n_sell)
-            both = (n_buy > 0 or want_bid) and (n_sell > 0 or want_ask)
             out[8] = now
         if n_steps < len(steps):
             steps[n_steps].ts = now
