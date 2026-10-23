@@ -18,6 +18,11 @@ chosen from it. Config: configs/runs/smoke_overlays_2024-01-01.yaml; commit bcf3
 
 ## Per cell
 
+Quote presence below is not valid: this run predates commit 679c894, and
+until then a step counted as quoted whenever the inventory cap allowed both
+sides, whether or not orders rested in the book. Fills, PnL, BEF and markouts
+are not affected.
+
 | Strategy | Queue | Latency | Fills | BEF bp | Net at standard maker USDT | Quote presence | Markout 10 s bp | Max inventory (order sizes) |
 |---|---|---|---|---|---|---|---|---|
 | B2 | log | high | 3592 | -0.837 | -131.63 | 1.000 | -0.856 | 4 |

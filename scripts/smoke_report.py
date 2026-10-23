@@ -5,12 +5,19 @@ Usage: uv run python scripts/smoke_report.py results/<hash> docs/smoke/<name>.md
 """
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
 import polars as pl
 
 QUEUES = ["risk_averse", "power3", "power2", "log"]
+PRESENCE_FIX = "679c894"  # before it, quote presence counted steps the cap allowed both sides
+
+
+def has_presence_fix(commit: str) -> bool:
+    is_ancestor = ["git", "merge-base", "--is-ancestor", PRESENCE_FIX, commit]
+    return subprocess.run(is_ancestor, capture_output=True).returncode == 0
 
 
 def main(run_dir: Path, out: Path) -> None:
@@ -48,10 +55,16 @@ def main(run_dir: Path, out: Path) -> None:
             + " | ".join(str(fills[q]) for q in queues)
             + f" | {fewest} |"
         )
+    lines += ["", "## Per cell", ""]
+    if not has_presence_fix(meta["commit"]):
+        lines += [
+            f"Quote presence below is not valid: this run predates commit {PRESENCE_FIX}, and",
+            "until then a step counted as quoted whenever the inventory cap allowed both",
+            "sides, whether or not orders rested in the book. Fills, PnL, BEF and markouts",
+            "are not affected.",
+            "",
+        ]
     lines += [
-        "",
-        "## Per cell",
-        "",
         "| Strategy | Queue | Latency | Fills | BEF bp | Net at standard maker USDT | "
         "Quote presence | Markout 10 s bp | Max inventory (order sizes) |",
         "|---|---|---|---|---|---|---|---|---|",
