@@ -1,0 +1,18 @@
+{
+  "date": "2024-01-01",
+  "label": "smoke: in-sample on the fitted day; not the AC3.5 validation-day check",
+  "residuals": {
+    "b": {
+      "n": 286297,
+      "mean": 0.9990083594566297,
+      "ks_statistic": 0.07321129150274033,
+      "ks_pvalue": 0.0
+    },
+    "s": {
+      "n": 312287,
+      "mean": 0.9886812507211759,
+      "ks_statistic": 0.06956621565349225,
+      "ks_pvalue": 0.0
+    }
+  }
+}

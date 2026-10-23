@@ -109,3 +109,60 @@ def fit(days: list[tuple[np.ndarray, np.ndarray, float]], beta0: float = 1.0) ->
         "converged": bool(res.success),
         "message": str(res.message),
     }
+
+
+@njit(cache=True)
+def _own_compensators(times, types, mu, alpha, beta):
+    """Lambda_k(t_i) = int_0^t_i lambda_k for k the type of event i, from strictly earlier
+    events: mu_k t + sum_j alpha_kj (N_j - R_j) / beta, in O(n)."""
+    n = len(times)
+    out = np.empty(n)
+    r = np.zeros(2)
+    cnt = np.zeros(2)
+    last = 0.0
+    i = 0
+    while i < n:
+        t = times[i]
+        decay = np.exp(-beta * (t - last))
+        r[0] *= decay
+        r[1] *= decay
+        last = t
+        j = i
+        while j < n and times[j] == t:
+            k = types[j]
+            out[j] = (
+                mu[k] * t + (alpha[k, 0] * (cnt[0] - r[0]) + alpha[k, 1] * (cnt[1] - r[1])) / beta
+            )
+            j += 1
+        for m in range(i, j):
+            r[types[m]] += 1.0
+            cnt[types[m]] += 1.0
+        i = j
+    return out
+
+
+def rescaled_residuals(times, types, mu, alpha, beta) -> dict[int, np.ndarray]:
+    """Per type, the compensator increments between its own events (time-rescaling). Under
+    the fitted model they are i.i.d. Exp(1)."""
+    lam = _own_compensators(
+        np.asarray(times, np.float64), np.asarray(types, np.int64), np.asarray(mu, np.float64),
+        np.asarray(alpha, np.float64), float(beta),
+    )  # fmt: skip
+    return {k: np.diff(np.concatenate([[0.0], lam[np.asarray(types) == k]])) for k in (0, 1)}
+
+
+def residual_report(times, types, mu, alpha, beta) -> dict:
+    """Mean and the KS test against Exp(1) of each type's residuals (SPEC.md AC3.5)."""
+    from scipy import stats
+
+    res = rescaled_residuals(times, types, mu, alpha, beta)
+    out = {}
+    for k, name in ((0, "b"), (1, "s")):
+        ks = stats.kstest(res[k], "expon")
+        out[name] = {
+            "n": int(len(res[k])),
+            "mean": float(res[k].mean()),
+            "ks_statistic": float(ks.statistic),
+            "ks_pvalue": float(ks.pvalue),
+        }
+    return out
