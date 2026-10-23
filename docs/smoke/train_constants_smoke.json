@@ -1,0 +1,45 @@
+{
+  "label": "SMOKE: training days on disk only, not the pre-registered fit",
+  "days": [
+    "2024-01-01"
+  ],
+  "hawkes": {
+    "params": {
+      "mu_b": 1.3202130002881391,
+      "mu_s": 1.444586185789969,
+      "alpha_bb": 4.26915470755978,
+      "alpha_bs": 0.3968057660734126,
+      "alpha_sb": 0.2930527288399371,
+      "alpha_ss": 4.342663341559424,
+      "beta": 7.828919905090641
+    },
+    "se": {
+      "mu_b": 0.006468493655457354,
+      "mu_s": 0.006930539558724564,
+      "alpha_bb": 0.028003221516036212,
+      "alpha_bs": 0.008062247363542038,
+      "alpha_sb": 0.00763350456170567,
+      "alpha_ss": 0.027796541526651744,
+      "beta": 0.05759535521413531
+    },
+    "loglik": 410673.6256001858,
+    "n_events": 598584,
+    "branching_ratio": 0.5938098707197818,
+    "converged": true,
+    "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "fit_seconds": 4.5,
+    "time": "exchange timestamps"
+  },
+  "K": {
+    "B2_ofi_1s": 8.163742,
+    "B2_ofi_5s": 4.845929,
+    "B2_ofi_30s": 3.285228,
+    "B2b_ewma_1s": 3.767413,
+    "B2b_ewma_5s": 3.042518,
+    "B2b_ewma_30s": 2.508109,
+    "B3_hawkes": 3.464269,
+    "C4_x10": 7.665144,
+    "C4_x0.1": 2.006187
+  },
+  "ac3_4_branching_ratio_below_1": true
+}
