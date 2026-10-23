@@ -408,3 +408,30 @@ What remains needs the 17 missing training and validation days (Q22) or a decisi
 the lists above. In order of what blocks the tag: Q22 (downloads), Q23 (B1 grid), Q28
 (C1's comparator), Q25 (C4's K), Q2, Q3 and Q6 (the M0 text in
 docs/proposals/prereg_m0_tbds.md), then Q34 to Q36 (analysis wording).
+
+# Block of 2026-10-23 evening: decisions, downloads, M1 to M3
+
+Rules as before: no protected path edited, no test-day URL requested, a commit and push
+after each item, no M4 work.
+
+## Decisions applied
+
+- Q31: place_quotes now cancels a stale order and sends its replacement in the same
+  100 ms step, for B0 to B3 and every canary alike. The rule is in PREREGISTRATION.md
+  section 3. A replacement waits only while an earlier order on that side is
+  unacknowledged, or while the inventory cap would not hold with every open order on
+  that side filled, cancels in flight included. New test: at zero latency, five ticks
+  out, both sides rest in more than 95% of steps (79% with the old rule).
+- Q23: B1 grid in PREREGISTRATION.md section 4, committed before any run with it:
+  gamma in {0.025, 0.05, 0.1, 0.2} and window in {5, 10, 20} minutes, 12 combinations.
+  The GLFT tutorial at py-v2.4.4 has no grid: it uses gamma = 0.05 ("arbitrarily
+  chosen") and a 10-minute window, so the grid spans factors of two around both, and
+  every window fits inside the 30-minute warm-up. B0 grid h in {1, 2, 3, 5}, as written.
+- Q28: C1 stays compared with B1; C1 against B3 is reported beside it as descriptive
+  (section 10 and eval/analysis.py).
+- Q25: each C4 variant gets its own K from the training days (section 10 and
+  engine/configs.py).
+- Facts applied from docs/proposals/prereg_m0_tbds.md: the engine version (2.4.4) and
+  the latency API with its one-second look-ahead (section 3). Left for you, because each
+  is a design choice: the exchange model (Q3), the queue-model variants (Q2), the third
+  fee level (Q6), and the analysis wording in Q34 to Q36.
