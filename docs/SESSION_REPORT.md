@@ -158,3 +158,138 @@ New in this block:
   so; the server also asked for none before 2026-10-23 15:26:43 UTC. M1 needs 17 more days.
 - Q23. B1's gamma and window, and the B0 h grid, are chosen on all 12 training days in
   M2 (section 4); the smoke values are placeholders only.
+
+# Continued block, 2026-10-23 (items 12 to 17)
+
+Same rules, all kept: no protected path edited (nothing staged under any path in
+.claude/protected-paths.txt in commits a90620e to the last commit of this block), no
+tardis.dev request (data/tardis_requests.jsonl is still empty), a commit and push after
+each item. Every run below is SMOKE on the one training day on disk, 2024-01-01, with
+placeholder parameters. Nothing was selected and configs/selected.yaml was not written.
+
+## What was done
+
+| # | Item | Commit | Where |
+|---|---|---|---|
+| 12 | AC1.2 re-hash test; exclusion rules by script | a90620e | tests/unit/test_raw_hashes.py, data/exclusions.py, docs/data_quality/EXCLUSIONS.md |
+| 13a | Overlays B2, B2b, B3 in one loop with B1; normalisers and K | c8fcb96 | strategies/overlay.py, signals/normalise.py |
+| 13b | SMOKE Hawkes fit and K on 2024-01-01; overlay grid, 24 cells | bcf355c, 63aea61 | docs/smoke/signals_2024-01-01.json, results/1b171034b708/, docs/smoke/smoke_overlays_2024-01-01.md |
+| 14 | Analysis code: bootstrap, t interval, MDE, section 11 statements, selectivity | acd8fc1 | eval/bootstrap.py |
+| 15 | Hawkes time-rescaling residuals and KS (AC3.5 tooling) | 2d0d9b3 | signals/hawkes_fit.py, docs/smoke/hawkes_residuals_2024-01-01.json |
+| 16 | Canaries C1 to C4 and the AC3.6 test; SMOKE canary run | d9c52bb, 37de49d | tests/canary/, engine/run.py, results/683bdb67ceee/, docs/smoke/smoke_canaries_2024-01-01.md |
+| 17 | Parameter selection tool by the section 4 rule | 1e22d7c | eval/select.py, scripts/select_params.py |
+| 18 | Leakage audit of the canary run; quote presence fix | 679c894, 37de49d | docs/smoke/audit_canaries_2024-01-01.md, strategies/common.py |
+
+### Highlights by item
+
+12. The AC1.2 test (slow) re-hashes every file in data/raw against data/manifest.json.
+    Exclusion rule 1 follows the Q18 wording (a GET that returns 404 or 400 twice, at
+    least 24 hours apart); rules 2 and 3 read the data-quality report. No day is
+    excluded; 1 of 34 days has been assessed.
+13. One numba loop runs B1 (mode NONE) and the three overlays, so B1 and every overlay
+    share their quoting code. With c = d = 0 each overlay gives exactly B1's fills, and
+    B1 itself is unchanged by the refactor (4,546 fills, -51.0243 USDT gross on
+    2024-01-01). The loop's u and m equal the offline signal functions to 1e-9.
+    SMOKE Hawkes fit on 2024-01-01: 598,584 events, branching ratio 0.594, beta 7.83 per
+    second. SMOKE overlay grid at c = d = 0.5: every cell loses before fees (BEF -0.83 to
+    -0.89 bp), and the risk-averse model has the fewest fills in every row, tied with
+    power n = 2 for B3 at both latencies. Nothing looked too good, so no audit was
+    triggered.
+14. The bootstrap uses seed 1729 and 10,000 resamples of days; a day where either
+    strategy has no fills is dropped from the pair and listed. If the bootstrap and t
+    intervals disagree about 0, the statement is "inconclusive", as section 8 says.
+15. In-sample on the fitted day, the rescaled residuals have means 0.999 (buys) and 0.989
+    (sells), but KS rejects exponential residuals (statistics 0.073 and 0.070, p about
+    0 with about 300,000 residuals each). This fits the known limitation of a constant
+    baseline over a whole day. AC3.5 itself is a validation-day check and was not run.
+16. C2 builds its forward-looking series only in tests/canary/ and reaches the loop
+    through a hook (judgment call 28). SMOKE canary run in the primary cell, plus zero
+    latency (BEF in bp, high then zero): B1 -0.874 and -0.869; B3 -0.869 and -0.881;
+    C1 -0.894 and -0.893; C2 +0.342 and +0.348; C4 at x10 -0.888 and -0.889; C4 at x0.1
+    -0.859 and -0.868. One day gives no interval, so no canary passes or fails here.
+    C2 earns spread before fees, as an oracle should, and still loses at the 2.0 bp
+    maker fee (-139.9 USDT at high latency).
+17. The tool ranks candidates by mean daily BEF in the primary cell and breaks overlay
+    ties by the smaller c + d, then the shorter window or decay. A run that does not
+    cover exactly the split's non-excluded days, or is labelled smoke, gets a ranking
+    headed "SMOKE ranking (chooses nothing)". It refuses to write a file named
+    selected.yaml.
+18. B3, C4 at x0.1 and C4 at x10 beat their zero-latency twins, so the leakage-auditor
+    ran before anything else. Verdict: noise, not leakage or a bug. Latency changes which
+    orders fill (about 2,030 of B3's fills are common to both runs), the paired hourly
+    bootstrap of B3 high minus zero is +0.0125 bp with interval [-0.014, +0.040], and
+    shifting the latency file in time moves B3's BEF across zero's value. Of its six
+    findings one was a bug: quote presence was 1.0 by construction, because a step
+    counted as quoted whenever the inventory cap allowed both sides. Fixed with a test
+    (679c894). It now needs an acknowledged order on each side. Fills, PnL, BEF and
+    markouts do not change. On 2024-01-01 in the primary cell, presence is 0.946 for B1
+    and 0.416 for B3. The quote presence column in the three committed smoke runs
+    predates the fix, and their reports now say so. The other findings are Q25 and
+    Q28 to Q30. Judgment call 12 of the earlier block was wrong: B0's 0.76 was the
+    share of steps inside the inventory cap.
+
+## Test results
+
+Commands run at the end of this block:
+
+- `make check`: exit 0, 216 passed, 17 deselected (slow).
+- AC1.4, AC1.5, AC3.1, AC3.2 and AC3.3 (tests/unit/test_market_orders.py,
+  tests/unit/test_hawkes.py, tests/pending_leakage/test_future_perturbation.py, slow
+  included): 25 passed.
+- `uv run python scripts/check_milestone.py M0`: 21/21, exit 0.
+- Slow tests run in this block: the quote-presence test, tests/unit/test_overlay_loop.py
+  and tests/unit/test_accounting.py (9 passed), and the C2 loop test in tests/canary/.
+
+## Judgment calls to check
+
+21. The Hawkes fit uses exchange timestamps; the online intensity at decision time uses
+    local timestamps, so the strategy sees an event only once it has been received.
+22. K is the 99th percentile of a / abar - 1 over the quoting window, abar the trailing
+    mean of 18,000 steps (30 minutes). The ring buffer recomputes its sum on every wrap
+    so rounding error cannot build up over a day.
+23. The SMOKE K values and Hawkes parameters come from 2024-01-01 alone. The study's
+    values come from the 12 training days (section 5) and are not computed yet.
+24. C1 is one permutation of the day's event sides (seed 1729), fed to B3's fitted
+    parameters with no refit. Section 10 does not say how many permutations.
+25. C4 keeps B3's K for both decay variants. Recomputing K for each variant on training
+    days is the alternative (Q25). On 2024-01-01 the per-variant K would be 7.665 (x10)
+    and 2.006 (x0.1), against 3.464 for B3 (from the audit).
+26. C2 uses c = 1 and m = 0 with B1's parameters; its u is 0 in the last 5 s of the data,
+    where no mid 5 s ahead exists. The oracle reads the mid on the local clock.
+27. C3 sets order latency to zero. Feed latency stays, because it is in the data as
+    local minus exchange time (Q26).
+28. C2 reaches the engine through a hook: run_config takes a callable that returns the
+    oracle series, and only tests/canary/run_c2.py passes one. A config with C2 run
+    through make run stops before any cell. No file in src builds a forward-looking
+    array, which tests/pending_leakage/test_forward_arrays.py checks by name.
+29. The results gained a label column, so two entries of one strategy (C4 at x10 and
+    x0.1) get separate fills files. Older runs have no such column; the smoke report
+    falls back to the strategy name.
+30. Selection ties are means within 1e-9 bp. Candidates at c = d = 0 reduce to B1 and tie
+    exactly, which is the case the tie rule exists for.
+31. Where section 4 has no rule, the selection tool raises instead of choosing: a tie
+    between B0 or B1 candidates, a candidate with a day without fills, and an overlay tie
+    that c + d and the window do not break (Q27).
+
+## Open questions, new in this block
+
+- Q24. C1: one permutation or several, and should B3 be refit on the shuffled events?
+  Taken: one permutation, seed 1729, no refit.
+- Q25. C4: keep B3's K or recompute K for each decay variant? Taken: keep B3's K.
+- Q26. C3: zero order latency only, or also remove feed latency (local time equal to
+  exchange time)? Taken: zero order latency only.
+- Q27. Rules for the cases section 4 leaves open: B0 or B1 ties, a candidate with a day
+  without fills, overlay ties the rule cannot break. Taken: the tool stops and asks.
+- Q28. C1 keeps B3's magnitude m, which does not depend on signs, and section 10 compares
+  it with B1. With d > 0, C1 minus B1 can exclude 0 with no sign information at all,
+  which would trigger the section 11 statement on C1. Compare C1 with B3 at c = 0
+  instead, or set C1's d to 0? This has to be settled before the tag.
+- Q29. The C3 flag and the CLAUDE.md zero-latency trigger compare means. On one day the
+  noise is as large as the latency effect. Judge C3 with the paired day-level intervals
+  used elsewhere?
+- Q30. Order latency at t is interpolated between one-second feed-latency rows on both
+  sides of t, so it uses feed latency up to 1 s ahead. The strategy cannot read it. State
+  it as a limitation, or shift the latency file by one row so it is causal?
+- Q31. B3 rests on both sides in 42% of steps against B1's 95%, because its quotes move
+  more often and a replace waits for its cancel to land (one order per side). That
+  lowers B3's fills, and it bears on the section 8 selectivity check. Keep the rule?
