@@ -2,14 +2,15 @@
 
 bid = mid - h ticks rounded down, ask = mid + h ticks rounded up, post-only, one order per
 side, cancelled and replaced when the target price changes. No bid at q >= Q, no ask at
-q <= -Q. M0 uses it as the one-day benchmark; M2 extends it with the per-step records.
+q <= -Q.
 """
 
 import math
 
 import numpy as np
-from hftbacktest import BUY, GTX, LIMIT
 from numba import njit
+
+from toxic_flow.strategies.common import finish_day, place_quotes, record_fills
 
 
 @njit(cache=True)
@@ -36,22 +37,29 @@ def order_size(price: float, lot_size: float, min_notional: float) -> float:
 
 
 @njit
-def run_b0(hbt, h, lot_size, min_notional, max_lots, quote_start_ns, quote_end_ns, step_ns, out):
+def run_b0(
+    hbt,
+    h,
+    lot_size,
+    min_notional,
+    max_lots,
+    quote_start_ns,
+    quote_end_ns,
+    step_ns,
+    steps,
+    fills,
+    out,
+):
     """Quote from quote_start_ns until quote_end_ns, then cancel everything and mark.
 
-    One order per side at most: a side gets a new order only once our previous order there
-    is gone, so with latency above the step a replace waits for its cancel, and fills
-    cannot push inventory past max_lots. The order size is fixed for the day at the first
-    quoting step, from the mid seen then, so it uses no later price.
-
-    out receives: steps quoted, fills, position, cash balance, mid at quote_end_ns, order
-    size, most of our orders seen on one side at a step, largest inventory in order sizes,
-    time of the last decision, time of the mark.
+    One order per side at most (strategies.common.place_quotes). The order size is fixed
+    for the day at the first quoting step, from the mid seen then, so it uses no later
+    price. steps receives one row per quoting step, fills one row per fill. out: 0 steps
+    recorded, 1 fills (engine), 2 position, 3 cash, 4 mark mid, 5 order size, 6 most of our
+    orders on one side, 7 largest inventory in order sizes, 8 last decision time, 9 mark
+    time, 10 fee, 11 traded value, 12 fills recorded.
     """
-    asset = 0
-    steps = 0
-    order_qty = 0.0
-    next_id = 1  # never reused, so an order still in the local map cannot block a new one
+    order_qty, next_id, n_steps, n_fills = 0.0, 1, 0, 0
     # Warm-up, no orders. Elapse before reading the clock: until the first elapse,
     # hftbacktest reports current_timestamp as i64 max.
     while True:
@@ -62,56 +70,35 @@ def run_b0(hbt, h, lot_size, min_notional, max_lots, quote_start_ns, quote_end_n
     while True:
         if hbt.elapse(step_ns) != 0:
             break
-        if hbt.current_timestamp >= quote_end_ns:
+        now = hbt.current_timestamp
+        if now >= quote_end_ns:
             break  # no decision at or after quote_end_ns
-        hbt.clear_inactive_orders(asset)
-        depth = hbt.depth(asset)
+        n_fills = record_fills(hbt, fills, n_fills)
+        hbt.clear_inactive_orders(0)
+        depth = hbt.depth(0)
         bb, ba = depth.best_bid_tick, depth.best_ask_tick
-        if not (np.isfinite(depth.best_bid) and np.isfinite(depth.best_ask)) or bb >= ba:
-            continue
-        steps += 1
-        out[8] = hbt.current_timestamp
-        if order_qty == 0.0:
-            order_qty = order_size((depth.best_bid + depth.best_ask) / 2.0, lot_size, min_notional)
-        bid_tick, ask_tick = quote_ticks(bb, ba, h)
-        want_bid, want_ask = sides_allowed(hbt.position(asset), order_qty, max_lots)
-        out[7] = max(out[7], abs(round(hbt.position(asset) / order_qty)))
-
-        n_buy, n_sell = 0, 0
-        values = hbt.orders(asset).values()
-        while values.has_next():
-            o = values.get()
-            if o.side == BUY:
-                n_buy += 1
-                stale = not want_bid or o.price_tick != bid_tick
-            else:
-                n_sell += 1
-                stale = not want_ask or o.price_tick != ask_tick
-            if stale and o.cancellable:
-                hbt.cancel(asset, o.order_id, False)
-        out[6] = max(out[6], n_buy, n_sell)
-        tick = depth.tick_size
-        if want_bid and n_buy == 0:
-            hbt.submit_buy_order(asset, next_id, bid_tick * tick, order_qty, GTX, LIMIT, False)
-            next_id += 1
-        if want_ask and n_sell == 0:
-            hbt.submit_sell_order(asset, next_id, ask_tick * tick, order_qty, GTX, LIMIT, False)
-            next_id += 1
-
-    # quote_end_ns: cancel every resting order and mark at the mid now. The cancels then
-    # need their latency to land; fills in that time still count in position and cash.
-    depth = hbt.depth(asset)
-    out[4] = (depth.best_bid + depth.best_ask) / 2.0
-    out[9] = hbt.current_timestamp
-    values = hbt.orders(asset).values()
-    while values.has_next():
-        o = values.get()
-        if o.cancellable:
-            hbt.cancel(asset, o.order_id, False)
-    hbt.elapse(1_000_000_000)
-    sv = hbt.state_values(asset)
-    out[0] = steps
-    out[1] = sv.num_trades
-    out[2] = sv.position
-    out[3] = sv.balance
+        position = hbt.position(0)
+        mid, both = np.nan, False
+        if np.isfinite(depth.best_bid) and np.isfinite(depth.best_ask) and bb < ba:
+            mid = (depth.best_bid + depth.best_ask) / 2.0
+            if order_qty == 0.0:
+                order_qty = order_size(mid, lot_size, min_notional)
+            bid_tick, ask_tick = quote_ticks(bb, ba, h)
+            want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
+            out[7] = max(out[7], abs(round(position / order_qty)))
+            next_id, n_buy, n_sell = place_quotes(
+                hbt, bid_tick, ask_tick, want_bid, want_ask, order_qty, next_id
+            )
+            out[6] = max(out[6], n_buy, n_sell)
+            both = (n_buy > 0 or want_bid) and (n_sell > 0 or want_ask)
+            out[8] = now
+        if n_steps < len(steps):
+            steps[n_steps].ts = now
+            steps[n_steps].mid = mid
+            steps[n_steps].position = position
+            steps[n_steps].balance = hbt.state_values(0).balance
+            steps[n_steps].both_quoted = both
+            n_steps += 1
+    out[0] = n_steps
     out[5] = order_qty
+    finish_day(hbt, fills, n_fills, out)

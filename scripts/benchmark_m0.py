@@ -26,6 +26,7 @@ from toxic_flow.data.split_lock import assert_allowed
 from toxic_flow.data.venue import venue_for
 from toxic_flow.machine import peak_rss_bytes
 from toxic_flow.strategies.b0_fixed import run_b0
+from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
 
 ROOT = Path(__file__).resolve().parents[1]
 DAY = "2024-01-01"
@@ -70,6 +71,11 @@ def build(parts: list[Path], lat_file: Path, venue: dict):
     return HashMapMarketDepthBacktest([asset])
 
 
+def records():
+    """Per-step and per-fill arrays, and the 13 totals, for run_b0."""
+    return np.zeros(900_000, STEP_DTYPE), np.zeros(500_000, FILL_DTYPE), np.zeros(13)
+
+
 def backtest(parts: list[Path], lat_file: Path, venue: dict, queue) -> None:
     args = (H_TICKS, venue["lot_size"], venue["min_notional"], MAX_LOTS)
     window = (utc_ns(DAY, 0, 30), utc_ns(DAY, 23, 59), STEP_NS)
@@ -79,14 +85,14 @@ def backtest(parts: list[Path], lat_file: Path, venue: dict, queue) -> None:
     t0 = time.perf_counter()
     hbt = build(parts[:1], lat_file, venue)
     first = int(np.load(parts[0])["data"]["local_ts"][0])
-    run_b0(hbt, *args, first, first, STEP_NS, np.zeros(10))
+    run_b0(hbt, *args, first, first, STEP_NS, *records())
     hbt.close()
     compile_seconds = time.perf_counter() - t0
 
-    out = np.zeros(10)
+    steps, fills, out = records()
     t0 = time.perf_counter()
     hbt = build(parts, lat_file, venue)
-    run_b0(hbt, *args, *window, out)
+    run_b0(hbt, *args, *window, steps, fills, out)
     hbt.close()
     queue.put((out, compile_seconds, time.perf_counter() - t0))
 

@@ -22,8 +22,10 @@ data:
 	uv run python -m toxic_flow.data.download $(DAYS)
 	uv run python -m toxic_flow.data.convert $(DAYS)
 
+# CFG is a committed configs/runs/<name>.yaml; writes results/<config_hash>/.
 run:
-	@echo "make run is a stub until M2 (engine/run.py)." && exit 1
+	@test -n "$(CFG)" || (echo "usage: make run CFG=configs/runs/<name>.yaml" && exit 2)
+	uv run python -m toxic_flow.engine.run $(CFG)
 
 paper:
 	@echo "make paper is a stub until M6." && exit 1

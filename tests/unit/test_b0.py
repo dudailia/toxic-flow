@@ -71,10 +71,24 @@ def run_window(hbt, start_s, end_s):
     from synthetic import T0
 
     from toxic_flow.strategies.b0_fixed import run_b0
+    from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
 
-    out = np.zeros(10)
+    out = np.zeros(13)
     t0 = T0 * 1000
-    run_b0(hbt, 1, 0.001, 100.0, 10, t0 + start_s * 10**9, t0 + end_s * 10**9, 100_000_000, out)
+    steps, fills = np.zeros(1000, STEP_DTYPE), np.zeros(1000, FILL_DTYPE)
+    run_b0(
+        hbt,
+        1,
+        0.001,
+        100.0,
+        10,
+        t0 + start_s * 10**9,
+        t0 + end_s * 10**9,
+        100_000_000,
+        steps,
+        fills,
+        out,
+    )
     hbt.close()
     return out
 
