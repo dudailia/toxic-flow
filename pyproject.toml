@@ -8,6 +8,7 @@ authors = [{ name = "Ilia Duda" }]
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "hftbacktest==2.4.4",
+    "matplotlib",
     "numba",
     "numpy",
     "polars",

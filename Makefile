@@ -30,4 +30,5 @@ run:
 # Builds paper/build/paper.md from results/summary.json, then runs the AC6.1 check.
 paper:
 	uv run python paper/build_paper.py
+	uv run python paper/figures.py
 	uv run python paper/check_paper.py

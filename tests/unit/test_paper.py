@@ -74,3 +74,36 @@ def test_the_real_template_passes_the_check(tmp_path):
     (tmp_path / "summary.json").write_text(json.dumps({k: 1.0 for k in keys}))
     built = build(template, tmp_path / "summary.json", tmp_path / "paper.md")
     assert check(template, built) == []
+
+
+def _summary():
+    """A summary built by eval/analysis.py from a synthetic results table."""
+    import numpy as np
+    import polars as pl
+
+    from toxic_flow.eval import analysis
+
+    days = [f"2025-{m:02d}-01" for m in range(1, 13)]
+    d = np.random.default_rng(0).normal(0.5, 0.3, len(days))
+    rows = [
+        {"day": day, "label": lab, "strategy": lab, "params": "{}", "queue": q, "latency": lat,
+         "fills": 100, "traded_notional": 1e6, "break_even_fee_bps": v,
+         "mean_markout_1s_bps": v, "mean_markout_10s_bps": v, "mean_markout_60s_bps": v}
+        for q in ("risk_averse", "power3", "power2", "log") for lat in ("low", "high")
+        for lab, vals in (("B1", [0.0] * 12), ("B2", [0.0] * 12), ("B2b", [0.0] * 12), ("B3", d))
+        for day, v in zip(days, vals, strict=True)
+    ]  # fmt: skip
+    meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "t", "n_train_days": 12, "n_val_days": 6}
+    return analysis.summary(pl.DataFrame(rows), {"s_bp": 0.3}, meta)
+
+
+def test_figures_and_the_one_page_pdf_come_from_the_summary(tmp_path):
+    # AC6.2 and the per-day plot of D_i in section 8, from summary.json only.
+    from figures import build_figures
+
+    paths = build_figures(_summary(), tmp_path)
+    assert {p.name for p in paths} == {"fig_daily_d.svg", "fig_cells.svg", "summary.pdf"}
+    pdf = (tmp_path / "summary.pdf").read_bytes()
+    import re
+
+    assert pdf.startswith(b"%PDF") and len(re.findall(rb"/Type\s*/Page(?!s)", pdf)) == 1

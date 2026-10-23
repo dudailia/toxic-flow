@@ -25,6 +25,12 @@ with a bootstrap interval from {{h1_ci_low_bp}} to {{h1_ci_high_bp}} bp and a pa
 interval from {{h1_t_low_bp}} to {{h1_t_high_bp}} bp. The study could detect effects of
 {{mde_bp}} bp or larger. {{h1_statement}}
 
+![Difference in break-even fee, B3 minus B2b, on each test day in the primary cell, with
+its mean and both intervals](fig_daily_d.svg)
+
+![Mean difference in each of the 8 queue and latency cells; H1 needs one sign in all of
+them](fig_cells.svg)
+
 Limitations, stated with the result: simulation only, no real fills; queue position is
 estimated, not observed; funding payments are not modelled.
 
