@@ -198,6 +198,9 @@ def run_cell(
         hbt.close()
     wall = time.perf_counter() - t0
     steps, fills = steps[: int(out[0])], fills[: int(out[12])]
+    # hftbacktest lists orders in hash-map order, which differs between processes; sorted
+    # fills make every sum below, and so every metric, the same in every run.
+    fills = np.sort(fills, order=["local_ts", "order_id"])
     fee_levels = {
         name: venue["maker_fee_bps"] if f == "venue" else float(f)
         for name, f in cfg["fee_levels_bps"].items()

@@ -34,6 +34,10 @@ def test_ac2_2_pnl_from_fills_reconciles_with_engine_cash_and_inventory(strategy
     assert abs(row["gross_pnl"] - engine_gross) <= 1e-6
     assert row["fills"] == row["engine_fills"] == len(fills)
     assert row["end_position"] == pytest.approx(row["engine_position"], abs=1e-12)
+    # Within a step hftbacktest returns orders in hash-map order, which changes between
+    # processes; sorted fills make every sum, and so every metric, identical across runs.
+    key = fills.select("local_ts", "order_id")
+    assert key.equals(key.sort(["local_ts", "order_id"]))
 
 
 def test_ac2_3_engine_maker_fee_equals_the_post_hoc_fee():
