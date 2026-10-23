@@ -28,9 +28,10 @@ from toxic_flow.data.venue import venue_for
 from toxic_flow.engine.grid import LATENCY_MUL, QUEUE_MODELS, config_hash, expand
 from toxic_flow.eval.markouts import HORIZONS_S, markouts
 from toxic_flow.eval.metrics import day_metrics
+from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
-from toxic_flow.strategies.b1_glft import run_b1
 from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
+from toxic_flow.strategies.overlay import EWMA, HAWKES, OFI, run_b1, run_overlay
 
 ROOT = Path(__file__).resolve().parents[3]
 RESULTS = ROOT / "results"
@@ -54,6 +55,64 @@ def latency_file(day: str, setting: str) -> Path:
         ]
         np.savez_compressed(path, data=np.concatenate(lat))
     return path
+
+
+def event_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
+    """Market-order events of the day (local_ts sorted, side 0 b / 1 s), built once."""
+    from toxic_flow.events.market_orders import EVENTS, build_day
+
+    path = EVENTS / f"{day}.parquet"
+    if not path.exists():
+        build_day(day)
+    ev = pl.read_parquet(path, columns=["local_ts", "side"])
+    return ev["local_ts"].to_numpy(), (ev["side"] == "s").to_numpy().astype(np.int64)
+
+
+def ofi_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
+    """Best-level OFI contributions of the day (update times, cumulative sum from 0)."""
+    from toxic_flow.data.book import replay_bbo
+    from toxic_flow.signals.ofi import ofi_contributions
+
+    path = CONVERTED / day / "ofi_contributions.npz"
+    if not path.exists():
+        venue = venue_for(day)
+        parts = json.loads((CONVERTED / day / "convert.json").read_text())["files"]
+        bbo, _ = replay_bbo(
+            [CONVERTED / day / f for f in parts], venue["tick_size"], venue["lot_size"]
+        )
+        ts, e = ofi_contributions(bbo)
+        np.savez_compressed(path, ts=ts, e=e)
+    data = np.load(path)
+    return data["ts"], np.concatenate([[0.0], np.cumsum(data["e"])])
+
+
+def _overlay_args(s: dict, day: str) -> tuple:
+    """Signal mode and inputs for an overlay strategy config (B2, B2b or B3)."""
+    mu, alpha, beta = np.zeros(2), np.zeros((2, 2)), 1.0
+    tau, ofi_window = 1.0, 1
+    if s["name"] == "B2":
+        mode = OFI
+        sig_ts, cum = ofi_inputs(day)
+        sig_side = np.zeros(len(sig_ts), np.int64)
+        ofi_window = int(float(s["ofi_window_s"]) * 1e9)
+    else:
+        sig_ts, sig_side = event_inputs(day)
+        cum = np.zeros(1)
+        if s["name"] == "B2b":
+            mode, tau = EWMA, float(s["tau_s"])
+        elif s["name"] == "B3":
+            mode = HAWKES
+            mu = np.array([s["mu_b"], s["mu_s"]], float)
+            alpha = np.array(
+                [[s["alpha_bb"], s["alpha_bs"]], [s["alpha_sb"], s["alpha_ss"]]], float
+            )
+            beta = float(s["beta"])
+        else:
+            raise ValueError(f"unknown strategy {s['name']}")
+    return (
+        mode, float(s["c"]), float(s["d"]), float(s["K"]), NORM_STEPS,
+        sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta, np.zeros((0, 3)),
+    )  # fmt: skip
 
 
 def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=0.0):
@@ -104,7 +163,9 @@ def run_cell(cell: dict, cfg: dict, maker_fee_bps: float = 0.0) -> tuple[dict, p
             run_b1(hbt, float(s["gamma"]), window, int(s.get("update_every", 50)), *common,
                    start, end, step, steps, fills, out)  # fmt: skip
         else:
-            raise ValueError(f"unknown strategy {s['name']}")
+            window = int(float(s["window_s"]) * 1e9 / step)
+            run_overlay(hbt, float(s["gamma"]), window, int(s.get("update_every", 50)), *common,
+                        start, end, step, steps, fills, out, *_overlay_args(s, day))  # fmt: skip
     finally:
         hbt.close()
     wall = time.perf_counter() - t0
