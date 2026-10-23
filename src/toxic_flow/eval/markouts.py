@@ -3,6 +3,10 @@
 markout_h = 10,000 * side * (mid(t_fill + h) - p_fill) / p_fill, side +1 for a buy. The mid
 at t_fill + h is the one recorded at the last decision step at or before that time.
 Negative means adverse selection.
+
+The horizon is added to the fill's exchange time, while decision steps are on local time,
+so the mid comes from a clock a feed latency (a few ms) behind; at h >= 1 s that is small
+(Q38 in docs/SESSION_REPORT.md).
 """
 
 import numpy as np

@@ -290,9 +290,14 @@ Commands run at the end of this block:
 - Q30. Order latency at t is interpolated between one-second feed-latency rows on both
   sides of t, so it uses feed latency up to 1 s ahead. The strategy cannot read it. State
   it as a limitation, or shift the latency file by one row so it is causal?
-- Q31. B3 rests on both sides in 42% of steps against B1's 95%, because its quotes move
-  more often and a replace waits for its cancel to land (one order per side). That
-  lowers B3's fills, and it bears on the section 8 selectivity check. Keep the rule?
+- Q31. B3 rests on both sides in 42% of steps against B1's 95%. Corrected on
+  2026-10-23: latency is not the cause, since B3 at zero order latency rests 41.6% of
+  steps, the same as at high latency (41.6%). place_quotes sends the cancel at one step
+  and the replacement only at the next, once the side has no order, so every change of
+  target price leaves that side empty for at least one 100 ms step. B3's target moves
+  far more often than B1's. That lowers B3's fills and bears on the section 8
+  selectivity check. Keep one order per side with cancel first, or allow a replace in
+  the same step (the inventory cap then needs in-flight orders counted)?
 
 # Continued again, 2026-10-23 (items 19 to 29)
 
