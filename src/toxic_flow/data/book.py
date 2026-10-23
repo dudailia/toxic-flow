@@ -77,7 +77,9 @@ def replay_bbo(
     """(rows of BBO_DTYPE, {"batches", "crossed", "one_sided"}) over one day's parts."""
     asset = (
         BacktestAsset()
-        .data([str(p) for p in part_files])  # paths: hftbacktest does not copy arrays
+        # Paths, or arrays the caller keeps alive for the whole replay: hftbacktest keeps a
+        # raw pointer to an array instead of copying it.
+        .data([p if isinstance(p, np.ndarray) else str(p) for p in part_files])
         .linear_asset(1.0)
         .constant_order_latency(0, 0)
         .risk_adverse_queue_model()

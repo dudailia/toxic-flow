@@ -78,11 +78,16 @@ def write_events(events: pl.DataFrame, path: Path) -> Path:
     return path
 
 
-def build_day(day: str, raw_dir: Path = RAW, out_dir: Path = EVENTS) -> dict:
+def build_day(day: str, raw_dir: Path = RAW, out_dir: Path = EVENTS, offset_ns=None) -> dict:
+    """offset_ns: the day's local-timestamp offset from conversion; read from convert.json
+    when not given, 0 if the day was never converted."""
     assert_allowed(day)  # first: this reads the raw trades file
     day = normalise(day)
     info = CONVERTED / day / "convert.json"
-    offset = json.loads(info.read_text())["local_ts_offset_ns"] if info.exists() else 0
+    if offset_ns is not None:
+        offset = offset_ns
+    else:
+        offset = json.loads(info.read_text())["local_ts_offset_ns"] if info.exists() else 0
     events, stats = collapse(raw_dir / day / "trades.csv.gz", local_offset_ns=offset)
     write_events(events, out_dir / f"{day}.parquet")
     return {**stats, "local_ts_offset_ns": offset}

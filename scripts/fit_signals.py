@@ -82,7 +82,12 @@ def fit_days(days: list[str]) -> dict:
 def main(smoke: bool) -> int:
     train = load_splits()["train"]
     days = [d for d in train if d not in excluded_days(train)]
-    on_disk = [d for d in days if (CONVERTED / d / "convert.json").exists()]
+    # A day is ready once its events and OFI contributions exist, whether its parts are
+    # on disk (make data) or were converted in memory (scripts/prepare_day.py).
+    on_disk = [
+        d for d in days
+        if (EVENTS / f"{d}.parquet").exists() and (CONVERTED / d / "ofi_contributions.npz").exists()
+    ]  # fmt: skip
     if not smoke and on_disk != days:
         missing = sorted(set(days) - set(on_disk))
         raise SystemExit(f"{len(missing)} training days not on disk: {missing}; use --smoke")

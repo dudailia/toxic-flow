@@ -74,9 +74,12 @@ def latency_quantiles_ms(latency_ns: np.ndarray) -> dict:
     }
 
 
-def quality_report(part_files: list[Path], tick: float, lot: float, window: tuple[int, int]):
+def quality_report(
+    part_files: list, tick: float, lot: float, window: tuple[int, int], bbo_out: list | None = None
+):
     """Data quality of one converted day, from the events as the strategy receives them
-    (rows flagged LOCAL_EVENT, so each original row counts once)."""
+    (rows flagged LOCAL_EVENT, so each original row counts once). Parts are files or
+    in-memory arrays; bbo_out, if given, receives the replayed BBO rows for reuse."""
     from toxic_flow.data.book import replay_bbo
 
     streams = {"book": DEPTH_EVENT, "trades": TRADE_EVENT}
@@ -84,7 +87,7 @@ def quality_report(part_files: list[Path], tick: float, lot: float, window: tupl
     lats = {k: [] for k in streams}
     snapshot_rows = 0
     for f in part_files:
-        data = np.load(f)["data"]
+        data = f if isinstance(f, np.ndarray) else np.load(f)["data"]
         local = (data["ev"] & LOCAL_EVENT) == LOCAL_EVENT
         kind = data["ev"] & 0xFF
         for name, code in streams.items():
@@ -93,7 +96,9 @@ def quality_report(part_files: list[Path], tick: float, lot: float, window: tupl
             lats[name].append(rows["local_ts"] - rows["exch_ts"])
         snapshot_rows += int((local & (kind == DEPTH_SNAPSHOT_EVENT)).sum())
         del data
-    _, bbo = replay_bbo(part_files, tick, lot)
+    rows_bbo, bbo = replay_bbo(part_files, tick, lot)
+    if bbo_out is not None:
+        bbo_out.append(rows_bbo)
     gaps = {k: largest_gap(np.concatenate(v), *window) for k, v in times.items()}
     return {
         "quoting_window_ns": list(window),
@@ -114,8 +119,9 @@ def quality_report(part_files: list[Path], tick: float, lot: float, window: tupl
     }
 
 
-def write_report(day: str) -> Path:
-    """docs/data_quality/<day>.json from data/converted/<day> and the raw trades."""
+def write_report(day: str, parts=None, info=None, bbo_out=None) -> Path:
+    """docs/data_quality/<day>.json from data/converted/<day> and the raw trades, or from
+    a conversion held in memory (parts and its info dict) when the disk has no room."""
     from toxic_flow.data.convert import CONVERTED
     from toxic_flow.data.split_lock import assert_allowed, normalise
     from toxic_flow.data.venue import venue_for
@@ -124,18 +130,21 @@ def write_report(day: str) -> Path:
     assert_allowed(day)
     day = normalise(day)
     venue = venue_for(day)
-    conv = json.loads((CONVERTED / day / "convert.json").read_text())
-    parts = [CONVERTED / day / f for f in conv["files"]]
+    if parts is None:
+        conv = json.loads((CONVERTED / day / "convert.json").read_text())
+        parts = [CONVERTED / day / f for f in conv["files"]]
+    else:
+        conv = info
     start = int(datetime.fromisoformat(f"{day}T00:30:00+00:00").timestamp()) * 10**9
     end = int(datetime.fromisoformat(f"{day}T23:59:00+00:00").timestamp()) * 10**9
     report = {
         "date": day,
         "exclusion_rule_1": False,  # both files were downloaded with HTTP 200 (manifest)
-        "exclusion_rule_2": False,  # conversion succeeded (convert.json exists)
-        **quality_report(parts, venue["tick_size"], venue["lot_size"], (start, end)),
+        "exclusion_rule_2": False,  # conversion succeeded (else this line is not reached)
+        **quality_report(parts, venue["tick_size"], venue["lot_size"], (start, end), bbo_out),
         "inferred": conv["inferred"],
         "local_ts_offset_ns": conv["local_ts_offset_ns"],
-        "market_orders": build_day(day),
+        "market_orders": build_day(day, offset_ns=conv["local_ts_offset_ns"]),
     }
     QUALITY.mkdir(parents=True, exist_ok=True)
     out = QUALITY / f"{day}.json"
