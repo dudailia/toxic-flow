@@ -529,3 +529,26 @@ So items 1 (conversion), 2 (15 of 18 quality files) and 3 (all of M2) cannot be 
 this machine as it stands, and repeating the attempt only thrashes it. Q39 holds: about
 15 GB more free disk, or permission to delete derived parts after use, or fewer
 programs holding swapped-out memory.
+
+## After the reboot (22:20 UTC): disk rules and the stop
+
+The disk filled during an in-memory conversion and the Mac rebooted. Nothing in the repo
+was lost (HEAD 7fe58a5, clean tree, git fsck shows only dangling objects). Ilia freed
+space (13.4 GB free) and set four rules; all are applied:
+
+1. Measured and written to docs/disk_budget.md.
+2. Converted days are a cache (7414650): each part's SHA-256 is in data/manifest.json under
+   "converted" and a rebuild must match it; after a day's runs its parts are deleted unless
+   more than 30 GB is free; raw files and raw manifest entries are unchanged. The hash is of
+   the part's events, not the .npz file, because the zip stores a write time. The hashes of
+   2024-01-01 were recorded from its existing parts; its first rebuild will check them.
+3. No conversion starts below 15 GB free, one at a time; the in-memory path is gone from the
+   engine and from scripts/prepare_day.py.
+4. Raw for all 34 days does not fit with 30 GB to spare: about 9.9 GB more raw for the test
+   days (4.2 to 16.2 GB, since their sizes cannot be known before the tag) needs about
+   39.9 GB free, against 13.4 GB. Short by about 26 GB. Work stops for an external SSD or a
+   cloud machine. Rule 3 also blocks M1 and M2 now: 13.4 GB is below the 15 GB floor.
+
+State of the goal: items 1 to 3 remain incomplete, as in the table above. Item 4 is done
+except B2's K. No raw file was deleted, no protected path edited, no test-day URL
+requested, no M4 work started.
