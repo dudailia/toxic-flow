@@ -56,6 +56,7 @@ def test_in_memory_conversion_waits_for_disk_room_and_then_gives_up(monkeypatch)
     usage = namedtuple("usage", "total used free")
     monkeypatch.setattr(shutil, "disk_usage", lambda _: usage(1, 1, 10))
     monkeypatch.setattr(run.time, "sleep", lambda s: None)
+    monkeypatch.setattr(run, "_swap_free", lambda: 0)
     with pytest.raises(RuntimeError, match="disk"):
         run.wait_for_room(min_free=100, timeout_s=0)
     monkeypatch.setattr(shutil, "disk_usage", lambda _: usage(1, 1, 1000))

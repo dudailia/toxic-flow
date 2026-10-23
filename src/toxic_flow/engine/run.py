@@ -46,19 +46,31 @@ def utc_ns(day: str, hms: str) -> int:
 
 
 _IN_MEMORY: dict[str, list] = {}  # at most one day converted in memory, see day_parts
-MIN_FREE_BYTES = 1_500_000_000
+MIN_ROOM_BYTES = 4_000_000_000
 
 
-def wait_for_room(min_free: int = MIN_FREE_BYTES, timeout_s: float = 1200) -> None:
-    """Wait until the disk has min_free bytes free, or raise after timeout_s. A day in memory
-    is about 6 GB, and macOS swap lives on the same disk, so converting with almost no free
-    disk can fill it; waiting lets swap shrink first."""
+def _swap_free() -> int:
+    """Unused bytes in the swap files already on disk (macOS); 0 elsewhere."""
+    try:
+        out = subprocess.run(["sysctl", "-n", "vm.swapusage"], capture_output=True, text=True)
+        return int(float(out.stdout.split("free = ")[1].split("M")[0]) * 2**20)
+    except (IndexError, ValueError, OSError):
+        return 0
+
+
+def wait_for_room(min_free: int = MIN_ROOM_BYTES, timeout_s: float = 1800) -> None:
+    """Wait until free disk plus unused swap is min_free bytes, or raise after timeout_s.
+    A day in memory is about 6 GB and macOS swap lives on the same disk, so converting
+    with little room makes swap grow into the last free space. On 2026-10-23 days that
+    started with about 4 GB of room converted; days with about 3 GB filled the disk."""
     import shutil
 
     waited = 0.0
-    while shutil.disk_usage(ROOT).free < min_free:
+    while shutil.disk_usage(ROOT).free + _swap_free() < min_free:
         if waited >= timeout_s:
-            raise RuntimeError(f"less than {min_free} bytes of free disk after {timeout_s} s")
+            raise RuntimeError(
+                f"less than {min_free} bytes of free disk and swap after {timeout_s} s"
+            )
         time.sleep(10)
         waited += 10
 
