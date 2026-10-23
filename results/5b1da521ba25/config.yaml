@@ -1,0 +1,19 @@
+# SMOKE RUN. One training day, placeholder parameters. It tests the harness and previews
+# the fill-count ordering (AC2.4); it is not a result and chooses no parameter. B0 and B1
+# parameters are chosen in M2 on all 12 training days (configs/selected.yaml).
+name: smoke_2024-01-01
+label: smoke
+days: [2024-01-01]
+strategies:
+  - {name: B0, h: 1}
+  # gamma and window are placeholders taken from the hftbacktest GLFT tutorial
+  - {name: B1, gamma: 0.05, window_s: 600, update_every: 50}
+queue_models: [risk_averse, power3, power2, log]
+latencies: [low, high]
+quote_start: "00:30:00"
+quote_end: "23:59:00"
+step_ns: 100000000
+max_lots: 10
+# standard maker fee for the date from configs/venue.yaml, zero, and the Liquidity Provider
+# Program Tier 1 maker fee (-0.1 bp, published; see docs/DATA_RECON.md Q6)
+fee_levels_bps: {standard_maker: venue, zero: 0.0, lp_tier1: -0.1}
