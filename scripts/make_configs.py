@@ -41,6 +41,9 @@ def kept(split: str) -> list[str]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("kind", choices=list(SPLIT))
+    # M4 drafts read the overlay choice from a draft file, so configs/selected.yaml keeps
+    # only what Ilia has approved (Ilia, 2026-10-24: M4 is reviewed before it is filled in).
+    p.add_argument("--selected", type=Path, default=ROOT / "configs" / "selected.yaml")
     args = p.parse_args()
     days = kept(SPLIT[args.kind])
     if args.kind == "training":
@@ -48,12 +51,14 @@ def main() -> None:
     elif args.kind == "training_extended":
         cfg = configs.training_extended(days)
     else:
-        selected = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+        selected = yaml.safe_load(args.selected.read_text())
         if args.kind == "training_chosen":
             cfg = configs.training_chosen(selected, days)
         else:
             constants = json.loads((ROOT / "docs" / "signals" / "train_constants.json").read_text())
             cfg = getattr(configs, args.kind)(constants, selected, days)
+    if args.selected.resolve() != (ROOT / "configs" / "selected.yaml").resolve():
+        cfg["name"] = cfg["label"] = f"{cfg['name']}_draft"  # never the approved config's name
     out = ROOT / "configs" / "runs" / f"{cfg['name']}.yaml"
     if out.exists():
         raise SystemExit(f"{out} exists; a changed config needs a new name")

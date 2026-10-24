@@ -106,3 +106,16 @@ def test_a_candidate_missing_a_day_is_refused():
     m = frame(rows("B1", {"gamma": 0.05}, [-0.5, -0.5]))
     with pytest.raises(ValueError, match="missing"):
         candidate_table(m, "B1", [*DAYS, "2025-03-01"])
+
+
+def test_an_eligible_b1_candidate_with_a_day_without_fills_is_left_to_ilia():
+    # Median of (0, 200) is 100, so it is eligible; its BEF on the empty day is undefined.
+    m = pl.DataFrame(
+        rows("B1", {"gamma": 0.2}, [-0.7, -0.7])
+        + [r | {"fills": f} for r, f in zip(rows("B1", {"gamma": 0.4}, [float("nan"), -0.1]),
+                                            (0, 200), strict=True)]
+    )  # fmt: skip
+    t = candidate_table(m, "B1", DAYS)
+    assert eligible(t).all()
+    with pytest.raises(ValueError, match="without fills"):
+        select(t, "B1")

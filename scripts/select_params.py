@@ -17,7 +17,7 @@ import polars as pl
 
 from toxic_flow.data.exclusions import excluded_days
 from toxic_flow.data.split_lock import load_splits
-from toxic_flow.eval.select import PRIMARY, candidate_table, select
+from toxic_flow.eval.select import PRIMARY, candidate_table, eligible, select
 
 
 def main(run_dir: Path, strategy: str, out: Path | None) -> None:
@@ -44,13 +44,18 @@ def main(run_dir: Path, strategy: str, out: Path | None) -> None:
         f" day(s): {', '.join(days)}. Rule: PREREGISTRATION.md section 4. From"
         f" {run_dir}/metrics.parquet by scripts/select_params.py.",
         "",
-        "| Candidate | Mean daily BEF bp | Days | Days without fills |",
-        "|---|---|---|---|",
+        "| Candidate | Mean daily BEF bp | Days | Days without fills | Median daily fills | Eligible |",
+        "|---|---|---|---|---|---|",
     ]
+    # B0 and B1 have the section 4 fill floor; overlays have none. NaN sorts last.
+    ok = eligible(table) if strategy in ("B0", "B1") else pl.Series([True] * table.height)
+    table = table.with_columns(eligible=ok, mean_bef_bps=pl.col("mean_bef_bps").fill_nan(None))
     for r in table.sort("mean_bef_bps", descending=True, nulls_last=True).iter_rows(named=True):
         params = {k: v for k, v in json.loads(r["params"]).items() if k != "name"}
+        bef = "none" if r["mean_bef_bps"] is None else f"{r['mean_bef_bps']:.4f}"
         lines.append(
-            f"| {params} | {r['mean_bef_bps']:.4f} | {r['n_days']} | {r['zero_fill_days']} |"
+            f"| {params} | {bef} | {r['n_days']} | {r['zero_fill_days']} |"
+            f" {r['median_fills']:.0f} | {'yes' if r['eligible'] else 'no'} |"
         )
     head = "Selected, pending Ilia's approval" if full else "Top of the smoke ranking, not a choice"
     lines += ["", f"{head}: {pick}"]

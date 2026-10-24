@@ -165,10 +165,16 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
             for lat in ("zero", "low", "high")
             if _has(m, "B3", q, lat)
         }
-        flag = any(v > mean["zero"] for lat, v in mean.items() if lat != "zero")
+        others = [v for lat, v in mean.items() if lat != "zero"]
+        # A NaN mean (no day with fills) compares False with anything, so it would read as
+        # "zero latency was above"; without both means there is no verdict (review, M2/M3).
+        known = np.isfinite(mean["zero"]) and others and np.all(np.isfinite(others))
+        flag = any(v > mean["zero"] for v in others) if known else None
         out["C3"] = {"mean_bef_bp": mean, "flag": flag}
         text.append(
-            "Flag: B3 at a non-zero latency beat its zero-latency run on the mean."
+            "C3, zero latency: a mean is missing (no day with fills), so no verdict."
+            if flag is None
+            else "Flag: B3 at a non-zero latency beat its zero-latency run on the mean."
             if flag
             else "C3, zero latency, was above B3 at every non-zero latency on the mean."
         )

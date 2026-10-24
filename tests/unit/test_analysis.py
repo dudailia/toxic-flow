@@ -239,3 +239,13 @@ def test_c1_against_b3_is_reported_as_descriptive():
     assert c1["pass"] is True
     assert c1["vs_B3"]["label"] == "descriptive"
     assert c1["vs_B3"]["mean"] == pytest.approx(NOISE.mean() - 0.5)
+
+
+def test_c3_without_fills_at_zero_latency_has_no_verdict():
+    # A NaN zero-latency mean must not read as "zero latency was above B3".
+    m = pl.DataFrame(
+        rows("B1", [0.0] * 12) + rows("B3", [0.2] * 12)
+        + rows("B3", [float("nan")] * 12, latency="zero", fills=0)
+    )  # fmt: skip
+    out = analysis.canaries(m, mde_bp=0.1)
+    assert out["C3"]["flag"] is None and "no verdict" in out["statement"]
