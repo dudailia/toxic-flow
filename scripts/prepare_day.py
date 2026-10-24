@@ -49,6 +49,14 @@ def main(day: str) -> None:
     )
 
 
+STAGES = {"convert": convert_day, "m1": m1, "evict": evict_converted}
+
 if __name__ == "__main__":
-    for d in sys.argv[1:]:
-        main(d)
+    # prepare_day.py DAY [...]: all stages in one process.
+    # prepare_day.py convert|m1|evict DAY: one stage, so a caller can run each in its own
+    # process and their memory peaks do not add up in one.
+    if sys.argv[1] in STAGES:
+        print(STAGES[sys.argv[1]](normalise(sys.argv[2])))
+    else:
+        for d in sys.argv[1:]:
+            main(d)
