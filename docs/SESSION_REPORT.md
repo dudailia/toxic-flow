@@ -778,3 +778,13 @@ the tables (window and full-day columns, median fills, eligibility).
   tuning (378 cells on the validation days, about 3 hours), scripts/m4_draft.py select,
   make_configs canaries and mde_train with --selected docs/M4_draft_selected.yaml, run
   both, scripts/m4_draft.py report.
+
+## Chosen B0 and B1 rerun in all 8 cells (new selection)
+
+results/633a29217f4b (configs/runs/train_chosen_window.yaml): B0 h = 13 and B1 gamma 0.4,
+10 min, 12 training days, 8 cells, 192 cells, exit 0. docs/m2_fills.md is regenerated from
+it. AC2.4 holds for B1: risk-averse has no more fills than any other queue model in 24 of
+24 rows, and is alone with the fewest in 3 of them (B0: 24 and 23). Limitation beside it:
+B1 now has a median of 127 fills a day, so the queue models disagree even less often than
+before. Mean daily BEF over the 8 cells: B0 -0.927 bp, B1 -0.570 bp; no cell has positive
+net PnL at the standard maker fee. results/c7921fce3271 is the run of the earlier choice.

@@ -1,61 +1,61 @@
-# Fills per queue model on the training days (AC2.4), run c7921fce3271
+# Fills per queue model on the training days (AC2.4), run 633a29217f4b
 
-Config configs/runs/train_chosen.yaml; commit ae291c6; hftbacktest 2.4.4.
+Config configs/runs/train_chosen_window.yaml; commit 2e174b6; hftbacktest 2.4.4.
 From metrics.parquet by scripts/m2_report.py. Fewest: the queue model(s) with the
 smallest fill count. AC2.4 needs risk_averse to have no more fills than any other
 queue model for B1 on every day and latency; a tie passes (Q42).
 
 | Strategy | Day | Latency | risk_averse | power3 | power2 | log | Fewest | Risk-averse no more |
 |---|---|---|---|---|---|---|---|---|
-| B0 | 2024-01-01 | high | 26811 | 26823 | 26821 | 26825 | risk_averse | yes |
-| B0 | 2024-01-01 | low | 28887 | 28895 | 28893 | 28901 | risk_averse | yes |
-| B0 | 2024-02-01 | high | 40966 | 40972 | 40972 | 40982 | risk_averse | yes |
-| B0 | 2024-02-01 | low | 44520 | 44526 | 44526 | 44534 | risk_averse | yes |
-| B0 | 2024-03-01 | high | 52481 | 52491 | 52491 | 52487 | risk_averse | yes |
-| B0 | 2024-03-01 | low | 58529 | 58537 | 58537 | 58535 | risk_averse | yes |
-| B0 | 2024-04-01 | high | 51614 | 51618 | 51620 | 51626 | risk_averse | yes |
-| B0 | 2024-04-01 | low | 59367 | 59373 | 59375 | 59373 | risk_averse | yes |
-| B0 | 2024-05-01 | high | 107589 | 107597 | 107595 | 107595 | risk_averse | yes |
-| B0 | 2024-05-01 | low | 129961 | 129971 | 129967 | 129977 | risk_averse | yes |
-| B0 | 2024-06-01 | high | 6872 | 6874 | 6874 | 6874 | risk_averse | yes |
-| B0 | 2024-06-01 | low | 7750 | 7754 | 7754 | 7754 | risk_averse | yes |
-| B0 | 2024-07-01 | high | 34845 | 34849 | 34851 | 34849 | risk_averse | yes |
-| B0 | 2024-07-01 | low | 37327 | 37333 | 37335 | 37335 | risk_averse | yes |
-| B0 | 2024-08-01 | high | 68466 | 68470 | 68472 | 68478 | risk_averse | yes |
-| B0 | 2024-08-01 | low | 75754 | 75758 | 75758 | 75762 | risk_averse | yes |
-| B0 | 2024-09-01 | high | 45961 | 45961 | 45961 | 45965 | risk_averse = power3 = power2 | yes |
-| B0 | 2024-09-01 | low | 49984 | 49986 | 49986 | 49986 | risk_averse | yes |
-| B0 | 2024-10-01 | high | 66796 | 66798 | 66798 | 66802 | risk_averse | yes |
-| B0 | 2024-10-01 | low | 73336 | 73344 | 73344 | 73350 | risk_averse | yes |
-| B0 | 2024-11-01 | high | 57759 | 57759 | 57759 | 57761 | risk_averse = power3 = power2 | yes |
-| B0 | 2024-11-01 | low | 63058 | 63060 | 63062 | 63066 | risk_averse | yes |
-| B0 | 2024-12-01 | high | 21572 | 21574 | 21574 | 21574 | risk_averse | yes |
-| B0 | 2024-12-01 | low | 23508 | 23510 | 23510 | 23512 | risk_averse | yes |
-| B1 | 2024-01-01 | high | 1046 | 1048 | 1048 | 1050 | risk_averse | yes |
-| B1 | 2024-01-01 | low | 1010 | 1010 | 1010 | 1014 | risk_averse = power3 = power2 | yes |
-| B1 | 2024-02-01 | high | 1520 | 1526 | 1524 | 1528 | risk_averse | yes |
-| B1 | 2024-02-01 | low | 1462 | 1468 | 1468 | 1472 | risk_averse | yes |
-| B1 | 2024-03-01 | high | 988 | 988 | 988 | 990 | risk_averse = power3 = power2 | yes |
-| B1 | 2024-03-01 | low | 958 | 958 | 958 | 958 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-04-01 | high | 566 | 568 | 568 | 568 | risk_averse | yes |
-| B1 | 2024-04-01 | low | 556 | 556 | 556 | 556 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-05-01 | high | 1192 | 1192 | 1192 | 1192 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-05-01 | low | 1126 | 1126 | 1126 | 1126 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-06-01 | high | 312 | 316 | 316 | 320 | risk_averse | yes |
-| B1 | 2024-06-01 | low | 300 | 310 | 310 | 316 | risk_averse | yes |
-| B1 | 2024-07-01 | high | 352 | 352 | 352 | 352 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-07-01 | low | 342 | 342 | 342 | 342 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-08-01 | high | 482 | 482 | 482 | 482 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-08-01 | low | 468 | 468 | 468 | 468 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-09-01 | high | 612 | 612 | 612 | 612 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-09-01 | low | 586 | 586 | 586 | 586 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-10-01 | high | 782 | 782 | 782 | 786 | risk_averse = power3 = power2 | yes |
-| B1 | 2024-10-01 | low | 728 | 728 | 728 | 734 | risk_averse = power3 = power2 | yes |
-| B1 | 2024-11-01 | high | 358 | 358 | 358 | 358 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-11-01 | low | 330 | 330 | 330 | 330 | risk_averse = power3 = power2 = log | yes |
-| B1 | 2024-12-01 | high | 208 | 208 | 208 | 210 | risk_averse = power3 = power2 | yes |
-| B1 | 2024-12-01 | low | 210 | 210 | 210 | 210 | risk_averse = power3 = power2 = log | yes |
+| B0 | 2024-01-01 | high | 20531 | 20557 | 20559 | 20567 | risk_averse | yes |
+| B0 | 2024-01-01 | low | 21681 | 21709 | 21711 | 21729 | risk_averse | yes |
+| B0 | 2024-02-01 | high | 32108 | 32122 | 32122 | 32124 | risk_averse | yes |
+| B0 | 2024-02-01 | low | 34322 | 34340 | 34340 | 34340 | risk_averse | yes |
+| B0 | 2024-03-01 | high | 46725 | 46733 | 46733 | 46739 | risk_averse | yes |
+| B0 | 2024-03-01 | low | 51051 | 51063 | 51065 | 51069 | risk_averse | yes |
+| B0 | 2024-04-01 | high | 46740 | 46748 | 46750 | 46748 | risk_averse | yes |
+| B0 | 2024-04-01 | low | 52685 | 52695 | 52697 | 52701 | risk_averse | yes |
+| B0 | 2024-05-01 | high | 101662 | 101668 | 101670 | 101686 | risk_averse | yes |
+| B0 | 2024-05-01 | low | 120293 | 120307 | 120309 | 120313 | risk_averse | yes |
+| B0 | 2024-06-01 | high | 5619 | 5621 | 5621 | 5625 | risk_averse | yes |
+| B0 | 2024-06-01 | low | 6228 | 6228 | 6228 | 6232 | risk_averse = power3 = power2 | yes |
+| B0 | 2024-07-01 | high | 31051 | 31057 | 31057 | 31069 | risk_averse | yes |
+| B0 | 2024-07-01 | low | 33101 | 33107 | 33109 | 33121 | risk_averse | yes |
+| B0 | 2024-08-01 | high | 61822 | 61828 | 61828 | 61830 | risk_averse | yes |
+| B0 | 2024-08-01 | low | 67482 | 67500 | 67500 | 67508 | risk_averse | yes |
+| B0 | 2024-09-01 | high | 39988 | 39992 | 39992 | 40004 | risk_averse | yes |
+| B0 | 2024-09-01 | low | 43147 | 43159 | 43159 | 43179 | risk_averse | yes |
+| B0 | 2024-10-01 | high | 60000 | 60006 | 60006 | 60012 | risk_averse | yes |
+| B0 | 2024-10-01 | low | 65032 | 65054 | 65056 | 65054 | risk_averse | yes |
+| B0 | 2024-11-01 | high | 52118 | 52124 | 52126 | 52132 | risk_averse | yes |
+| B0 | 2024-11-01 | low | 56363 | 56369 | 56371 | 56381 | risk_averse | yes |
+| B0 | 2024-12-01 | high | 20022 | 20024 | 20024 | 20026 | risk_averse | yes |
+| B0 | 2024-12-01 | low | 21516 | 21520 | 21520 | 21522 | risk_averse | yes |
+| B1 | 2024-01-01 | high | 252 | 252 | 252 | 252 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-01-01 | low | 246 | 246 | 246 | 246 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-02-01 | high | 300 | 302 | 302 | 302 | risk_averse | yes |
+| B1 | 2024-02-01 | low | 278 | 280 | 280 | 280 | risk_averse | yes |
+| B1 | 2024-03-01 | high | 132 | 132 | 132 | 132 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-03-01 | low | 130 | 130 | 130 | 130 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-04-01 | high | 88 | 88 | 88 | 88 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-04-01 | low | 86 | 86 | 86 | 86 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-05-01 | high | 210 | 210 | 210 | 210 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-05-01 | low | 194 | 194 | 194 | 194 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-06-01 | high | 124 | 124 | 124 | 126 | risk_averse = power3 = power2 | yes |
+| B1 | 2024-06-01 | low | 122 | 124 | 124 | 126 | risk_averse | yes |
+| B1 | 2024-07-01 | high | 88 | 88 | 88 | 88 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-07-01 | low | 80 | 80 | 80 | 80 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-08-01 | high | 104 | 104 | 104 | 104 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-08-01 | low | 96 | 96 | 96 | 96 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-09-01 | high | 134 | 134 | 134 | 134 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-09-01 | low | 128 | 128 | 128 | 128 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-10-01 | high | 180 | 180 | 180 | 182 | risk_averse = power3 = power2 | yes |
+| B1 | 2024-10-01 | low | 174 | 174 | 174 | 176 | risk_averse = power3 = power2 | yes |
+| B1 | 2024-11-01 | high | 102 | 102 | 102 | 102 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-11-01 | low | 94 | 94 | 94 | 94 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-12-01 | high | 32 | 32 | 32 | 32 | risk_averse = power3 = power2 = log | yes |
+| B1 | 2024-12-01 | low | 30 | 30 | 30 | 30 | risk_averse = power3 = power2 = log | yes |
 
-B0: risk-averse has no more fills than any other queue model in 24 of 24 day and latency rows, and is alone with the fewest in 22.
-B1: risk-averse has no more fills than any other queue model in 24 of 24 day and latency rows, and is alone with the fewest in 6.
+B0: risk-averse has no more fills than any other queue model in 24 of 24 day and latency rows, and is alone with the fewest in 23.
+B1: risk-averse has no more fills than any other queue model in 24 of 24 day and latency rows, and is alone with the fewest in 3.
 AC2.4 holds for B1.
