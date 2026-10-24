@@ -552,3 +552,25 @@ space (13.4 GB free) and set four rules; all are applied:
 State of the goal: items 1 to 3 remain incomplete, as in the table above. Item 4 is done
 except B2's K. No raw file was deleted, no protected path edited, no test-day URL
 requested, no M4 work started.
+
+## Revised rules applied, then stopped at the 12 GB floor (01:53 UTC)
+
+Ilia's revised rules are in force (a62b0cd, docs/disk_budget.md): rule 4 waits for M5;
+the conversion floor is 12 GB; a memory guard estimates each day's peak from its counted
+raw rows (7.55 GB per 100M events, 2024-01-01) and refuses a day over 11 GB or over the
+memory free at that moment; days run smallest first. Two training days are over 11 GB:
+2024-08-01 (12.1 GB) and 2024-05-01 (14.2 GB). They need a reader that does not hold the
+whole day's book rows, which is not built.
+
+The M1 loop stopped before its first conversion: free disk was 11.4 GB, below the 12 GB
+floor, down from 13.4 GB at 22:20 UTC. Nothing in the repo grew (data 11.8 GB, results
+16 MB) and swap stayed at 3 GB, so the 2 GB went elsewhere on the machine. No conversion
+ran, nothing was deleted.
+
+Also at 01:53 UTC available memory (free, inactive and speculative pages) was about
+6.1 GB, with the compressor holding about 16 GB of other processes' memory. At that level
+the guard would refuse every remaining day estimated above about 6 GB, which is all of
+them; freeing memory matters as much as freeing disk.
+
+State of the goal: items 1 to 3 remain incomplete (15 quality reports, all of M2); item 4
+is done except B2's K. The block's 4-hour limit has passed.
