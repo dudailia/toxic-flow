@@ -110,6 +110,41 @@ def latency_quantiles_ms(latency_ns: np.ndarray) -> dict:
     }
 
 
+class LatencyCounts:
+    """latency_quantiles_ms from value counts merged part by part, so a day's latencies are
+    never held at once. Exact: latencies are whole microseconds, so a day has few distinct
+    values, and the quantiles use numpy's own linear rule on the sorted order."""
+
+    def __init__(self):
+        self.values = np.empty(0, np.int64)
+        self.counts = np.empty(0, np.int64)
+
+    def add(self, latency_ns: np.ndarray) -> None:
+        v, c = np.unique(latency_ns, return_counts=True)
+        allv, inv = np.unique(np.concatenate([self.values, v]), return_inverse=True)
+        self.counts = np.bincount(inv, weights=np.concatenate([self.counts, c])).astype(np.int64)
+        self.values = allv
+
+    def _at(self, cum, k: int) -> float:
+        return float(self.values[np.searchsorted(cum, k, side="right")])
+
+    def quantiles_ms(self) -> dict:
+        cum = np.cumsum(self.counts)
+        n = int(cum[-1])
+        out = {}
+        for name, q in (("p50", 0.5), ("p90", 0.9), ("p99", 0.99)):
+            virtual = (n - 1) * q  # numpy's "linear" method
+            lo = int(np.floor(virtual))
+            hi = min(lo + 1, n - 1)
+            t = virtual - lo
+            a, b = self._at(cum, lo), self._at(cum, hi)
+            diff = b - a
+            v = b - diff * (1 - t) if t >= 0.5 else a + diff * t  # numpy's _lerp
+            out[name] = round(v / 1e6, 3)
+        out["max"] = round(float(self.values[-1]) / 1e6, 3)
+        return out
+
+
 def quality_report(
     part_files: list, tick: float, lot: float, window: tuple[int, int], bbo_out: list | None = None
 ):
@@ -121,7 +156,7 @@ def quality_report(
     streams = {"book": DEPTH_EVENT, "trades": TRADE_EVENT}
     gaps = {k: GapTracker(*window) for k in streams}  # part by part, not the whole day
     counts = dict.fromkeys(streams, 0)
-    lats = {k: [] for k in streams}
+    lats = {k: LatencyCounts() for k in streams}
     snapshot_rows = 0
     for f in part_files:
         data = f if isinstance(f, np.ndarray) else np.load(f)["data"]
@@ -131,7 +166,7 @@ def quality_report(
             rows = data[local & (kind == code)]
             gaps[name].add(rows["local_ts"])
             counts[name] += len(rows)
-            lats[name].append(rows["local_ts"] - rows["exch_ts"])
+            lats[name].add(rows["local_ts"] - rows["exch_ts"])
         snapshot_rows += int((local & (kind == DEPTH_SNAPSHOT_EVENT)).sum())
         del data
     rows_bbo, bbo = replay_bbo(part_files, tick, lot)
@@ -143,7 +178,7 @@ def quality_report(
         "book_updates": counts["book"],
         "snapshot_rows": snapshot_rows,
         "trades": counts["trades"],
-        "feed_latency_ms": {k: latency_quantiles_ms(np.concatenate(v)) for k, v in lats.items()},
+        "feed_latency_ms": {k: v.quantiles_ms() for k, v in lats.items()},
         "largest_gap_s": {k: round(g, 3) for k, (g, _) in gaps.items()},
         "largest_gap_starts_utc": {
             k: datetime.fromtimestamp(at / 1e9, UTC).isoformat(timespec="milliseconds")

@@ -82,3 +82,16 @@ def test_largest_gap_over_sorted_pieces_equals_the_whole_day():
     assert largest_gap_sorted([np.array([], np.int64)], 5, 15) == largest_gap(
         np.array([], np.int64), 5, 15
     )
+
+
+def test_latency_quantiles_from_value_counts_equal_numpy_percentile():
+    import numpy as np
+
+    from toxic_flow.data.validate import LatencyCounts, latency_quantiles_ms
+
+    rng = np.random.default_rng(5)
+    lat = rng.lognormal(8, 1, 100_001).astype(np.int64) * 1000  # whole microseconds, in ns
+    acc = LatencyCounts()
+    for piece in np.array_split(lat, 7):
+        acc.add(piece)
+    assert acc.quantiles_ms() == latency_quantiles_ms(lat)
