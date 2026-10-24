@@ -611,7 +611,7 @@ available, each day's 3.5 to 4.9 GB peak pages other programs out to swap on the
 | M2 selection, 192 cells, primary cell, 12 training days | done | ea5adad |
 | configs/selected.yaml with the training tables | done: B0 h = 5; B1 gamma 0.2, window 20 min | f2ad105 |
 | B2's K and every other K, from the training days | done | 9ed983c |
-| Chosen B0 and B1 in all 8 cells, fill counts per queue model (AC2.4) | not run: the block's 4-hour limit; config committed | this commit |
+| Chosen B0 and B1 in all 8 cells, fill counts per queue model (AC2.4) | done after the limit (see below); AC2.4 fails on ties for B1 | 6faed95, ae291c6, 03a3ee9 |
 
 Notes:
 - Conversion and the quality report run as separate processes; each stayed under 5 GB.
@@ -631,6 +631,37 @@ Notes:
 - In the selection run the 12 B1 candidates wrote the same fills file name (metrics, which
   the selection uses, are per candidate); fixed for later runs (d3a3158).
 
-Next: `make run CFG=configs/runs/train_chosen.yaml` (B0 h = 5 and the chosen B1, 8 cells,
-12 days, about 100 minutes), then `uv run python scripts/m2_report.py results/<hash>
-docs/m2_fills.md` for the AC2.4 table.
+## Chosen run and AC2.4 (07:18 to 09:04 UTC)
+
+The 4-hour limit had passed, but the goal's last item was still open, so the run went ahead.
+
+- First attempt: stopped after 64 of 192 cells. The selection run had evicted 2024-01-01,
+  the rebuild from raw made 20 parts instead of the 7 on record, its events SHA-256 matched,
+  but the manifest still listed only the 7 old part hashes, so eviction refused the 13 new
+  parts. Fix: a rebuild whose events hash matches refreshes the part record (ae291c6, with a
+  test); 2024-01-01's 20 parts were checked and recorded. The partial run directory was
+  removed and the run restarted from scratch.
+- Second attempt: exit 0, 192 cells, results/c7921fce3271 (config train_chosen, commit
+  ae291c6, hftbacktest 2.4.4), 105 minutes, peak 5.5 GB resident, free disk 16 GB at the end.
+- Fill counts per queue model: docs/m2_fills.md (scripts/m2_report.py). Risk-averse never has
+  more fills than power3, power2 or log in any of the 48 day, latency and strategy rows. It is
+  alone with the fewest in 22 of 24 rows for B0 and in 6 of 24 for B1; the other 18 B1 rows are
+  ties (in 13 of them all four models give the same count). B1 quotes wide and fills a few
+  hundred to 1,500 times a day, so its orders rarely sit where the queue models disagree.
+- AC2.4 reads "the risk-averse model has the fewest fills of the four on every train day for
+  B1. If not, stop." With a tie counted as not fewest (how m2_report.py counts it), AC2.4 does
+  not hold, so M2 stops here. With a tie counted as fewest, it holds on all 24 rows. This is
+  Q42 for Ilia. Nothing after AC2.4 was started.
+- Other numbers from the run, for the record (training days, not a test result): mean daily
+  break-even fee across the 8 cells is -0.994 bp for B0 and -0.663 bp for B1; for B1 it is
+  -0.677 bp under risk-averse and -0.647 bp under log, the order the queue models should give.
+  No cell has positive net PnL at the standard maker fee, so the leakage-auditor trigger was
+  not met.
+- Each fills file has one row per fill with distinct order ids, and the fill count equals
+  hftbacktest's own count in every cell. B1 ends every day flat, so its counts are even.
+
+## Open questions, new
+
+- Q42. AC2.4 and ties: does "the fewest" allow a tie? Under the strict reading B1 fails on
+  18 of 24 rows and M2 stops; under the tie reading it passes on all 24. Judgment call 18 of
+  the first block raised the same point before any data.
