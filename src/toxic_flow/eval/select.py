@@ -15,11 +15,16 @@ PRIMARY = ("risk_averse", "high")  # section 3
 # Candidates with c = d = 0 reduce to B1 and tie exactly; this absorbs only rounding.
 TIE_BP = 1e-9
 SIGNAL_SCALE = ("ofi_window_s", "tau_s")  # B2's window W, B2b's decay; B3 has neither
+# Section 4 grid-edge rule (Q41): a B0 or B1 candidate whose median training day has fewer
+# fills than this in the primary cell is not eligible, so a grid pushed to very wide quotes
+# cannot win on a handful of fills.
+MIN_MEDIAN_FILLS = 100
 
 
 def candidate_table(metrics: pl.DataFrame, strategy: str, days: list[str]) -> pl.DataFrame:
     """One row per candidate (params JSON) in the primary cell over the given days: mean
-    daily BEF, days counted, days with zero fills. Every candidate must have every day."""
+    daily BEF, days counted, days with zero fills, median daily fills. Every candidate must
+    have every day."""
     queue, latency = PRIMARY
     m = metrics.filter(
         (pl.col("strategy") == strategy)
@@ -33,6 +38,7 @@ def candidate_table(metrics: pl.DataFrame, strategy: str, days: list[str]) -> pl
             mean_bef_bps=pl.col("break_even_fee_bps").mean(),
             n_days=pl.col("day").n_unique(),
             zero_fill_days=(pl.col("fills") == 0).sum(),
+            median_fills=pl.col("fills").median(),
         )
         .sort("params")
     )
@@ -49,7 +55,12 @@ def _tie_key(params: dict) -> tuple:
 
 
 def select(table: pl.DataFrame, strategy: str) -> dict:
-    """The winning candidate, its mean daily BEF and how many candidates tied at the top."""
+    """The winning candidate, its mean daily BEF and how many candidates tied at the top.
+    For B0 and B1, candidates under MIN_MEDIAN_FILLS are dropped first."""
+    if strategy in ("B0", "B1"):
+        table = table.filter(eligible(table))
+        if table.is_empty():
+            raise ValueError(f"no {strategy} candidate has {MIN_MEDIAN_FILLS} median daily fills")
     bad = table.filter(pl.col("zero_fill_days") > 0)
     if bad.height:
         # BEF is undefined on a day without fills and section 4 says nothing about it.
@@ -63,3 +74,15 @@ def select(table: pl.DataFrame, strategy: str) -> dict:
         if _tie_key(top[0]) == _tie_key(top[1]):
             raise ValueError(f"tie that the section 4 rule does not break: {top[:2]}")
     return {"params": top[0], "mean_bef_bps": float(best), "tied": len(top)}
+
+
+def eligible(table: pl.DataFrame) -> pl.Series:
+    """B0 and B1 eligibility under the section 4 grid-edge rule (Q41)."""
+    return table["median_fills"] >= MIN_MEDIAN_FILLS
+
+
+def at_edge(value: float, grid: tuple) -> str | None:
+    """'low' or 'high' when the value is the grid's smallest or largest, else None."""
+    if value == min(grid):
+        return "low"
+    return "high" if value == max(grid) else None

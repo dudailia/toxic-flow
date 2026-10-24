@@ -23,6 +23,12 @@ B0_H = (1, 2, 3, 5)
 # window; every window fits inside the 30-minute warm-up.
 B1_GAMMAS = (0.025, 0.05, 0.1, 0.2)
 B1_WINDOWS_S = (300, 600, 1200)
+# Section 4 grid-edge rule (Q41): every first choice sat at the top edge, so each grid gets
+# two more steps upward, in its own spacing (h continues 1, 2, 3, 5; gamma and window
+# double). Windows of 40 and 80 min exceed the warm-up, so those candidates quote later.
+B0_H_EXT = (8, 13)
+B1_GAMMAS_EXT = (0.4, 0.8)
+B1_WINDOWS_S_EXT = (2400, 4800)
 C4_FACTORS = (10.0, 0.1)
 PRIMARY = ["risk_averse", "high"]
 COMMON = {
@@ -84,6 +90,19 @@ def training(days) -> dict:
         for g, w in product(B1_GAMMAS, B1_WINDOWS_S)
     ]
     return _config("train_select", days, strategies, [PRIMARY[0]], [PRIMARY[1]])
+
+
+def training_extended(days) -> dict:
+    """M2, section 4 grid-edge rule: the new B0 values and every B1 pair in the extended
+    product that the first selection run did not have, on training days in the primary
+    cell. The selection then reads both runs."""
+    gammas, windows = B1_GAMMAS + B1_GAMMAS_EXT, B1_WINDOWS_S + B1_WINDOWS_S_EXT
+    strategies = [{"name": "B0", "h": h} for h in B0_H_EXT] + [
+        {"name": "B1", "gamma": g, "window_s": w, "update_every": 50}
+        for g, w in product(gammas, windows)
+        if g in B1_GAMMAS_EXT or w in B1_WINDOWS_S_EXT
+    ]
+    return _config("train_select_ext", days, strategies, [PRIMARY[0]], [PRIMARY[1]])
 
 
 def training_chosen(selected: dict, days) -> dict:

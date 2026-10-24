@@ -5,7 +5,7 @@ import json
 import polars as pl
 import pytest
 
-from toxic_flow.eval.select import candidate_table, select
+from toxic_flow.eval.select import at_edge, candidate_table, eligible, select
 
 DAYS = ["2025-01-01", "2025-02-01"]
 
@@ -66,14 +66,40 @@ def test_section_4_has_no_tie_rule_for_b0_and_b1():
 
 
 def test_a_day_without_fills_is_left_to_ilia():
+    # Overlays have no fill floor, so a day without fills still stops the selection.
     m = frame(
-        rows("B1", {"gamma": 0.05}, [-0.5, -0.5]),
-        rows("B1", {"gamma": 5.0}, [float("nan")] * 2, fills=0),
+        rows("B3", {"c": 0.0, "d": 0.0}, [-0.5, -0.5]),
+        rows("B3", {"c": 1.0, "d": 1.0}, [float("nan")] * 2, fills=0),
     )
-    t = candidate_table(m, "B1", DAYS)
+    t = candidate_table(m, "B3", DAYS)
     assert t.filter(pl.col("zero_fill_days") > 0).height == 1
     with pytest.raises(ValueError, match="without fills"):
-        select(t, "B1")
+        select(t, "B3")
+
+
+def test_b1_candidates_under_100_median_fills_are_not_eligible():
+    # Section 4 grid-edge rule (Q41): the better BEF on 99 fills a day does not count, and
+    # neither does a day without fills on an ineligible candidate.
+    m = frame(
+        rows("B1", {"gamma": 0.2}, [-0.7, -0.7], fills=100),
+        rows("B1", {"gamma": 0.4}, [-0.1, -0.1], fills=99),
+        rows("B1", {"gamma": 0.8}, [float("nan")] * 2, fills=0),
+    )
+    t = candidate_table(m, "B1", DAYS)
+    assert eligible(t).to_list() == [True, False, False]  # sorted by params: 0.2, 0.4, 0.8
+    out = select(t, "B1")
+    assert out["params"]["gamma"] == 0.2 and out["mean_bef_bps"] == pytest.approx(-0.7)
+
+
+def test_no_eligible_candidate_is_left_to_ilia():
+    m = frame(rows("B0", {"h": 13}, [-0.5, -0.5], fills=10))
+    with pytest.raises(ValueError, match="median daily fills"):
+        select(candidate_table(m, "B0", DAYS), "B0")
+
+
+def test_edges_of_a_grid():
+    assert at_edge(5, (1, 2, 3, 5)) == "high" and at_edge(1, (1, 2, 3, 5)) == "low"
+    assert at_edge(0.2, (0.025, 0.05, 0.1, 0.2, 0.4, 0.8)) is None
 
 
 def test_a_candidate_missing_a_day_is_refused():

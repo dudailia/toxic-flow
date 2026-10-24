@@ -67,6 +67,20 @@ def test_training_selection_is_the_preregistered_grid_in_the_primary_cell():
     assert {s["window_s"] for s in cfg["strategies"] if s["name"] == "B1"} == {300, 600, 1200}
 
 
+def test_the_grid_edge_extension_adds_only_new_candidates():
+    # Section 4 grid-edge rule: h 8 and 13; B1 on the 6 x 5 extended product less the 12
+    # pairs the first run had, so 18 new pairs.
+    cfg = configs.training_extended(["2024-01-01"])
+    b0 = [s["h"] for s in cfg["strategies"] if s["name"] == "B0"]
+    b1 = {(s["gamma"], s["window_s"]) for s in cfg["strategies"] if s["name"] == "B1"}
+    first = {(s["gamma"], s["window_s"]) for s in configs.training(["2024-01-01"])["strategies"]
+             if s["name"] == "B1"}  # fmt: skip
+    assert b0 == [8, 13] and len(b1) == 18 and not b1 & first
+    assert {g for g, _ in b1} | {g for g, _ in first} == {0.025, 0.05, 0.1, 0.2, 0.4, 0.8}
+    assert {w for _, w in b1} | {w for _, w in first} == {300, 600, 1200, 2400, 4800}
+    assert len(expand(cfg)) == 20  # primary cell only
+
+
 def test_the_chosen_b0_and_b1_run_in_all_8_cells():
     cfg = configs.training_chosen(SELECTED, ["2024-01-01"])
     assert [s["name"] for s in cfg["strategies"]] == ["B0", "B1"]
