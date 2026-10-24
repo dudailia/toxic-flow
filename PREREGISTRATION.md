@@ -123,6 +123,19 @@ refitted every 5 s. The hftbacktest GLFT tutorial uses gamma = 0.05, which it ca
 arbitrarily chosen, and a 10-minute window; the grid spans factors of two around both,
 and every window fits inside the 30-minute warm-up. Chosen values: [TBD M2].
 
+Grid edges (added on 2026-10-24, after the first training selection had been seen: every
+choice was at the top edge of its grid). If a selected value sits at the edge of its grid,
+that grid is extended by two steps in that direction, once, on training days only, in the
+primary cell, and the selection is repeated over the old and new candidates together. The
+steps continue each grid's own spacing: h in {8, 13} after {1, 2, 3, 5}, where each value
+is the sum of the two before; gamma and the window double, so gamma in {0.4, 0.8} and the
+window in {40, 80} minutes. For B1 the new values of one parameter are run with every value
+of the other. A window longer than the 30-minute warm-up must fill from 00:00 before the
+first quote, so such a candidate starts quoting at 00:40 or 01:20 instead of 00:30. A
+candidate whose median training day has fewer than 100 fills in the primary cell is not
+eligible. If the choice is still at the edge after the extension, it is kept and reported
+as at the edge.
+
 Tuning grids for overlays, on validation days in the primary cell:
 - c in {0, 0.5, 1} and d in {0, 0.5, 1} for all three.
 - B2: OFI window W in {1 s, 5 s, 30 s}. 27 candidates.
