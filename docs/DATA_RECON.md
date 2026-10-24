@@ -2,7 +2,7 @@
 
 What the data source and the venue look like before anything is designed around them.
 Records behind every number below: data/recon.json (scripts/recon.py),
-data/converted/2024-01-01/convert.json (make data), data/benchmark_m0.json
+docs/benchmark/convert_2024-01-01_m0.json (make data, kept when the converted cache was evicted), data/benchmark_m0.json
 (scripts/benchmark_m0.py), configs/venue.yaml and docs/venue_sources.json.
 
 ## Source

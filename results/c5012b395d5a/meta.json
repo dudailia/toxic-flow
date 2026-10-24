@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/train_select.yaml",
+  "config_hash": "c5012b395d5a",
+  "commit": "cd0245f839f6ca58590a1071b6ce2f3eda6a117c",
+  "started_at": "2026-10-24T04:35:28+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "train_select",
+  "finished_at": "2026-10-24T06:40:31+00:00"
+}

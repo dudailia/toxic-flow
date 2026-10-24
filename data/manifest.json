@@ -823,6 +823,21 @@
         "part-36.npz": "79b7476bdd27cd2dddde03abca6ff69187cca638f3ff08421536b439fa24d1aa"
       },
       "hftbacktest_version": "2.4.4"
+    },
+    "2024-06-01": {
+      "events_sha256": "8b03dcace0b8a9c7ccc29c6cfa058c64bc5595c7295d2ab6a9dba438aafd711f",
+      "parts": {
+        "part-00.npz": "7e908adc750e6d9dfb1883ef4ce3e0a6881b510090f914b2ccfb7d8a6125c668",
+        "part-01.npz": "db814c9ad22e81e84cdf51f3ce28be42938a693818519f5b528d6a65ce7da979",
+        "part-02.npz": "9a03a25b0218f2202e4653e9c44bf10e7d65fbef0e467d9372a80f60a8ff4fc4",
+        "part-03.npz": "b5c406eee7ff2f18e751313048dd7f254069d896c78ffa9ca74dfdc10d859eed",
+        "part-04.npz": "bcaa8c46711d62385f1a1f808988202c09941caa7720895dd2468b2443bc5b9d",
+        "part-05.npz": "1e34200626b23c855e53d8dd84892d369429ccecebfc987de9a96ff2ef82cf5a",
+        "part-06.npz": "f51239ae3dd96fb5e6e6076ad163fac9fb559d839616a952fb119a9dcb743ef4",
+        "part-07.npz": "fa289be4c32e2e3b1e9e47f6f615c8df8947b7fa346fb81cb13f4a95aff178cd",
+        "part-08.npz": "16819d8045983c164b519849f7d3fdb415039f254e501a5cbfd06ff355395c5f"
+      },
+      "hftbacktest_version": "2.4.4"
     }
   }
 }

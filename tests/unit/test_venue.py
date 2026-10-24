@@ -6,7 +6,6 @@ import pytest
 from toxic_flow.data.split_lock import load_splits
 from toxic_flow.data.venue import FIELDS, venue_for
 
-CONVERTED = Path(__file__).resolve().parents[2] / "data" / "converted"
 ALL_DAYS = [d for days in load_splits().values() for d in days]
 
 
@@ -22,9 +21,12 @@ def test_unknown_date_raises():
         venue_for("2024-01-02")
 
 
-@pytest.mark.parametrize(
-    "info", sorted(CONVERTED.glob("*/convert.json")), ids=lambda p: p.parent.name
-)
+QUALITY = Path(__file__).resolve().parents[2] / "docs" / "data_quality"
+
+
+# The quality reports keep each converted day's inferred tick and lot for good; the
+# converted files themselves are a cache and are evicted after use.
+@pytest.mark.parametrize("info", sorted(QUALITY.glob("20*.json")), ids=lambda p: p.stem)
 def test_inferred_tick_and_lot_match_venue(info):
     data = json.loads(info.read_text())
     v = venue_for(data["date"])
