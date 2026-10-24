@@ -1,0 +1,87 @@
+# B0 and B1 chosen on the training days by scripts/write_selected.py (M2, AC2.5).
+# B2, B2b and B3 are added in M4 from the validation tuning.
+source:
+  run: c5012b395d5a
+  commit: cd0245f839f6ca58590a1071b6ce2f3eda6a117c
+  days:
+  - '2024-01-01'
+  - '2024-02-01'
+  - '2024-03-01'
+  - '2024-04-01'
+  - '2024-05-01'
+  - '2024-06-01'
+  - '2024-07-01'
+  - '2024-08-01'
+  - '2024-09-01'
+  - '2024-10-01'
+  - '2024-11-01'
+  - '2024-12-01'
+  cell:
+  - risk_averse
+  - high
+  rule: PREREGISTRATION.md section 4
+B0:
+  h: 5
+B1:
+  gamma: 0.2
+  update_every: 50
+  window_s: 1200
+tables:
+  B0:
+  - h: 5
+    mean_daily_bef_bps: -0.993008
+  - h: 3
+    mean_daily_bef_bps: -1.009661
+  - h: 2
+    mean_daily_bef_bps: -1.018459
+  - h: 1
+    mean_daily_bef_bps: -1.027321
+  B1:
+  - gamma: 0.2
+    update_every: 50
+    window_s: 1200
+    mean_daily_bef_bps: -0.686674
+  - gamma: 0.2
+    update_every: 50
+    window_s: 600
+    mean_daily_bef_bps: -0.693619
+  - gamma: 0.2
+    update_every: 50
+    window_s: 300
+    mean_daily_bef_bps: -0.704981
+  - gamma: 0.1
+    update_every: 50
+    window_s: 1200
+    mean_daily_bef_bps: -0.772435
+  - gamma: 0.1
+    update_every: 50
+    window_s: 600
+    mean_daily_bef_bps: -0.791066
+  - gamma: 0.1
+    update_every: 50
+    window_s: 300
+    mean_daily_bef_bps: -0.79753
+  - gamma: 0.05
+    update_every: 50
+    window_s: 600
+    mean_daily_bef_bps: -0.81211
+  - gamma: 0.05
+    update_every: 50
+    window_s: 300
+    mean_daily_bef_bps: -0.81759
+  - gamma: 0.05
+    update_every: 50
+    window_s: 1200
+    mean_daily_bef_bps: -0.818104
+  - gamma: 0.025
+    update_every: 50
+    window_s: 1200
+    mean_daily_bef_bps: -0.863291
+  - gamma: 0.025
+    update_every: 50
+    window_s: 600
+    mean_daily_bef_bps: -0.865997
+  - gamma: 0.025
+    update_every: 50
+    window_s: 300
+    mean_daily_bef_bps: -0.86628
