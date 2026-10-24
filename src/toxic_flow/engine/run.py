@@ -47,15 +47,36 @@ def utc_ns(day: str, hms: str) -> int:
     return int(datetime.fromisoformat(f"{day}T{hms}+00:00").timestamp()) * 10**9
 
 
-def day_parts(day: str) -> list[str]:
+# The child's exit code when the memory guard refuses; the run then waits and asks again
+# for up to MEMORY_WAIT_S before failing (Ilia, 2026-10-24: memory below what the guard
+# needs for 30 minutes is reported, not worked around).
+MEMORY_REFUSED = 75
+MEMORY_WAIT_S, MEMORY_RETRY_S = 30 * 60, 60
+
+
+def day_parts(day: str, sleep=time.sleep) -> list[str]:
     """A day's converted parts, from the cache in data/converted/<day>. A day not in the
     cache is converted from its hashed raw files first, in a child process so the run's own
     process never holds the conversion's memory (data/convert.py: disk and memory guards,
     events hash checked against the manifest)."""
     dest = CONVERTED / day
     if not (dest / "convert.json").exists():
-        code = f"from toxic_flow.data.convert import convert_day; convert_day({day!r})"
-        subprocess.run([sys.executable, "-c", code], check=True)
+        code = (
+            "import sys\nfrom toxic_flow.data.convert import MemoryGuardError, convert_day\n"
+            f"try:\n    convert_day({day!r})\nexcept MemoryGuardError as e:\n"
+            f"    print(e, file=sys.stderr)\n    sys.exit({MEMORY_REFUSED})"
+        )
+        waited = 0
+        while True:
+            rc = subprocess.run([sys.executable, "-c", code]).returncode
+            if rc != MEMORY_REFUSED:
+                break
+            if waited >= MEMORY_WAIT_S:
+                raise SystemExit(f"{day}: memory below the guard's need for {waited // 60} min")
+            sleep(MEMORY_RETRY_S)
+            waited += MEMORY_RETRY_S
+        if rc != 0:
+            raise subprocess.CalledProcessError(rc, "convert_day")
     return [str(dest / f) for f in json.loads((dest / "convert.json").read_text())["files"]]
 
 

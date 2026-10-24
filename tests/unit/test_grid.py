@@ -77,3 +77,39 @@ def test_fills_file_names_are_unique_when_a_label_repeats():
     cell = {"queue": "risk_averse", "latency": "high", "day": "2024-01-01"}
     assert fills_name(a, cell, repeated=False) == "B1_risk_averse_high_2024-01-01"
     assert fills_name(a, cell, repeated=True) != fills_name(b, cell, repeated=True)
+
+
+def test_a_memory_refusal_waits_and_asks_again_then_gives_up(tmp_path, monkeypatch):
+    # The guard decides; the run only waits (up to 30 min) and never converts without it.
+    import subprocess
+
+    from toxic_flow.engine import run
+
+    monkeypatch.setattr(run, "CONVERTED", tmp_path)
+    codes = iter([run.MEMORY_REFUSED, run.MEMORY_REFUSED, 0])
+
+    def fake(cmd, **kw):
+        rc = next(codes)
+        if rc == 0:
+            (tmp_path / "2025-01-01").mkdir()
+            (tmp_path / "2025-01-01" / "convert.json").write_text('{"files": ["part-00.npz"]}')
+        return subprocess.CompletedProcess(cmd, rc)
+
+    slept = []
+    monkeypatch.setattr(run.subprocess, "run", fake)
+    assert run.day_parts("2025-01-01", sleep=slept.append) == [
+        str(tmp_path / "2025-01-01" / "part-00.npz")
+    ]
+    assert slept == [run.MEMORY_RETRY_S] * 2
+
+    monkeypatch.setattr(
+        run.subprocess,
+        "run",
+        lambda cmd, **kw: subprocess.CompletedProcess(cmd, run.MEMORY_REFUSED),
+    )
+    slept.clear()
+    import pytest
+
+    with pytest.raises(SystemExit, match="memory below"):
+        run.day_parts("2025-02-01", sleep=slept.append)
+    assert sum(slept) == run.MEMORY_WAIT_S
