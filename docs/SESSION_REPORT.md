@@ -737,3 +737,44 @@ train_select_window.yaml). It wrote no metrics.parquet and no number from it is 
 config copy is committed only because the engine needs a clean working tree and the
 session may neither delete nor move files under results/; its fills files are untracked.
 Ilia may delete the directory.
+
+## Extended selection with one scoring window (Q41, Q45, A2)
+
+Run results/ccbf1a18e770 (configs/runs/train_select_window.yaml, commit a0e0241): all 36
+B0 and B1 candidates on the 12 training days, primary cell, 432 cells, exit 0, scored from
+01:20 by the section 4 rules. configs/selected.yaml and docs/selection/*_train.md hold
+the tables (window and full-day columns, median fills, eligibility).
+
+- B0: h = 13 (window mean daily BEF -0.924 bp). Still at the top edge of the extended
+  grid, so it is kept and reported as at the edge. Without the fill floor: the same.
+- B1: gamma 0.4, window 10 min (-0.549 bp, median 126 window fills a day). Not at an
+  edge. The fill floor decided it: without the floor, gamma 0.8 with an 80 min window
+  would win at +0.41 bp on a median of 32 fills a day. "Without the floor" also leaves out
+  candidates with a day without fills, for which section 4 has no rule; that part of the
+  A2 report is my choice, not a pre-registered one.
+- Limitation, next to the choice: the window is a coin flip. Gamma 0.4 with 10 min scores
+  -0.5494 bp and with 80 min -0.5506 bp in the scoring window, a gap of 0.001 bp against a
+  day-level standard error near 0.2 bp; over the full day the 80 min window would win. So
+  the Q45 rule, added after the first selection was seen, decided the window.
+- Leakage-auditor, triggered by CLAUDE.md: 7 day cells of gamma 0.8 (2 to 50 fills each,
+  four on 2024-05-01) have positive net PnL at the standard maker fee under risk-averse.
+  Verdict: small-sample noise of a very wide quoter catching sweep reversals on the busiest
+  training day (day BEF sd 2.36 bp, t about 0.6; every positive cell ends flat). No
+  look-ahead, accounting or mark defect; 93% of these fills have an opposite print in the
+  same millisecond, and fills without a print are no more common on 2024-05-01 than on a
+  day with no crossed batches. Open: placing 2024-05-01's crossed batches in time against
+  the 07:08 burst needs that day re-converted. None of these candidates is eligible.
+- Forward risk for M4 (auditor): the mean of daily BEF weights a 2-fill day like a 250-fill
+  day, and overlays have no fill floor. The M4 draft should show median fills and pooled
+  BEF beside the mean.
+
+## Where the block stopped (5-hour limit)
+
+- Not done: the chosen B0 (h = 13) and B1 (gamma 0.4, 10 min) in all 8 cells, and
+  docs/m2_fills.md for them. results/c7921fce3271 and docs/m2_fills.md describe the old
+  choice (h = 5; gamma 0.2, 20 min). Next: `uv run python scripts/make_configs.py
+  training_chosen --suffix window`, run it, then scripts/m2_report.py.
+- Not done: item 3 (M4). docs/M4_draft.md does not exist. Next, in order: make_configs
+  tuning (378 cells on the validation days, about 3 hours), scripts/m4_draft.py select,
+  make_configs canaries and mde_train with --selected docs/M4_draft_selected.yaml, run
+  both, scripts/m4_draft.py report.

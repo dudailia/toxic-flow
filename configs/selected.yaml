@@ -1,8 +1,9 @@
 # B0 and B1 chosen on the training days by scripts/write_selected.py (M2, AC2.5).
 # B2, B2b and B3 are added in M4 from the validation tuning.
 source:
-  run: c5012b395d5a
-  commit: cd0245f839f6ca58590a1071b6ce2f3eda6a117c
+  run: ccbf1a18e770
+  commit: a0e02419a3c5ee5a7e931062d0b46bdd3849dc2c
+  config: configs/runs/train_select_window.yaml
   days:
   - '2024-01-01'
   - '2024-02-01'
@@ -19,69 +20,301 @@ source:
   cell:
   - risk_averse
   - high
-  rule: PREREGISTRATION.md section 4
+  scored_from: 01:20:00
+  rule: PREREGISTRATION.md section 4, grid-edge rule and scoring window
 B0:
-  h: 5
+  h: 13
 B1:
-  gamma: 0.2
+  gamma: 0.4
   update_every: 50
-  window_s: 1200
+  window_s: 600
+without_fill_floor:
+  B0:
+    h: 13
+  B1:
+    gamma: 0.8
+    update_every: 50
+    window_s: 4800
+at_edge:
+  B0:
+    h: high
+  B1: {}
 tables:
   B0:
+  - h: 13
+    window_mean_daily_bef_bps: -0.924326
+    window_median_daily_fills: 42419.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.927297
+    full_day_median_daily_fills: 43356.5
+  - h: 8
+    window_mean_daily_bef_bps: -0.959869
+    window_median_daily_fills: 46125.5
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.963606
+    full_day_median_daily_fills: 46840.5
   - h: 5
-    mean_daily_bef_bps: -0.993008
+    window_mean_daily_bef_bps: -0.988921
+    window_median_daily_fills: 48029.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.993008
+    full_day_median_daily_fills: 48787.5
   - h: 3
-    mean_daily_bef_bps: -1.009661
+    window_mean_daily_bef_bps: -1.005411
+    window_median_daily_fills: 49317.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -1.009661
+    full_day_median_daily_fills: 50102.5
   - h: 2
-    mean_daily_bef_bps: -1.018459
+    window_mean_daily_bef_bps: -1.013676
+    window_median_daily_fills: 49980.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -1.018459
+    full_day_median_daily_fills: 50783.5
   - h: 1
-    mean_daily_bef_bps: -1.027321
+    window_mean_daily_bef_bps: -1.022746
+    window_median_daily_fills: 50886.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -1.027321
+    full_day_median_daily_fills: 51704.0
   B1:
+  - gamma: 0.8
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: 0.410391
+    window_median_daily_fills: 32.0
+    eligible: false
+    full_day_mean_daily_bef_bps: 0.410391
+    full_day_median_daily_fills: 32.0
+  - gamma: 0.4
+    update_every: 50
+    window_s: 600
+    window_mean_daily_bef_bps: -0.549431
+    window_median_daily_fills: 126.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.565322
+    full_day_median_daily_fills: 128.0
+  - gamma: 0.4
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: -0.550551
+    window_median_daily_fills: 122.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.550551
+    full_day_median_daily_fills: 122.0
+  - gamma: 0.4
+    update_every: 50
+    window_s: 1200
+    window_mean_daily_bef_bps: -0.570761
+    window_median_daily_fills: 107.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.584929
+    full_day_median_daily_fills: 109.0
+  - gamma: 0.4
+    update_every: 50
+    window_s: 2400
+    window_mean_daily_bef_bps: -0.586849
+    window_median_daily_fills: 118.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.588316
+    full_day_median_daily_fills: 118.0
+  - gamma: 0.4
+    update_every: 50
+    window_s: 300
+    window_mean_daily_bef_bps: -0.666531
+    window_median_daily_fills: 144.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.663004
+    full_day_median_daily_fills: 146.0
+  - gamma: 0.2
+    update_every: 50
+    window_s: 2400
+    window_mean_daily_bef_bps: -0.670798
+    window_median_daily_fills: 605.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.68466
+    full_day_median_daily_fills: 608.0
   - gamma: 0.2
     update_every: 50
     window_s: 1200
-    mean_daily_bef_bps: -0.686674
+    window_mean_daily_bef_bps: -0.675974
+    window_median_daily_fills: 585.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.686674
+    full_day_median_daily_fills: 589.0
+  - gamma: 0.2
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: -0.680616
+    window_median_daily_fills: 637.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.680616
+    full_day_median_daily_fills: 637.0
   - gamma: 0.2
     update_every: 50
     window_s: 600
-    mean_daily_bef_bps: -0.693619
+    window_mean_daily_bef_bps: -0.683392
+    window_median_daily_fills: 597.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.693619
+    full_day_median_daily_fills: 602.0
   - gamma: 0.2
     update_every: 50
     window_s: 300
-    mean_daily_bef_bps: -0.704981
+    window_mean_daily_bef_bps: -0.698663
+    window_median_daily_fills: 622.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.704981
+    full_day_median_daily_fills: 629.0
   - gamma: 0.1
     update_every: 50
     window_s: 1200
-    mean_daily_bef_bps: -0.772435
+    window_mean_daily_bef_bps: -0.766921
+    window_median_daily_fills: 2223.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.772435
+    full_day_median_daily_fills: 2263.0
+  - gamma: 0.1
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: -0.774009
+    window_median_daily_fills: 2353.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.774009
+    full_day_median_daily_fills: 2353.0
+  - gamma: 0.1
+    update_every: 50
+    window_s: 2400
+    window_mean_daily_bef_bps: -0.774598
+    window_median_daily_fills: 2247.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.780519
+    full_day_median_daily_fills: 2280.0
   - gamma: 0.1
     update_every: 50
     window_s: 600
-    mean_daily_bef_bps: -0.791066
+    window_mean_daily_bef_bps: -0.787811
+    window_median_daily_fills: 2222.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.791066
+    full_day_median_daily_fills: 2263.0
   - gamma: 0.1
     update_every: 50
     window_s: 300
-    mean_daily_bef_bps: -0.79753
+    window_mean_daily_bef_bps: -0.793998
+    window_median_daily_fills: 2301.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.79753
+    full_day_median_daily_fills: 2347.0
   - gamma: 0.05
     update_every: 50
     window_s: 600
-    mean_daily_bef_bps: -0.81211
+    window_mean_daily_bef_bps: -0.809911
+    window_median_daily_fills: 5133.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.81211
+    full_day_median_daily_fills: 5257.0
+  - gamma: 0.05
+    update_every: 50
+    window_s: 1200
+    window_mean_daily_bef_bps: -0.815036
+    window_median_daily_fills: 5014.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.818104
+    full_day_median_daily_fills: 5127.0
+  - gamma: 0.05
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: -0.816887
+    window_median_daily_fills: 4895.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.816887
+    full_day_median_daily_fills: 4895.0
   - gamma: 0.05
     update_every: 50
     window_s: 300
-    mean_daily_bef_bps: -0.81759
+    window_mean_daily_bef_bps: -0.817303
+    window_median_daily_fills: 5267.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.81759
+    full_day_median_daily_fills: 5400.0
   - gamma: 0.05
     update_every: 50
-    window_s: 1200
-    mean_daily_bef_bps: -0.818104
+    window_s: 2400
+    window_mean_daily_bef_bps: -0.817445
+    window_median_daily_fills: 4903.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.818989
+    full_day_median_daily_fills: 4990.0
+  - gamma: 0.025
+    update_every: 50
+    window_s: 4800
+    window_mean_daily_bef_bps: -0.852148
+    window_median_daily_fills: 7826.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.852148
+    full_day_median_daily_fills: 7826.0
   - gamma: 0.025
     update_every: 50
     window_s: 1200
-    mean_daily_bef_bps: -0.863291
+    window_mean_daily_bef_bps: -0.86147
+    window_median_daily_fills: 7808.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.863291
+    full_day_median_daily_fills: 8034.0
+  - gamma: 0.025
+    update_every: 50
+    window_s: 2400
+    window_mean_daily_bef_bps: -0.86249
+    window_median_daily_fills: 7754.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.863952
+    full_day_median_daily_fills: 7902.0
   - gamma: 0.025
     update_every: 50
     window_s: 600
-    mean_daily_bef_bps: -0.865997
+    window_mean_daily_bef_bps: -0.863672
+    window_median_daily_fills: 7862.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.865997
+    full_day_median_daily_fills: 8092.0
   - gamma: 0.025
     update_every: 50
     window_s: 300
-    mean_daily_bef_bps: -0.86628
+    window_mean_daily_bef_bps: -0.864928
+    window_median_daily_fills: 7940.0
+    eligible: true
+    full_day_mean_daily_bef_bps: -0.86628
+    full_day_median_daily_fills: 8122.0
+  - gamma: 0.8
+    update_every: 50
+    window_s: 1200
+    window_mean_daily_bef_bps: null
+    window_median_daily_fills: 28.0
+    eligible: false
+    full_day_mean_daily_bef_bps: null
+    full_day_median_daily_fills: 28.0
+  - gamma: 0.8
+    update_every: 50
+    window_s: 2400
+    window_mean_daily_bef_bps: null
+    window_median_daily_fills: 34.0
+    eligible: false
+    full_day_mean_daily_bef_bps: null
+    full_day_median_daily_fills: 34.0
+  - gamma: 0.8
+    update_every: 50
+    window_s: 300
+    window_mean_daily_bef_bps: null
+    window_median_daily_fills: 28.0
+    eligible: false
+    full_day_mean_daily_bef_bps: null
+    full_day_median_daily_fills: 28.0
+  - gamma: 0.8
+    update_every: 50
+    window_s: 600
+    window_mean_daily_bef_bps: null
+    window_median_daily_fills: 24.0
+    eligible: false
+    full_day_mean_daily_bef_bps: null
+    full_day_median_daily_fills: 24.0
