@@ -67,3 +67,13 @@ def test_after_day_runs_once_per_day_before_eviction(tmp_path, monkeypatch):
     days = cfg["days"]
     expected = [e for d in days for e in [("cell", d)] * 2 + [("after", d), ("evict", d)]]
     assert events == expected
+
+
+def test_fills_file_names_are_unique_when_a_label_repeats():
+    from toxic_flow.engine.run import fills_name
+
+    a = {"name": "B1", "gamma": 0.05}
+    b = {"name": "B1", "gamma": 0.1}
+    cell = {"queue": "risk_averse", "latency": "high", "day": "2024-01-01"}
+    assert fills_name(a, cell, repeated=False) == "B1_risk_averse_high_2024-01-01"
+    assert fills_name(a, cell, repeated=True) != fills_name(b, cell, repeated=True)

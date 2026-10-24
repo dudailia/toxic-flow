@@ -8,11 +8,13 @@ metrics.parquet (one row per day and cell) and fills_<cell>.parquet (gitignored)
 Fees are zero in the simulation and applied in evaluation (PREREGISTRATION.md section 3).
 """
 
+import hashlib
 import io
 import json
 import subprocess
 import sys
 import time
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -267,6 +269,17 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True).stdout
 
 
+def fills_name(strategy: dict, cell: dict, repeated: bool) -> str:
+    """fills_<label>_<queue>_<latency>_<day>, plus a short hash of the parameters when the
+    config has several entries with one label (a selection grid), so none overwrites another."""
+    label = strategy.get("label", strategy["name"])
+    name = f"{label}_{cell['queue']}_{cell['latency']}_{cell['day']}"
+    if repeated:
+        h = hashlib.sha256(json.dumps(strategy, sort_keys=True).encode()).hexdigest()[:8]
+        name += f"_{h}"
+    return name
+
+
 def run_config(cfg_path: Path, oracle=None, after_day=None) -> Path:
     """Run every cell of a committed config. after_day(day), if given, runs once a day's
     last cell is done and before its converted parts may be evicted, so work that needs the
@@ -292,9 +305,10 @@ def run_config(cfg_path: Path, oracle=None, after_day=None) -> Path:
     }
     rows = []
     cells = expand(cfg)
+    repeated = Counter(s.get("label", s["name"]) for s in cfg["strategies"])
     for n, cell in enumerate(cells):
         row, fills = run_cell(cell, cfg, oracle=oracle)
-        name = f"{row['label']}_{cell['queue']}_{cell['latency']}_{cell['day']}"
+        name = fills_name(cell["strategy"], cell, repeated[row["label"]] > 1)
         fills.write_parquet(out_dir / f"fills_{name}.parquet")
         rows.append(row)
         print(
