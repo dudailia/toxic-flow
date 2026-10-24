@@ -679,3 +679,61 @@ Limitation, next to the result: B1 quotes wide and has a few hundred to 1,500 fi
 so its orders rarely sit where the queue models disagree; in 13 of its 24 rows all four
 models give the same count. For B1, AC2.4 is a weak test of the queue models: it shows
 risk-averse is never more optimistic, not that the models bracket each other by much.
+
+## Q41 applied: grid-edge rule
+
+The rule is in PREREGISTRATION.md section 4 (a5899dd), committed before any extended run.
+It was added on 2026-10-24 after the first training selection had been seen (every choice
+at the top edge of its grid), and both section 4 and this report say so. One extension by
+two steps per edge, on training days in the primary cell: h in {8, 13}; gamma in {0.4, 0.8};
+window in {40, 80} min, with B1 on the full 6 x 5 product (18 new pairs). Candidates whose
+median training day has fewer than 100 fills in the primary cell are not eligible. A choice
+still at the edge is kept and reported.
+
+Choices made to write the rule down (least change, for Ilia to confirm):
+- The two steps continue each grid's own spacing. For h, {1, 2, 3, 5} reads as each value
+  the sum of the two before, so 8 and 13; gamma and window double, as their grids do. Q43.
+- Windows of 40 and 80 min exceed the 30-minute warm-up. The code is unchanged: B1 quotes
+  only once its window is full, so those candidates start at 00:40 and 01:20. Q43.
+- Only the 20 new candidates were run (results/<extension run>); the first 192-cell run is
+  reused. Its primary-cell rows and the chosen run's agree bit for bit, and the src/
+  changes between the two commits are cache bookkeeping and file names. write_selected.py
+  refuses two runs whose settings or hftbacktest version differ.
+
+## Reviews of M2 and M3 (item 2)
+
+Full log with every finding and what was done: docs/reviews/M2_M3.md. Summary:
+- Leakage-auditor: no look-ahead, no split leak, no accounting error. Three points that
+  could change a conclusion. A1, C1 with c above 0 adds centre noise, so C1 can fail for
+  a reason unrelated to signs (Q44); the M4 canary run adds B3 and C1 with c = 0 as a
+  descriptive measure. A2, the post-hoc fill floor may decide B1; the tables now show it.
+  A3, 40 and 80 min windows skip the early hour, whose fills mark out worse, enough to
+  flip a window choice (Q45); see the selection outcome below.
+- /code-review: 10 findings. Fixed with tests: the C3 statement on a missing
+  zero-latency mean (R1) and the eligible-with-a-fill-less-day case (R8). Fixed: partial
+  writes, pooled runs with different settings, NaN ordering, edge grid from the runs,
+  duplicated threshold, eligibility in select_params. Logged: fill rate and quote presence
+  of late-starting windows (R9), speed of long windows (R10).
+
+## Open questions, new
+
+- Q43. Grid-edge steps: h 8 and 13 after 1, 2, 3, 5; windows of 40 and 80 min start
+  quoting at 00:40 and 01:20 because the warm-up is 30 min. Alternatives: h 7 and 9, or
+  a longer warm-up for all candidates.
+- Q44. C1's pass rule is two-sided, and with c above 0 C1 carries centre noise that B1
+  does not, so a C1 below B1 is not evidence that signs carry no information. Options: a
+  one-sided rule ("C1 does not beat B1"), or compare C1 with a magnitude-only twin (c = 0).
+  The M4 draft reports the c = 0 pair. Section 10 is not changed.
+- Q45. Candidates that start quoting later skip the early hour, whose fills mark out worse
+  (audit A3). If this matters for the choice, a common scoring window from 01:20 for every
+  candidate would make them comparable; that needs a rule change.
+
+## Stopped extension run
+
+results/fddca6f8b9b0 is the grid-edge extension run (configs/runs/train_select_ext.yaml),
+stopped by hand after 106 of 240 cells when Q45 was decided: every candidate is now scored
+from 01:20, which needs one new run of all 36 candidates (configs/runs/
+train_select_window.yaml). It wrote no metrics.parquet and no number from it is used. Its
+config copy is committed only because the engine needs a clean working tree and the
+session may neither delete nor move files under results/; its fills files are untracked.
+Ilia may delete the directory.
