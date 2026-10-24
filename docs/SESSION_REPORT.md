@@ -665,3 +665,17 @@ The 4-hour limit had passed, but the goal's last item was still open, so the run
 - Q42. AC2.4 and ties: does "the fewest" allow a tie? Under the strict reading B1 fails on
   18 of 24 rows and M2 stops; under the tie reading it passes on all 24. Judgment call 18 of
   the first block raised the same point before any data.
+
+# Block of 2026-10-24 (12:02 UTC on): Q41 and Q42, extended selection, reviews, M4 draft
+
+## Q42 applied
+
+AC2.4 now reads "no more fills than any other queue model" on every train day and latency
+for B1; a tie passes (SPEC.md). scripts/m2_report.py counts it that way, and the proposed
+check in docs/proposals/check_M2.md already did. On results/c7921fce3271 AC2.4 holds for B1
+on 24 of 24 rows (risk-averse alone with the fewest in 6 of them), so M2 goes on.
+
+Limitation, next to the result: B1 quotes wide and has a few hundred to 1,500 fills a day,
+so its orders rarely sit where the queue models disagree; in 13 of its 24 rows all four
+models give the same count. For B1, AC2.4 is a weak test of the queue models: it shows
+risk-averse is never more optimistic, not that the models bracket each other by much.

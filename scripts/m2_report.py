@@ -5,9 +5,11 @@ metrics.parquet only (SPEC.md M2).
 Usage: uv run python scripts/m2_report.py results/<hash> docs/m2_fills.md
 
 For each strategy, day and latency it lists the fills under the four queue models and
-whether the risk-averse model has the fewest. AC2.4 asks this for B1 on every training
-day; if it fails, the pessimistic reference is not pessimistic and M2 stops. A tie at the
-minimum is shown as a tie and counted as failing the "fewest" wording.
+whether the risk-averse model has no more fills than any other. AC2.4 asks this for B1
+on every training day and latency; if it fails, the pessimistic reference is not pessimistic
+and M2 stops. A tie at the minimum passes (Ilia, Q42, 2026-10-24): the point is that
+risk-averse is never more optimistic than the others. Rows where it is alone with the
+fewest are counted too, for the record.
 """
 
 import json
@@ -27,26 +29,29 @@ def main(run_dir: Path, out: Path) -> None:
         "",
         f"Config {meta['config']}; commit {meta['commit'][:7]}; hftbacktest {meta['hftbacktest']}.",
         "From metrics.parquet by scripts/m2_report.py. Fewest: the queue model(s) with the",
-        "smallest fill count; AC2.4 needs risk_averse alone there for B1 on every day.",
+        "smallest fill count. AC2.4 needs risk_averse to have no more fills than any other",
+        "queue model for B1 on every day and latency; a tie passes (Q42).",
         "",
-        "| Strategy | Day | Latency | " + " | ".join(QUEUES) + " | Fewest | Risk-averse fewest |",
+        "| Strategy | Day | Latency | " + " | ".join(QUEUES) + " | Fewest | Risk-averse no more |",
         "|---|---|---|" + "---|" * len(QUEUES) + "---|---|",
     ]
-    verdict = {}
+    verdict, alone = {}, {}
     for (s, day, lat), g in m.sort(["strategy", "day", "latency"]).group_by(
         ["strategy", "day", "latency"], maintain_order=True
     ):
         fills = {q: int(g.filter(pl.col("queue") == q)["fills"][0]) for q in QUEUES}
         low = min(fills.values())
         fewest = [q for q in QUEUES if fills[q] == low]
-        ok = fewest == ["risk_averse"]
+        ok = fills["risk_averse"] == low
         verdict.setdefault(s, []).append(ok)
+        alone.setdefault(s, []).append(fewest == ["risk_averse"])
         lines.append(
             f"| {s} | {day} | {lat} | " + " | ".join(str(fills[q]) for q in QUEUES)
             + f" | {' = '.join(fewest)} | {'yes' if ok else 'no'} |"
         )  # fmt: skip
     lines += [""] + [
-        f"{s}: risk-averse alone has the fewest fills in {sum(v)} of {len(v)} day and latency rows."
+        f"{s}: risk-averse has no more fills than any other queue model in {sum(v)} of {len(v)}"
+        f" day and latency rows, and is alone with the fewest in {sum(alone[s])}."
         for s, v in verdict.items()
     ]
     b1 = verdict.get("B1", [])

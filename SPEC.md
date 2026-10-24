@@ -158,7 +158,9 @@ Acceptance:
   day, to 1e-6 USDT.
 - AC2.3 fee equivalence: on one day, net PnL from hftbacktest run with its own maker fee
   equals the post-hoc computation to 1e-6 USDT.
-- AC2.4 the risk-averse model has the fewest fills of the four on every train day for B1.
+- AC2.4 the risk-averse model has no more fills than any other queue model on every train
+  day and latency for B1; a tie passes, since the purpose is that risk-averse is never more
+  optimistic than the others (Ilia, Q42, 2026-10-24; was "the fewest fills of the four").
   If not, stop: the pessimistic reference is not pessimistic.
 - AC2.5 B0 h and B1 gamma and estimation window chosen by the pre-registered rule and
   written to configs/selected.yaml with the training-day table behind the choice.

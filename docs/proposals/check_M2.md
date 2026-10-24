@@ -15,7 +15,8 @@ SPEC.md M2.
 | AC2.6 | tests/leakage/test_layering.py has the layering test | written in tests/pending_leakage/; Ilia moves it |
 
 Choices to confirm:
-- AC2.4 counts a tie as passing ("no more fills than"); SPEC.md says "the fewest".
+- AC2.4 counts a tie as passing ("no more fills than"). Decided by Ilia on 2026-10-24
+  (Q42); SPEC.md now says the same.
 - AC2.2 reads every run, smoke included, because the accounting must hold everywhere.
 - AC2.5 recomputes the selection from the results rather than trusting the table in
   configs/selected.yaml, so a hand-edited table cannot pass it.
@@ -94,7 +95,7 @@ def m2(r: Results) -> None:
             if ra is None or any(ra > fills[q] for q in M2_QUEUES[1:] if q in fills):
                 bad.append((day, lat))
     r.add(
-        "AC2.4 risk-averse has the fewest B1 fills every train day",
+        "AC2.4 risk-averse has no more B1 fills than any other queue model every train day",
         runs is not None and not missing and not bad,
         f"bad {sorted(bad)[:4]}",
     )
