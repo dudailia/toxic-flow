@@ -814,3 +814,7 @@ hours), then scripts/m4_draft.py select, make_configs canaries and mde_train wit
 --selected docs/M4_draft_selected.yaml, run both, scripts/m4_draft.py report. Q46: the
 swap file shares the disk, so the 12 GB floor can trip from swap growth alone; a 14 GB
 start margin, or fewer apps open during runs, would avoid it.
+
+Resumed on Ilia's answer ("Resume"): the partial run's config copy (identical to
+configs/runs/tune_val.yaml) is committed so the tree is clean, and tune_val is rerun from
+the start into the same directory, overwriting the partial fills.
