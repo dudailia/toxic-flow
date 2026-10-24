@@ -92,18 +92,28 @@ def tuning_section(m: pl.DataFrame, meta: dict) -> list[str]:
         "daily break-even fee; ties to the smaller c + d, then the shorter window or decay.",
     ]
     for name in OVERLAYS:
-        table = candidate_table(m, name, days).with_columns(pl.col("mean_bef_bps").fill_nan(None))
+        table = candidate_table(m, name, days)
         pick = select(table, name)
+        # The mean of daily BEF weights a 2-fill day like a 250-fill day, and overlays have
+        # no fill floor (audit of the window run), so the pooled BEF, total gross over total
+        # notional, is shown beside it. Descriptive; the rule uses the mean.
+        pooled = (
+            m.filter((pl.col("strategy") == name) & (pl.col("queue") == PRIMARY[0])
+                     & (pl.col("latency") == PRIMARY[1]) & pl.col("day").is_in(days))
+            .group_by("params")
+            .agg(pooled_bef=1e4 * pl.col("gross_pnl").sum() / pl.col("traded_notional").sum())
+        )  # fmt: skip
+        table = table.join(pooled, on="params").with_columns(pl.col("mean_bef_bps").fill_nan(None))
         lines += ["", f"### {name}", "",
-                  "| Candidate | Mean daily BEF bp | Days without fills | Median daily fills |",
-                  "|---|---|---|---|"]  # fmt: skip
+                  "| Candidate | Mean daily BEF bp | Pooled BEF bp | Days without fills | Median daily fills |",
+                  "|---|---|---|---|---|"]  # fmt: skip
         for r in table.sort("mean_bef_bps", descending=True, nulls_last=True).iter_rows(named=True):
             p = {
                 k: v
                 for k, v in json.loads(r["params"]).items()
                 if k in ("c", "d", "ofi_window_s", "tau_s")
             }
-            lines.append(f"| {json.dumps(p)} | {fmt(r['mean_bef_bps'])} | {r['zero_fill_days']} "
+            lines.append(f"| {json.dumps(p)} | {fmt(r['mean_bef_bps'])} | {fmt(r['pooled_bef'])} | {r['zero_fill_days']} "
                          f"| {r['median_fills']:.0f} |")  # fmt: skip
         chosen = {
             k: v for k, v in pick["params"].items() if k in ("c", "d", "ofi_window_s", "tau_s")

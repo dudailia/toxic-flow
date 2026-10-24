@@ -22,7 +22,8 @@ def rows(days, label, params, bef, latency="high", fills=500):
     name = label.split("_")[0]
     p = json.dumps({"name": name, **params}, sort_keys=True)
     return [{"day": d, "strategy": name, "label": label, "params": p, "queue": "risk_averse",
-             "latency": latency, "fills": fills, "break_even_fee_bps": bef + RNG.normal(0, 0.05)}
+             "latency": latency, "fills": fills, "break_even_fee_bps": bef + RNG.normal(0, 0.05),
+             "gross_pnl": bef, "traded_notional": 1e4}
             for d in days]  # fmt: skip
 
 
@@ -70,7 +71,7 @@ def test_select_then_report(tmp_path, monkeypatch):
     )
     text = (tmp_path / "docs" / "M4_draft.md").read_text()
     n = len(load_splits()["test"])
-    for part in ("### B2b", "| s, bp |", "C2 - B1", "C1 with c = 0 - B1", "AC4.2", "C4_x10 - B3",
+    for part in ("### B2b", "Pooled BEF bp", "| s, bp |", "C2 - B1", "C1 with c = 0 - B1", "AC4.2", "C4_x10 - B3",
                  f"n = {n} test days"):  # fmt: skip
         assert part in text, part
     assert "AC4.2, C2 beats B1 by more than 3 x MDE: passes." in text
