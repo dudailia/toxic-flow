@@ -47,11 +47,13 @@ def utc_ns(day: str, hms: str) -> int:
 
 def day_parts(day: str) -> list[str]:
     """A day's converted parts, from the cache in data/converted/<day>. A day not in the
-    cache is converted from its hashed raw files first, which needs 15 GB of free disk and
-    is checked against the part hashes in the manifest (data/convert.py)."""
-    from toxic_flow.data.convert import convert_day
-
-    dest = convert_day(day)
+    cache is converted from its hashed raw files first, in a child process so the run's own
+    process never holds the conversion's memory (data/convert.py: disk and memory guards,
+    events hash checked against the manifest)."""
+    dest = CONVERTED / day
+    if not (dest / "convert.json").exists():
+        code = f"from toxic_flow.data.convert import convert_day; convert_day({day!r})"
+        subprocess.run([sys.executable, "-c", code], check=True)
     return [str(dest / f) for f in json.loads((dest / "convert.json").read_text())["files"]]
 
 
