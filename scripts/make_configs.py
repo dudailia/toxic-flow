@@ -45,6 +45,9 @@ def main() -> None:
     # M4 drafts read the overlay choice from a draft file, so configs/selected.yaml keeps
     # only what Ilia has approved (Ilia, 2026-10-24: M4 is reviewed before it is filled in).
     p.add_argument("--selected", type=Path, default=ROOT / "configs" / "selected.yaml")
+    # A changed config is a new file (see above), so a rerun after a new selection gets a
+    # suffix, such as train_chosen_window.
+    p.add_argument("--suffix", default="")
     args = p.parse_args()
     days = kept(SPLIT[args.kind])
     if args.kind == "training":
@@ -62,6 +65,8 @@ def main() -> None:
             cfg = getattr(configs, args.kind)(constants, selected, days)
     if args.selected.resolve() != (ROOT / "configs" / "selected.yaml").resolve():
         cfg["name"] = cfg["label"] = f"{cfg['name']}_draft"  # never the approved config's name
+    if args.suffix:
+        cfg["name"] = cfg["label"] = f"{cfg['name']}_{args.suffix}"
     out = ROOT / "configs" / "runs" / f"{cfg['name']}.yaml"
     if out.exists():
         raise SystemExit(f"{out} exists; a changed config needs a new name")
