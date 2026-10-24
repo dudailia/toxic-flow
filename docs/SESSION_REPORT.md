@@ -599,3 +599,38 @@ Remaining for the goal: M1 for 2025-04-01 and 10 training days, the exclusion sc
 selection and configs/selected.yaml, the 8-cell B0 and B1 runs, and B2's K. The cause of the
 stop is swap growth during the M1 replay, not the converter: with about 5 GB of memory
 available, each day's 3.5 to 4.9 GB peak pages other programs out to swap on the same disk.
+
+## Two-pass reader, M1 on all 18 days, M2 selection, all K (02:46 to 06:47 UTC)
+
+| Item | State | Commit |
+|---|---|---|
+| Two-pass reader; same events SHA-256 as the recorded 2024-01-01 conversion (e7a8a9bd...562c, 100,128,234 events); peak 3.38 GB there, 3.91 GB on 2024-05-01 | done | 80e176f |
+| correct_event_order reads one past the end of its indexes (hftbacktest 2.4.4); it crashed 2024-02-01; indexes padded, outputs unchanged | done | 82f074b |
+| M1 on all 18 days: converted with the streamed reader, quality reports, event tables, events hashes in the manifest | done | one commit per day, 90c945e to the 2024-05-01 commit |
+| Exclusion rules on all 18 days, before any strategy result | done: none excluded | 20d4ee0 |
+| M2 selection, 192 cells, primary cell, 12 training days | done | ea5adad |
+| configs/selected.yaml with the training tables | done: B0 h = 5; B1 gamma 0.2, window 20 min | f2ad105 |
+| B2's K and every other K, from the training days | done | 9ed983c |
+| Chosen B0 and B1 in all 8 cells, fill counts per queue model (AC2.4) | not run: the block's 4-hour limit; config committed | this commit |
+
+Notes:
+- Conversion and the quality report run as separate processes; each stayed under 5 GB.
+  Swap held at about 4 GB and free disk at 15 to 17 GB after the stages were split.
+- The quality report now finds gaps and latency quantiles part by part (GapTracker,
+  LatencyCounts); the 2024-01-01 report reruns byte-identical with both.
+- Crossed book batches (an opposite level hidden within 10 ticks of the touch) are not an
+  exclusion rule but are worth a look: 18,947 on 2024-05-01, 577 on 2024-03-01, 202 on
+  2024-11-01, 252 on 2025-06-01, none elsewhere.
+- Selection, Q41: every choice is at the edge of its grid. BEF rises with h (-1.027 to
+  -0.993 bp from h = 1 to 5) and with gamma (-0.866 to -0.687 bp from 0.025 to 0.2); the
+  window matters less. The pre-registered rule was applied as written; whether the grid
+  should have reached further is for Ilia.
+- The tracked cache file data/converted/2024-01-01/convert.json was evicted; its content is
+  docs/benchmark/convert_2024-01-01_m0.json, and test_venue checks all 18 days' inferred
+  tick and lot from the quality reports.
+- In the selection run the 12 B1 candidates wrote the same fills file name (metrics, which
+  the selection uses, are per candidate); fixed for later runs (d3a3158).
+
+Next: `make run CFG=configs/runs/train_chosen.yaml` (B0 h = 5 and the chosen B1, 8 cells,
+12 days, about 100 minutes), then `uv run python scripts/m2_report.py results/<hash>
+docs/m2_fills.md` for the AC2.4 table.
