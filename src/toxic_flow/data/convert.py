@@ -588,6 +588,10 @@ def convert_day(
     ):
         shutil.rmtree(staging, ignore_errors=True)
         raise ConversionError(f"{day}: rebuilt parts do not match the hashes in the manifest")
+    elif recorded["parts"] != hashes:
+        # Same events in another part layout (another part size, or the old reader): the
+        # events hash is the check, and the part record follows the parts now on disk.
+        _record_converted(manifest, day, hashes, events)
     if dest.exists():  # caches of an evicted day; the parts join them
         for f in staging.iterdir():
             os.replace(f, dest / f.name)

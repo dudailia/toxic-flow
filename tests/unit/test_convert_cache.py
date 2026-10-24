@@ -137,3 +137,17 @@ def test_a_day_is_refused_when_memory_is_not_free_now(tmp_path, monkeypatch):
     monkeypatch.setattr(cv, "available_memory_bytes", lambda: 4e9)
     with pytest.raises(cv.MemoryGuardError, match="available"):
         cv.convert_day(DAY, min_free=0, **kw)
+
+
+def test_a_rebuild_with_other_parts_updates_the_part_record_and_can_be_evicted(tmp_path):
+    # Same events in a different number of parts (another part size, or the old reader's
+    # record): the events hash matches, so the part record is refreshed, and eviction works.
+    kw = raw_day(tmp_path)
+    cv.convert_day(DAY, min_free=0, events_per_part=10**9, **kw)  # one part
+    cv.evict_converted(DAY, out_dir=kw["out_dir"], manifest=kw["manifest"], keep_free=10**18)
+    dest = cv.convert_day(DAY, min_free=0, events_per_part=500, **kw)  # several parts
+    parts = sorted(p.name for p in dest.glob("part-*.npz"))
+    assert len(parts) > 1
+    rec = json.loads(kw["manifest"].read_text())["converted"][DAY]
+    assert sorted(rec["parts"]) == parts
+    assert cv.evict_converted(DAY, out_dir=kw["out_dir"], manifest=kw["manifest"], keep_free=10**18)
