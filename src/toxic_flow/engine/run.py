@@ -265,7 +265,10 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True).stdout
 
 
-def run_config(cfg_path: Path, oracle=None) -> Path:
+def run_config(cfg_path: Path, oracle=None, after_day=None) -> Path:
+    """Run every cell of a committed config. after_day(day), if given, runs once a day's
+    last cell is done and before its converted parts may be evicted, so work that needs the
+    parts (the M1 report) shares the run's conversion instead of making its own."""
     rel = Path(cfg_path).resolve().relative_to(ROOT).as_posix()
     if not _git("ls-files", "--", rel).strip():
         raise SystemExit(f"{rel} is not tracked by git; commit the config first")
@@ -299,6 +302,8 @@ def run_config(cfg_path: Path, oracle=None) -> Path:
             # expand() is day-major: the day's last cell is done, so its parts may go.
             from toxic_flow.data.convert import evict_converted
 
+            if after_day is not None:
+                after_day(cell["day"])
             evict_converted(cell["day"])
     pl.DataFrame(rows).write_parquet(out_dir / "metrics.parquet")
     meta["finished_at"] = datetime.now(UTC).isoformat(timespec="seconds")

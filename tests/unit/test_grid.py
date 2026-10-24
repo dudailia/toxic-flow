@@ -41,3 +41,29 @@ def test_a_strategy_can_name_its_own_cells():
     cells = [(c["strategy"]["name"], c["queue"], c["latency"]) for c in expand(cfg)]
     assert len(cells) == 2 * 8 + 2
     assert ("C1", "risk_averse", "high") in cells and ("B3", "risk_averse", "zero") in cells
+
+
+def test_after_day_runs_once_per_day_before_eviction(tmp_path, monkeypatch):
+    import yaml
+
+    import toxic_flow.data.convert as cv
+    from toxic_flow.engine import run
+
+    cfg = {**CFG, "days": ["2024-01-01", "2024-02-01"], "queue_models": ["risk_averse"],
+           "latencies": ["high"]}  # fmt: skip
+    path = run.ROOT / "configs" / "runs" / "_test_after_day.yaml"
+    events = []
+    monkeypatch.setattr(run, "_git", lambda *a: "tracked" if a[0] == "ls-files" else "")
+    monkeypatch.setattr(run, "RESULTS", tmp_path)
+    monkeypatch.setattr(run, "run_cell", lambda cell, cfg, oracle=None: (
+        events.append(("cell", cell["day"])) or ({"label": "x", "fills": 0,
+        "break_even_fee_bps": 0.0, "wall_seconds": 0.0}, __import__("polars").DataFrame())))  # fmt: skip
+    monkeypatch.setattr(cv, "evict_converted", lambda day: events.append(("evict", day)))
+    path.write_text(yaml.safe_dump(cfg))
+    try:
+        run.run_config(path, after_day=lambda day: events.append(("after", day)))
+    finally:
+        path.unlink()
+    days = cfg["days"]
+    expected = [e for d in days for e in [("cell", d)] * 2 + [("after", d), ("evict", d)]]
+    assert events == expected

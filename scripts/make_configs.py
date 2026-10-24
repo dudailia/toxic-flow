@@ -28,8 +28,13 @@ SPLIT = {"training": "train", "training_chosen": "train", "tuning": "val", "cana
 
 
 def kept(split: str) -> list[str]:
+    """The split's days less any excluded day, smallest raw size first, so the largest days
+    convert last (Ilia, 2026-10-23). The order of days does not change any result."""
     days = load_splits()[split]
-    return [d for d in days if d not in excluded_days(days)]
+    raw = {}
+    for e in json.loads((ROOT / "data" / "manifest.json").read_text())["files"]:
+        raw[e["date"]] = raw.get(e["date"], 0) + e["bytes"]
+    return sorted((d for d in days if d not in excluded_days(days)), key=lambda d: raw.get(d, 0))
 
 
 def main() -> None:
