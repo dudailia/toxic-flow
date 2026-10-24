@@ -50,8 +50,15 @@ def test_canary_config_for_validation_days():
     cfg = configs.canaries(CONSTANTS, SELECTED, VAL)
     labels = Counter(s.get("label", s["name"]) for s in cfg["strategies"])
     # B2b too, so the validation estimate of s (section 9) comes from this one run.
-    assert labels == {"B1": 1, "B2b": 1, "B3": 2, "C1": 1, "C2": 1, "C4_x10": 1, "C4_x0.1": 1}
+    # B3_c0 and C1_c0 are descriptive (audit A1): the selected B3 has c = 0.5 here.
+    assert labels == {"B1": 1, "B2b": 1, "B3": 2, "C1": 1, "C2": 1, "C4_x10": 1, "C4_x0.1": 1,
+                      "B3_c0": 1, "C1_c0": 1}  # fmt: skip
+    c0 = {s["label"]: s for s in cfg["strategies"] if s.get("label", "").endswith("_c0")}
+    assert all(s["c"] == 0.0 and s["d"] == 0.5 for s in c0.values())
+    assert c0["C1_c0"]["seed"] == 1729 and c0["C1_c0"]["K"] == c0["B3_c0"]["K"]
     assert {c["latency"] for c in expand(cfg)} == {"high", "zero"}
+    no_c = configs.canaries(CONSTANTS, {**SELECTED, "B3": {"c": 0.0, "d": 0.5}}, VAL)
+    assert not any(s.get("label", "").endswith("_c0") for s in no_c["strategies"])
 
 
 def test_smoke_constants_never_make_a_study_config():

@@ -141,6 +141,13 @@ def canaries(constants: dict, selected: dict, days) -> dict:
     _check(constants)
     s = [{"name": "B1", **_b1(selected)}]
     s += [_selected_overlay(n, constants, selected) for n in ("B2b", "B3")]
+    if selected["B3"]["c"] > 0:
+        # Descriptive, not a section 10 canary (leakage audit A1, Q44): with c > 0, C1's
+        # random u moves the quote centre, so C1 can lose to B1 from that noise alone. B3
+        # and C1 with c = 0 at the selected d measure how much of C1's gap that explains.
+        b1, d = _b1(selected), selected["B3"]["d"]
+        s += [_overlay("B3", b1, 0.0, d, constants, label="B3_c0"),
+              _overlay("C1", b1, 0.0, d, constants, label="C1_c0", seed=1729)]  # fmt: skip
     return _config(
         "canaries_val", days, s + _canary_entries(constants, selected), [PRIMARY[0]], [PRIMARY[1]]
     )
