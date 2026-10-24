@@ -172,7 +172,9 @@ def test_failed_conversion_leaves_no_staging_directory(tmp_path, monkeypatch):
         sink(0, np.zeros(3, event_dtype))
         raise ConversionError("simulated")
 
-    monkeypatch.setattr(cv, "convert_parts", fail_after_one_part)
+    import toxic_flow.data.stream_convert as sc
+
+    monkeypatch.setattr(sc, "convert_parts_streamed", fail_after_one_part)  # convert_day's reader
     out = tmp_path / "converted"
     with pytest.raises(ConversionError):
         cv.convert_day(

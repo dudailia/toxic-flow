@@ -363,6 +363,7 @@
   ],
   "converted": {
     "2024-01-01": {
+      "events_sha256": "e7a8a9bd13a46c018a006e6ca21311cf03af2feb80fd8386515215529582562c",
       "parts": {
         "part-00.npz": "1123be6ea7d634ee5f9e0cbee9101096f601c6676f5ad5d993a782f6d649abbc",
         "part-01.npz": "cb8ea98dc6967d7cc69534b61f2266d3b89e93d482112db044da62c9dcded8ed",

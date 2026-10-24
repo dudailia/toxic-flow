@@ -61,12 +61,15 @@ SS_BUFFER_SIZE = 1_000_000  # tardis.convert's default ss_buffer_size
 # (100M events); on a full disk macOS swap, which lives on the same disk, can fill the rest.
 MIN_FREE_TO_CONVERT = 12 * 10**9
 KEEP_FREE_AFTER_RUNS = 30 * 10**9
-# Memory guard (Ilia, 2026-10-23): peak memory is estimated from the day's events at the
-# 2024-01-01 measurement, 7.55 GB per 100M events; events are not known before converting,
-# so they are rows times that day's ratio. A day over 11 GB, or over the memory free now,
-# is refused rather than allowed to push the machine into swap on the same disk.
-PEAK_BYTES_PER_EVENT = 7.55e9 / 1e8
-EVENTS_PER_ROW = 100_128_234 / 98_493_167  # 2024-01-01: events / (trade + depth rows)
+# Memory guard (Ilia, 2026-10-23). convert_day uses the streamed reader
+# (data/stream_convert.py), whose peak was measured with /usr/bin/time at 3.38 GB for
+# 100.1M events (2024-01-01) and 3.91 GB for 198.3M (2024-05-01): about 2.84 GB plus 5.41 GB
+# per billion events. Events are not known before converting, so they are estimated as raw
+# rows times 1.08, above the ratio of either day (1.017 and 1.074). A day over 11 GB, or
+# over the memory free now, is refused rather than allowed to push the machine into swap.
+PEAK_FIXED_BYTES = 2.84e9
+PEAK_BYTES_PER_EVENT = 5.41
+EVENTS_PER_ROW = 1.08
 MAX_PEAK_BYTES = 11e9
 
 
@@ -75,7 +78,7 @@ class MemoryGuardError(RuntimeError):
 
 
 def estimate_peak_bytes(rows: int) -> float:
-    return rows * EVENTS_PER_ROW * PEAK_BYTES_PER_EVENT
+    return PEAK_FIXED_BYTES + rows * EVENTS_PER_ROW * PEAK_BYTES_PER_EVENT
 
 
 def available_memory_bytes() -> float:
@@ -301,6 +304,13 @@ def _clean_cuts_near(srcs, target: int, window_ns: int, blocks: list) -> np.ndar
     after = min(_masked_min(loc, e >= w_hi) for e, loc in srcs)
     e_w = np.concatenate([e[(e >= w_lo) & (e < w_hi)] for e, _ in srcs])
     l_w = np.concatenate([loc[(e >= w_lo) & (e < w_hi)] for e, loc in srcs])
+    return _clean_cuts_from(e_w, l_w, before, after, blocks)
+
+
+def _clean_cuts_from(e_w, l_w, before: int, after: int, blocks: list) -> np.ndarray:
+    """Clean cuts among a window's rows (exchange and local times, trades then book, each
+    in file order), given the latest local time sent before the window and the earliest
+    sent after it."""
     order = np.argsort(e_w, kind="mergesort")
     e_w, l_w = e_w[order], l_w[order]
     # Cut between sorted positions i and i + 1, at B = e_w[i + 1]: everything sent
@@ -314,6 +324,43 @@ def _clean_cuts_near(srcs, target: int, window_ns: int, blocks: list) -> np.ndar
         lo, hi = min(b_lo, b_close), max(b_hi, b_close)
         cand = cand[~((cand > lo) & (cand <= hi))]
     return cand
+
+
+def part_events(t_seg: np.ndarray, d_seg: np.ndarray, k: int) -> np.ndarray:
+    """One part's trade and book rows (each in file order) as hftbacktest events, before
+    the local-timestamp offset and event ordering."""
+    n_snap = int(d_seg["is_snapshot"].sum())
+    tmp = np.empty(len(t_seg) + len(d_seg) + 2 * n_snap, event_dtype)
+    tmp[: len(t_seg)] = t_seg
+    # One _convert_depth call per snapshot block, each with fresh buffers (Q13).
+    # _convert_depth reslices its buffers to every block it emits, so in one call a
+    # later block larger than an earlier one is cut short. A block is closed by the
+    # first non-snapshot row after it, which comes before the next block starts, so
+    # splitting where a block starts never separates a block from its closing row.
+    snap = d_seg["is_snapshot"] == 1
+    starts = np.flatnonzero(snap[1:] & ~snap[:-1]) + 1
+    bounds = [0, *starts.tolist(), len(d_seg)]
+    n = len(t_seg)
+    for a, b in zip(bounds[:-1], bounds[1:], strict=True):
+        ss_bid = np.empty(SS_BUFFER_SIZE, event_dtype)
+        ss_ask = np.empty(SS_BUFFER_SIZE, event_dtype)
+        n = _convert_depth(tmp, d_seg[a:b], n, ss_bid, ss_ask, 0)
+    if n == 0:
+        raise ConversionError(f"part {k} is empty")
+    return tmp[:n]
+
+
+def order_part(tmp: np.ndarray, offset: int) -> np.ndarray:
+    """correct_local_timestamp's shift, then correct_event_order and its validation."""
+    if offset:
+        tmp["local_ts"] += offset
+    data = correct_event_order(
+        tmp,
+        np.argsort(tmp["exch_ts"], kind="mergesort"),
+        np.argsort(tmp["local_ts"], kind="mergesort"),
+    )
+    validate_event_order(data)
+    return data
 
 
 def convert_parts(
@@ -352,26 +399,8 @@ def convert_parts(
     for k in range(n_parts):
         t_seg = trades[(trades["exch_ts"] >= edges[k]) & (trades["exch_ts"] < edges[k + 1])]
         d_seg = depth[(depth["exch_ts"] >= edges[k]) & (depth["exch_ts"] < edges[k + 1])]
-        n_snap = int(d_seg["is_snapshot"].sum())
-        tmp = np.empty(len(t_seg) + len(d_seg) + 2 * n_snap, event_dtype)
-        tmp[: len(t_seg)] = t_seg
-        # One _convert_depth call per snapshot block, each with fresh buffers (Q13).
-        # _convert_depth reslices its buffers to every block it emits, so in one call a
-        # later block larger than an earlier one is cut short. A block is closed by the
-        # first non-snapshot row after it, which comes before the next block starts, so
-        # splitting where a block starts never separates a block from its closing row.
-        snap = d_seg["is_snapshot"] == 1
-        starts = np.flatnonzero(snap[1:] & ~snap[:-1]) + 1
-        bounds = [0, *starts.tolist(), len(d_seg)]
-        n = len(t_seg)
-        for a, b in zip(bounds[:-1], bounds[1:], strict=True):
-            ss_bid = np.empty(SS_BUFFER_SIZE, event_dtype)
-            ss_ask = np.empty(SS_BUFFER_SIZE, event_dtype)
-            n = _convert_depth(tmp, d_seg[a:b], n, ss_bid, ss_ask, 0)
-        tmp = tmp[:n]
+        tmp = part_events(t_seg, d_seg, k)
         del d_seg, t_seg
-        if n == 0:
-            raise ConversionError(f"part {k} is empty")
         # Counted before correct_event_order, which can write a row twice (EXCH and LOCAL).
         emitted += int(((tmp["ev"] & 0xFF) == DEPTH_SNAPSHOT_EVENT).sum())
         # Re-check the cut actually used: this part must start receiving after the
@@ -379,15 +408,8 @@ def convert_parts(
         if prev_max_local is not None and int(tmp["local_ts"].min()) <= prev_max_local:
             raise ConversionError(f"cut {k} is not clean: messages in flight across it")
         prev_max_local = int(tmp["local_ts"].max())
-        if offset:
-            tmp["local_ts"] += offset
-        data = correct_event_order(
-            tmp,
-            np.argsort(tmp["exch_ts"], kind="mergesort"),
-            np.argsort(tmp["local_ts"], kind="mergesort"),
-        )
+        data = order_part(tmp, offset)
         del tmp
-        validate_event_order(data)
         sizes.append(len(data))
         if sink is None:
             parts.append(data)
@@ -419,6 +441,15 @@ def convert_parts(
     return parts, info
 
 
+def events_sha256(parts) -> str:
+    """SHA-256 of a day's events, parts concatenated in order: the same for any clean cuts,
+    so a rebuild with a different part size can still be checked."""
+    h = hashlib.sha256()
+    for part in parts:
+        h.update(np.ascontiguousarray(part).tobytes())
+    return h.hexdigest()
+
+
 def part_sha256(part: np.ndarray) -> str:
     """SHA-256 of a part's events. The array, not the .npz: the zip container stores a write
     time, so the file's hash changes on every rebuild while its events do not."""
@@ -429,9 +460,10 @@ def _converted_record(manifest: Path) -> dict:
     return json.loads(manifest.read_text()).get("converted", {}) if manifest.exists() else {}
 
 
-def _record_converted(manifest: Path, day: str, parts: dict[str, str]) -> None:
+def _record_converted(manifest: Path, day: str, parts: dict[str, str], events: str) -> None:
     doc = json.loads(manifest.read_text())
     doc.setdefault("converted", {})[day] = {
+        "events_sha256": events,
         "parts": dict(sorted(parts.items())),
         "hftbacktest_version": hftbacktest.__version__,
     }
@@ -472,11 +504,12 @@ def convert_day(
     raw_dir: Path = RAW,
     out_dir: Path = CONVERTED,
     manifest: Path = MANIFEST,
-    events_per_part: int = 15_000_000,
+    events_per_part: int = 5_000_000,
     min_free: int = MIN_FREE_TO_CONVERT,
 ) -> Path:
-    """Write data/converted/<date>/part-NN.npz and convert.json, record each part's SHA-256
-    in the manifest, or check a rebuild against the recorded ones. Return the directory."""
+    """Write data/converted/<date>/part-NN.npz and convert.json with the streamed reader,
+    and record the day's events SHA-256 and each part's in the manifest, or check a
+    rebuild against the recorded events hash. Return the directory."""
     assert_allowed(day)  # first: converting reads the raw file
     day = normalise(day)
     dest = out_dir / day
@@ -498,17 +531,20 @@ def convert_day(
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True)
 
-    hashes = {}
+    hashes, all_events = {}, hashlib.sha256()
 
     def save(k: int, part: np.ndarray) -> None:
         np.savez_compressed(staging / f"part-{k:02d}.npz", data=part)
         hashes[f"part-{k:02d}.npz"] = part_sha256(part)
+        all_events.update(np.ascontiguousarray(part).tobytes())
 
     start = time.perf_counter()
     try:
         # Trades first, as tardis.convert asks, so a trade reduces queue position before the
         # depth update it caused.
-        _, info = convert_parts(
+        from toxic_flow.data.stream_convert import convert_parts_streamed
+
+        _, info = convert_parts_streamed(
             raw_dir / day / "trades.csv.gz",
             raw_dir / day / "incremental_book_L2.csv.gz",
             events_per_part=events_per_part,
@@ -535,9 +571,12 @@ def convert_day(
     )
     (staging / "convert.json").write_text(json.dumps(info, indent=2) + "\n")
     recorded = _converted_record(manifest).get(day)
+    events = all_events.hexdigest()
     if recorded is None:
-        _record_converted(manifest, day, hashes)
-    elif recorded["parts"] != hashes:
+        _record_converted(manifest, day, hashes, events)
+    elif recorded.get("events_sha256", events) != events or (
+        "events_sha256" not in recorded and recorded["parts"] != hashes
+    ):
         shutil.rmtree(staging, ignore_errors=True)
         raise ConversionError(f"{day}: rebuilt parts do not match the hashes in the manifest")
     if dest.exists():  # caches of an evicted day; the parts join them
@@ -560,24 +599,6 @@ def min_feed_latency_ns(day: str, raw_dir: Path = RAW, chunk_bytes: int = 64 << 
             v = int((df["local_timestamp"] - df["timestamp"]).min()) * 1000  # us to ns
             best = v if best is None else min(best, v)
     return best
-
-
-def convert_day_in_memory(
-    day: str, raw_dir: Path = RAW, manifest: Path = MANIFEST, min_free: int = MIN_FREE_TO_CONVERT
-):
-    """(parts, info) for one day, held in memory only: the same conversion as convert_day.
-    Raw hashes are checked first; the disk guard applies too, since swap grows into it."""
-    assert_allowed(day)  # first: converting reads the raw file
-    day = normalise(day)
-    check_room(raw_dir, min_free)
-    pinned = {(e["date"], e["data_type"]): e for e in load_manifest(manifest)}
-    for data_type in DATA_TYPES:
-        path, entry = raw_dir / day / f"{data_type}.csv.gz", pinned.get((day, data_type))
-        if entry is None or not path.exists() or sha256_file(path) != entry["sha256"]:
-            raise ManifestError(f"{path} is missing or does not match data/manifest.json")
-    return convert_parts(
-        raw_dir / day / "trades.csv.gz", raw_dir / day / "incremental_book_L2.csv.gz"
-    )
 
 
 def main(argv: list[str]) -> int:

@@ -58,8 +58,7 @@ def test_a_rebuild_must_match_the_recorded_hashes(tmp_path):
     assert not (kw["out_dir"] / DAY / "convert.json").exists()
     cv.convert_day(DAY, min_free=0, **kw)  # same raw files, same parts
     m = json.loads(kw["manifest"].read_text())
-    first = next(iter(m["converted"][DAY]["parts"]))
-    m["converted"][DAY]["parts"][first] = "0" * 64
+    m["converted"][DAY]["events_sha256"] = "0" * 64  # as if the events had changed
     kw["manifest"].write_text(json.dumps(m))
     cv.evict_converted(DAY, out_dir=kw["out_dir"], manifest=kw["manifest"], keep_free=10**18)
     with pytest.raises(cv.ConversionError, match="do not match"):
@@ -108,11 +107,20 @@ def test_the_downloader_keeps_the_converted_record(tmp_path):
     assert m["converted"][DAY]["parts"] == {"part-00.npz": "a"} and len(m["files"]) == 1
 
 
-def test_peak_memory_is_estimated_from_the_event_count_of_2024_01_01():
-    # 7.55 GB per 100M events, measured on 2024-01-01; events are rows times 100128234 /
-    # 98493167 there (snapshot clears and the like).
-    rows = 98_493_167
-    assert cv.estimate_peak_bytes(rows) == pytest.approx(7.55e9 * 100_128_234 / 1e8, rel=1e-9)
+def test_peak_memory_estimate_matches_the_streamed_reader_measurements():
+    # Measured with /usr/bin/time: 3.38 GB for 100.1M events (2024-01-01) and 3.91 GB for
+    # 198.3M (2024-05-01). Events are estimated as rows times 1.08, above both days' ratio.
+    assert cv.estimate_peak_bytes(int(100_128_234 / 1.08)) == pytest.approx(3.38e9, rel=0.01)
+    assert cv.estimate_peak_bytes(int(198_258_877 / 1.08)) == pytest.approx(3.91e9, rel=0.01)
+    assert cv.estimate_peak_bytes(184_565_000) < 4e9  # 2024-05-01's counted rows
+
+
+def test_concatenated_events_hash_is_recorded_and_checked(tmp_path):
+    kw = raw_day(tmp_path)
+    dest = cv.convert_day(DAY, min_free=0, **kw)
+    rec = json.loads(kw["manifest"].read_text())["converted"][DAY]
+    files = json.loads((dest / "convert.json").read_text())["files"]
+    assert rec["events_sha256"] == cv.events_sha256([np.load(dest / f)["data"] for f in files])
 
 
 def test_a_day_over_the_memory_limit_is_refused_before_any_work(tmp_path, monkeypatch):
