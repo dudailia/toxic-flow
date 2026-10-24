@@ -574,3 +574,28 @@ them; freeing memory matters as much as freeing disk.
 
 State of the goal: items 1 to 3 remain incomplete (15 quality reports, all of M2); item 4
 is done except B2's K. The block's 4-hour limit has passed.
+
+## Two-pass reader, then M1 on the validation days; stopped at the 12 GB floor (03:15 UTC)
+
+- Two-pass streamed reader built (80e176f, docs/stream_convert.md). On 2024-01-01 its 20
+  parts concatenate to the same SHA-256 as the recorded 7-part conversion, after each old
+  part was checked against the manifest: e7a8a9bd13a46c018a006e6ca21311cf03af2feb80fd8386515215529582562c,
+  100,128,234 events. Peak memory 3.38 GB there and 3.91 GB on 2024-05-01 (old reader 7.55 GB,
+  about 14 GB). convert_day uses it at 5M events per part and records each day's events hash;
+  the guard estimate is 2.84 GB plus 5.41 GB per billion events.
+- M1 done with it, each committed: 2025-02-01, 2025-06-01, 2025-05-01, 2025-03-01. Each day's
+  process peaked at 3.5 to 4.9 GB, the conversion plus the quality report's replay.
+- 2025-04-01 was stopped by the watchdog: free disk fell below 12 GB during it, as swap grew
+  from 3 GB to 6 GB of swap files over these days. Free disk was 15 GB again once it stopped.
+  Its staging directory, data/converted/2025-04-01.partial (475 MB), is left; the next
+  conversion of that day clears it.
+- The quality report now finds the largest gap part by part (GapTracker) instead of holding
+  every local time of the day. 2025-03-01 already used it. It equals largest_gap in the unit
+  test, but it has not yet been checked against a real report: rerunning 2024-01-01's report
+  from its parts on disk is the check, left for the next run.
+- The manifest's events hashes for the four days are committed with this report.
+
+Remaining for the goal: M1 for 2025-04-01 and 10 training days, the exclusion script, the M2
+selection and configs/selected.yaml, the 8-cell B0 and B1 runs, and B2's K. The cause of the
+stop is swap growth during the M1 replay, not the converter: with about 5 GB of memory
+available, each day's 3.5 to 4.9 GB peak pages other programs out to swap on the same disk.

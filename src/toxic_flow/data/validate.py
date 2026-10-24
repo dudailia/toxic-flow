@@ -64,6 +64,42 @@ def largest_gap(local_ts: np.ndarray, start: int, end: int) -> tuple[float, int]
     return float(gaps[i]) / 1e9, int(edges[i])
 
 
+class GapTracker:
+    """largest_gap fed one time-ordered piece at a time, so a day never has to be held:
+    received events are in local-time order within each converted part and across parts.
+    ValueError if a piece breaks the order."""
+
+    def __init__(self, start: int, end: int):
+        self.start, self.end = start, end
+        self.best, self.at, self.prev = -1, start, start
+
+    def add(self, t: np.ndarray) -> None:
+        t = t[(t >= self.start) & (t <= self.end)]
+        if not len(t):
+            return
+        if t[0] < self.prev or (np.diff(t) < 0).any():
+            raise ValueError("pieces are not in time order")
+        edges = np.concatenate([[self.prev], t]).astype(np.int64)
+        gaps = np.diff(edges)
+        i = int(np.argmax(gaps))
+        if gaps[i] > self.best:  # strict: the first of equal gaps wins, as in largest_gap
+            self.best, self.at = int(gaps[i]), int(edges[i])
+        self.prev = int(t[-1])
+
+    def result(self) -> tuple[float, int]:
+        best, at = self.best, self.at
+        if self.end - self.prev > best:
+            best, at = self.end - self.prev, self.prev
+        return float(best) / 1e9, int(at)
+
+
+def largest_gap_sorted(pieces, start: int, end: int) -> tuple[float, int]:
+    tracker = GapTracker(start, end)
+    for t in pieces:
+        tracker.add(t)
+    return tracker.result()
+
+
 def latency_quantiles_ms(latency_ns: np.ndarray) -> dict:
     q = np.percentile(latency_ns, [50, 90, 99]) / 1e6
     return {
@@ -83,7 +119,8 @@ def quality_report(
     from toxic_flow.data.book import replay_bbo
 
     streams = {"book": DEPTH_EVENT, "trades": TRADE_EVENT}
-    times = {k: [] for k in streams}
+    gaps = {k: GapTracker(*window) for k in streams}  # part by part, not the whole day
+    counts = dict.fromkeys(streams, 0)
     lats = {k: [] for k in streams}
     snapshot_rows = 0
     for f in part_files:
@@ -92,19 +129,20 @@ def quality_report(
         kind = data["ev"] & 0xFF
         for name, code in streams.items():
             rows = data[local & (kind == code)]
-            times[name].append(rows["local_ts"])
+            gaps[name].add(rows["local_ts"])
+            counts[name] += len(rows)
             lats[name].append(rows["local_ts"] - rows["exch_ts"])
         snapshot_rows += int((local & (kind == DEPTH_SNAPSHOT_EVENT)).sum())
         del data
     rows_bbo, bbo = replay_bbo(part_files, tick, lot)
     if bbo_out is not None:
         bbo_out.append(rows_bbo)
-    gaps = {k: largest_gap(np.concatenate(v), *window) for k, v in times.items()}
+    gaps = {k: g.result() for k, g in gaps.items()}
     return {
         "quoting_window_ns": list(window),
-        "book_updates": int(sum(len(t) for t in times["book"])),
+        "book_updates": counts["book"],
         "snapshot_rows": snapshot_rows,
-        "trades": int(sum(len(t) for t in times["trades"])),
+        "trades": counts["trades"],
         "feed_latency_ms": {k: latency_quantiles_ms(np.concatenate(v)) for k, v in lats.items()},
         "largest_gap_s": {k: round(g, 3) for k, (g, _) in gaps.items()},
         "largest_gap_starts_utc": {

@@ -64,3 +64,21 @@ def test_quality_report_on_a_converted_synthetic_day(tmp_path):
     assert rep["crossed_book_batches"] == 0
     assert rep["largest_gap_s"]["book"] >= 0.2  # the generator leaves 200 ms quiet gaps
     assert set(rep["feed_latency_ms"]["book"]) == {"p50", "p90", "p99", "max"}
+
+
+def test_largest_gap_over_sorted_pieces_equals_the_whole_day():
+    # Received events are in local-time order within each part and across parts, so the
+    # gap can be found part by part without holding the whole day.
+    import numpy as np
+
+    from toxic_flow.data.validate import largest_gap, largest_gap_sorted
+
+    rng = np.random.default_rng(3)
+    t = np.sort(rng.integers(0, 10**12, 5000))
+    t[2000:2100] = t[1999]  # ties
+    for start, end in ((0, 10**12), (10**11, 9 * 10**11), (t[100], t[100])):
+        pieces = np.split(t, [7, 1500, 1500, 4999])
+        assert largest_gap_sorted(pieces, start, end) == largest_gap(t, start, end)
+    assert largest_gap_sorted([np.array([], np.int64)], 5, 15) == largest_gap(
+        np.array([], np.int64), 5, 15
+    )
