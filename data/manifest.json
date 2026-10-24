@@ -742,6 +742,44 @@
         "part-26.npz": "c644a3c6d22f068000a11705f39eb96e131aa52afe478d8b36af9c7b5fff7149"
       },
       "hftbacktest_version": "2.4.4"
+    },
+    "2024-08-01": {
+      "events_sha256": "9d7ec9e5d94ad7469a05a524585199409818053d58a4b55dce4fb683445ed0ca",
+      "parts": {
+        "part-00.npz": "73cd11d1dee77aecf4c6557c015c14c61fa28e1ad6357180dbf2b5ae9606795b",
+        "part-01.npz": "0de618860cf1ae1e70b6032ce5e8e7f74ed3a821b0b17601ef58bf7905298732",
+        "part-02.npz": "f118cd4e74cc134866732ba052104a1d4c667929cb5d72b73ab5bffc22dbce2d",
+        "part-03.npz": "f438c2b71e7a2affc93e99e7d64d641b3af5163cab383c16a7a3dffd9a521739",
+        "part-04.npz": "b1fc56d97fae1bceb77d0953e8529f1eb9c049ac86f0f428bc5ad4b014b3bd2d",
+        "part-05.npz": "dffadd49c1c6ac81b09be376c7a2b737201490ab14bc193fbfa1eada467b9b74",
+        "part-06.npz": "9ec1765c4d6966f5167c9236df97c2320b46ce84dcdd80231ae6c6d8a0ddf389",
+        "part-07.npz": "cd0c87a90b669836c4f80a4a043258b49eb70ef314392ee9f1be0c16dc980f4e",
+        "part-08.npz": "b0d6f82c0de1c636a0d66ab60f4f93032706b6f8bbe99a8c13cf8bfef9953afb",
+        "part-09.npz": "60cfaed295c2f3cffe042d45280bd24f95e4b1032833211af0f8662ec43ab240",
+        "part-10.npz": "37f2d8b1107c6f24d9b1c7988ab09dd4d3d1bbad5e9934eac6703b33f758796a",
+        "part-11.npz": "c5acc7acf20459e01df9fca53df79db2401e4deb6ae7d9162f7dd538f483519b",
+        "part-12.npz": "a32a5e40bbf46e8f6da6f12a35ab5037a7b2e5ef1fab35db66599141ec9af71e",
+        "part-13.npz": "abb1216959634d860530288a1cf0472f71860ec04030c907ec15db43f7875e3a",
+        "part-14.npz": "5a22fffcdb947f2e11de466d60db3bd232c8e8f8a689f71eac9f0d66b91ea45f",
+        "part-15.npz": "73da5b368f369617257fea7bfe5bb9ba3b26969b8d7dcb802bf16c8e77170102",
+        "part-16.npz": "9fe0a67de7d6f3e4a75100331f27753c447c9583a367aa259fd0305818334d0f",
+        "part-17.npz": "495262aa052d3fe4db6b231be90c2457582b113f9f2adda032f06d6c85c34bb7",
+        "part-18.npz": "519118461b899f32b7fdf18d3f0a12bef672a70f9d4efa14ce0612e9a59f4db7",
+        "part-19.npz": "1ac5bd65fb592308eca736c56690a22c052692c83ddc1e6624378f296c65d6b0",
+        "part-20.npz": "25211f2824d1cede162d5d44c893744176875c377681976c4d10e49d5df176dd",
+        "part-21.npz": "d327665666511e5a68f542c7996e6d616963726b7c15e3398c458f522fcaae8f",
+        "part-22.npz": "20f476ad1431bb46ad32d76d9cc47a286925ca050b191fe2fc246981ffceef49",
+        "part-23.npz": "1f6ea4c83f5e4d4b413fab22d4bdf7084c736d5408e7fbe3d382298c74bc07a1",
+        "part-24.npz": "7f4bf48129d3e523a353fb06944f79c950b1f8aecba3993dd38a8d6060944837",
+        "part-25.npz": "6be4990b3f8f5dc9577d5619da95185b7e610c7d06bff1f140ea7544cf5283e4",
+        "part-26.npz": "774b1139817b4e56a5b121fe5092300c6fe4d2eea8079d1852708022b8605999",
+        "part-27.npz": "913ae669d6d08bb78faf12d93eb71b3b90633b81cd39212166f9f22b94e67d66",
+        "part-28.npz": "82fe7b3d43d29ef61609d737c216731211b4c1e05d22e729d013ca65f8e620dd",
+        "part-29.npz": "459a630a6ca4437e00a19ffba3e4bb943bf0e20665861b37b1493ca9cd45970c",
+        "part-30.npz": "ed38adf9cbfb7486c3fd3778ce410d150a0624207732e595debb5b4cbabe3f5c",
+        "part-31.npz": "72c0da3e165b6ad212f186a687f15d8d1caf46c67fd4fc11594f0e1cf30d0503"
+      },
+      "hftbacktest_version": "2.4.4"
     }
   }
 }
