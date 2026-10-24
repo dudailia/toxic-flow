@@ -167,7 +167,9 @@ Magnitude, same rule for all three:
 where abar(t) is the trailing 30-minute mean of a at decision steps and K is the 99th
 percentile of (a / abar - 1) on training days for that signal and parameter. Trailing
 normalisers keep the signal on the same scale when volume levels differ between 2024
-and 2026. Constants K: [TBD M3].
+and 2026. Constants K, from the 12 training days (docs/hawkes_fit.md): B2 7.165, 4.664
+and 3.423 for W = 1, 5 and 30 s; B2b 3.450, 2.650 and 2.142 for tau = 1, 5 and 30 s; B3
+3.878; C4 9.303 (beta times 10) and 2.197 (beta divided by 10).
 
 Hawkes fit: parameters mu_b, mu_s, alpha_bb, alpha_bs, alpha_sb, alpha_ss, beta, by
 maximum likelihood pooled over the 12 training days, each day an independent

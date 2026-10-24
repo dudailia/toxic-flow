@@ -31,6 +31,9 @@ ratio.
 
 | Signal and parameter | K |
 |---|---|
+| B2_ofi_1s | 7.164670 |
+| B2_ofi_5s | 4.663662 |
+| B2_ofi_30s | 3.422958 |
 | B2b_ewma_1s | 3.450032 |
 | B2b_ewma_5s | 2.649641 |
 | B2b_ewma_30s | 2.142253 |
@@ -66,7 +69,3 @@ constant baseline is the expected source of misfit.
 
 Mean residual from 1.019 to 1.340. A mean above 1 means the fitted model
 expected more events than the day had, so the training fit runs hot on these days.
-
-B2's K (OFI windows of 1, 5 and 30 s) is not computed: its input needs a replay of the
-whole book per day, which this machine has neither the disk nor the memory to hold
-(K_not_computed in train_constants.json: B2_ofi_1s, B2_ofi_5s, B2_ofi_30s).

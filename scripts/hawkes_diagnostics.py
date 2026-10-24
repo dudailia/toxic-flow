@@ -106,11 +106,13 @@ def main() -> None:
         "",
         f"Mean residual from {lo_m:.3f} to {hi_m:.3f}. A mean above 1 means the fitted model",
         "expected more events than the day had, so the training fit runs hot on these days.",
-        "",
-        "B2's K (OFI windows of 1, 5 and 30 s) is not computed: its input needs a replay of the",
-        "whole book per day, which this machine has neither the disk nor the memory to hold",
-        f"(K_not_computed in train_constants.json: {', '.join(c['K_not_computed']) or 'none'}).",
     ]
+    if c.get("K_not_computed"):
+        lines += [
+            "",
+            "Not computed: " + ", ".join(c["K_not_computed"]) + ". Their input needs a replay",
+            "of the whole book on every training day.",
+        ]
     (ROOT / "docs" / "hawkes_fit.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 

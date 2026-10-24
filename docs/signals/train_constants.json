@@ -38,10 +38,13 @@
     "branching_ratio": 0.6701762706295028,
     "converged": true,
     "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-    "fit_seconds": 61.9,
+    "fit_seconds": 97.2,
     "time": "exchange timestamps"
   },
   "K": {
+    "B2_ofi_1s": 7.16467,
+    "B2_ofi_5s": 4.663662,
+    "B2_ofi_30s": 3.422958,
     "B2b_ewma_1s": 3.450032,
     "B2b_ewma_5s": 2.649641,
     "B2b_ewma_30s": 2.142253,
@@ -49,10 +52,6 @@
     "C4_x10": 9.303423,
     "C4_x0.1": 2.197368
   },
-  "K_not_computed": [
-    "B2_ofi_1s",
-    "B2_ofi_5s",
-    "B2_ofi_30s"
-  ],
+  "K_not_computed": [],
   "ac3_4_branching_ratio_below_1": true
 }
