@@ -105,6 +105,24 @@ def training_extended(days) -> dict:
     return _config("train_select_ext", days, strategies, [PRIMARY[0]], [PRIMARY[1]])
 
 
+# Q45: the latest first quote among the candidates. The 80-minute window is full at step
+# 47,999 and the fit runs every 50 steps, so the first quote is at 4,800 s, 01:20:00.
+SELECT_FROM = "01:20:00"
+
+
+def training_window(days) -> dict:
+    """M2 selection with the grid-edge extension and one scoring window (section 4, Q41
+    and Q45): every B0 and B1 candidate, old and new, on training days in the primary cell,
+    with sel_* metrics from SELECT_FROM to the end of quoting beside the full-day ones."""
+    gammas, windows = B1_GAMMAS + B1_GAMMAS_EXT, B1_WINDOWS_S + B1_WINDOWS_S_EXT
+    strategies = [{"name": "B0", "h": h} for h in B0_H + B0_H_EXT] + [
+        {"name": "B1", "gamma": g, "window_s": w, "update_every": 50}
+        for g, w in product(gammas, windows)
+    ]
+    cfg = _config("train_select_window", days, strategies, [PRIMARY[0]], [PRIMARY[1]])
+    return cfg | {"select_from": SELECT_FROM}
+
+
 def training_chosen(selected: dict, days) -> dict:
     """M2: the chosen B0 and B1 on training days in all 8 cells (AC2.1, AC2.4)."""
     s = [{"name": "B0", "h": selected["B0"]["h"]}, {"name": "B1", **_b1(selected)}]

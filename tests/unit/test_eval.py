@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from toxic_flow.eval.markouts import markouts
-from toxic_flow.eval.metrics import day_metrics
+from toxic_flow.eval.metrics import day_metrics, window_metrics
 from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
 
 S = 10**9
@@ -71,3 +71,30 @@ def test_markouts_sign_and_horizons():
     assert mk["markout_10s_bps"][0] == pytest.approx(100.0)  # bought at 100, mid 101: +100 bp
     assert mk["markout_10s_bps"][1] == pytest.approx(-100.0)  # sold at 100: adverse
     assert np.isnan(mk["markout_10s_bps"][2])  # 29 s is past the recorded steps
+
+
+def test_window_metrics_mark_the_inventory_held_at_the_window_start():
+    # Buy 1 at 100 before the window, sell 1 at 101 and buy 1 at 100.5 inside it; the mid
+    # at the window start (step at 2 s) is 100.4, the end mark 101.
+    f = fills([(1 * S, 1, 100.0, 1.0), (3 * S, -1, 101.0, 1.0), (4 * S, 1, 100.5, 1.0)])
+    st = steps(60)
+    st["mid"][20:] = 100.4
+    w = window_metrics(f, st, mark_mid=101.0, from_ns=2 * S)
+    assert w["fills"] == 2
+    assert w["traded_notional"] == pytest.approx(101.0 + 100.5)
+    gross = (101.0 - 100.5) + 1.0 * 101.0 - 1.0 * 100.4  # cash in window, end q, start q
+    assert w["gross_pnl"] == pytest.approx(gross)
+    assert w["break_even_fee_bps"] == pytest.approx(1e4 * gross / (101.0 + 100.5))
+    # Window plus the part before it is the whole day.
+    full = day_metrics(f, st, mark_mid=101.0, order_qty=1.0, fee_levels_bps={})
+    before = -100.0 + 1.0 * 100.4
+    assert full["gross_pnl"] == pytest.approx(w["gross_pnl"] + before)
+
+
+def test_a_window_from_the_first_step_is_the_whole_day():
+    f = fills([(1 * S, 1, 100.0, 1.0), (2 * S, -1, 100.5, 1.0)])
+    st = steps(40)
+    w = window_metrics(f, st, mark_mid=101.0, from_ns=0)
+    full = day_metrics(f, st, mark_mid=101.0, order_qty=1.0, fee_levels_bps={})
+    for k in ("fills", "gross_pnl", "traded_notional", "break_even_fee_bps"):
+        assert w[k] == pytest.approx(full[k])

@@ -21,10 +21,13 @@ SIGNAL_SCALE = ("ofi_window_s", "tau_s")  # B2's window W, B2b's decay; B3 has n
 MIN_MEDIAN_FILLS = 100
 
 
-def candidate_table(metrics: pl.DataFrame, strategy: str, days: list[str]) -> pl.DataFrame:
+def candidate_table(
+    metrics: pl.DataFrame, strategy: str, days: list[str], prefix: str = ""
+) -> pl.DataFrame:
     """One row per candidate (params JSON) in the primary cell over the given days: mean
     daily BEF, days counted, days with zero fills, median daily fills. Every candidate must
-    have every day."""
+    have every day. prefix "sel_" reads the selection-window columns (Q45)."""
+    bef, fills = f"{prefix}break_even_fee_bps", f"{prefix}fills"
     queue, latency = PRIMARY
     m = metrics.filter(
         (pl.col("strategy") == strategy)
@@ -35,10 +38,10 @@ def candidate_table(metrics: pl.DataFrame, strategy: str, days: list[str]) -> pl
     t = (
         m.group_by("params")
         .agg(
-            mean_bef_bps=pl.col("break_even_fee_bps").mean(),
+            mean_bef_bps=pl.col(bef).mean(),
             n_days=pl.col("day").n_unique(),
-            zero_fill_days=(pl.col("fills") == 0).sum(),
-            median_fills=pl.col("fills").median(),
+            zero_fill_days=(pl.col(fills) == 0).sum(),
+            median_fills=pl.col(fills).median(),
         )
         .sort("params")
     )

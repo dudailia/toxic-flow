@@ -4,7 +4,8 @@
   uv run python scripts/make_configs.py training
   uv run python scripts/make_configs.py training_chosen | tuning | canaries | mde_train | confirmatory
 
-training is the section 4 selection grid, training_extended its grid-edge extension (Q41).
+training is the section 4 selection grid, training_extended its grid-edge extension (Q41),
+training_window both grids scored from 01:20 (Q45).
 training_chosen reads configs/selected.yaml; the
 others also read docs/signals/train_constants.json
 (from scripts/fit_signals.py) and configs/selected.yaml (written by hand after Ilia approves
@@ -24,7 +25,7 @@ from toxic_flow.data.split_lock import load_splits
 from toxic_flow.engine import configs
 
 ROOT = Path(__file__).resolve().parents[1]
-SPLIT = {"training": "train", "training_extended": "train", "training_chosen": "train", "tuning": "val", "canaries": "val",
+SPLIT = {"training": "train", "training_extended": "train", "training_window": "train", "training_chosen": "train", "tuning": "val", "canaries": "val",
          "mde_train": "train", "confirmatory": "test"}  # fmt: skip
 
 
@@ -50,6 +51,8 @@ def main() -> None:
         cfg = configs.training(days)
     elif args.kind == "training_extended":
         cfg = configs.training_extended(days)
+    elif args.kind == "training_window":
+        cfg = configs.training_window(days)
     else:
         selected = yaml.safe_load(args.selected.read_text())
         if args.kind == "training_chosen":

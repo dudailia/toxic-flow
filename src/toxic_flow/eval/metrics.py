@@ -41,3 +41,35 @@ def day_metrics(fills, steps, mark_mid, order_qty, fee_levels_bps, funding_ns=()
         "quote_presence": float(steps["both_quoted"].mean()),
         "inventory_at_funding": inventory_at(steps, funding_ns),
     }
+
+
+def window_metrics(fills, steps, mark_mid, from_ns: int) -> dict:
+    """Gross PnL, notional, fills and BEF from from_ns to the end of the day, for scoring
+    candidates that start quoting at different times over one window (Q45, section 4).
+
+    A fill belongs to the window when its exchange time is at or after from_ns. Inventory
+    held at from_ns enters at the mid of the first step at or after from_ns, so the window's
+    gross PnL is the day's equity at the end minus the equity at from_ns:
+    G_w = -sum_window(side qty price) + q_end mark - q_from mid_from.
+    """
+    inside = fills["exch_ts"] >= from_ns
+    signed = fills["side"] * fills["qty"]
+    i = int(np.searchsorted(steps["ts"], from_ns, side="left"))
+    mids = steps["mid"][i:]
+    finite = np.flatnonzero(np.isfinite(mids))
+    q_from = float(signed[~inside].sum())
+    if q_from != 0.0 and not len(finite):
+        raise ValueError("inventory at the window start but no mid after it")
+    mid_from = float(mids[finite[0]]) if len(finite) else 0.0
+    gross = float(
+        -(signed[inside] * fills["price"][inside]).sum()
+        + signed.sum() * mark_mid
+        - q_from * mid_from
+    )
+    notional = float((fills["qty"][inside] * fills["price"][inside]).sum())
+    return {
+        "fills": int(inside.sum()),
+        "gross_pnl": gross,
+        "traded_notional": notional,
+        "break_even_fee_bps": 1e4 * gross / notional if notional else float("nan"),
+    }

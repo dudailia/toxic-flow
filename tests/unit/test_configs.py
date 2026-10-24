@@ -88,6 +88,15 @@ def test_the_grid_edge_extension_adds_only_new_candidates():
     assert len(expand(cfg)) == 20  # primary cell only
 
 
+def test_the_window_selection_has_every_candidate_and_one_scoring_window():
+    cfg = configs.training_window(["2024-01-01"])
+    names = Counter(s["name"] for s in cfg["strategies"])
+    assert names == {"B0": 6, "B1": 30} and len(expand(cfg)) == 36
+    # The latest first quote: an 80-minute window is full at 01:20 (Q45).
+    assert max(s.get("window_s", 0) for s in cfg["strategies"]) == 4800
+    assert cfg["select_from"] == "01:20:00"
+
+
 def test_the_chosen_b0_and_b1_run_in_all_8_cells():
     cfg = configs.training_chosen(SELECTED, ["2024-01-01"])
     assert [s["name"] for s in cfg["strategies"]] == ["B0", "B1"]

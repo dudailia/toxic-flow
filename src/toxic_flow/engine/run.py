@@ -30,7 +30,7 @@ from toxic_flow.data.split_lock import assert_allowed
 from toxic_flow.data.venue import venue_for
 from toxic_flow.engine.grid import LATENCY_MUL, QUEUE_MODELS, config_hash, expand
 from toxic_flow.eval.markouts import HORIZONS_S, markouts
-from toxic_flow.eval.metrics import day_metrics
+from toxic_flow.eval.metrics import day_metrics, window_metrics
 from toxic_flow.signals.hawkes_fit import rescale_decay
 from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
@@ -232,6 +232,13 @@ def run_cell(
         funding_ns=[utc_ns(day, "08:00:00"), utc_ns(day, "16:00:00")],
     )  # fmt: skip
     mk = markouts(fills, steps)
+    if "select_from" in cfg:
+        # Selection window (Q45): every B0 and B1 candidate is scored from the latest first
+        # quote among them, as sel_* columns beside the full-day metrics.
+        w = window_metrics(fills, steps, out[4], utc_ns(day, cfg["select_from"]))
+        sel = {f"sel_{k}": v for k, v in w.items()}
+    else:
+        sel = {}
     row = {
         "day": day,
         "strategy": s["name"],
@@ -260,6 +267,7 @@ def run_cell(
         "engine_fee": out[10],
         "engine_traded_value": out[11],
         "wall_seconds": round(wall, 1),
+        **sel,
     }
     fills_df = pl.DataFrame({name: fills[name] for name in FILL_DTYPE.names} | mk)
     return row, fills_df

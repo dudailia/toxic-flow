@@ -136,6 +136,14 @@ candidate whose median training day has fewer than 100 fills in the primary cell
 eligible. If the choice is still at the edge after the extension, it is kept and reported
 as at the edge.
 
+One scoring window (added on 2026-10-24 with the rule above, after the first selection had
+been seen). For the selection only, every B0 and B1 candidate, old and new, is scored from
+01:20 to 23:59 UTC, the latest first quote among them: a fill counts when its exchange time
+is at or after 01:20, inventory held at 01:20 enters at the mid of the first decision step
+at or after 01:20, and the fill floor counts fills in that window. Quoting is unchanged.
+Full-day metrics are reported beside the window ones, and so is the choice the rule would
+make without the fill floor.
+
 Tuning grids for overlays, on validation days in the primary cell:
 - c in {0, 0.5, 1} and d in {0, 0.5, 1} for all three.
 - B2: OFI window W in {1 s, 5 s, 30 s}. 27 candidates.
