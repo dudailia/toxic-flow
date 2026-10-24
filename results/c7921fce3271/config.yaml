@@ -1,0 +1,39 @@
+# Written by scripts/make_configs.py training_chosen.
+name: train_chosen
+label: train_chosen
+days:
+- '2024-06-01'
+- '2024-12-01'
+- '2024-07-01'
+- '2024-01-01'
+- '2024-02-01'
+- '2024-09-01'
+- '2024-11-01'
+- '2024-10-01'
+- '2024-03-01'
+- '2024-04-01'
+- '2024-08-01'
+- '2024-05-01'
+strategies:
+- name: B0
+  h: 5
+- name: B1
+  gamma: 0.2
+  window_s: 1200
+  update_every: 50
+queue_models:
+- risk_averse
+- power3
+- power2
+- log
+latencies:
+- low
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1
