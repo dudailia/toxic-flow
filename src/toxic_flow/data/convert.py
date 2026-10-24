@@ -59,8 +59,67 @@ SS_BUFFER_SIZE = 1_000_000  # tardis.convert's default ss_buffer_size
 # Converted days are a cache of the raw files (Ilia, 2026-10-23). Decimal GB, as df -H.
 # A conversion takes about 1.4 times the day's raw bytes on disk and up to 7.5 GB of memory
 # (100M events); on a full disk macOS swap, which lives on the same disk, can fill the rest.
-MIN_FREE_TO_CONVERT = 15 * 10**9
+MIN_FREE_TO_CONVERT = 12 * 10**9
 KEEP_FREE_AFTER_RUNS = 30 * 10**9
+# Memory guard (Ilia, 2026-10-23): peak memory is estimated from the day's events at the
+# 2024-01-01 measurement, 7.55 GB per 100M events; events are not known before converting,
+# so they are rows times that day's ratio. A day over 11 GB, or over the memory free now,
+# is refused rather than allowed to push the machine into swap on the same disk.
+PEAK_BYTES_PER_EVENT = 7.55e9 / 1e8
+EVENTS_PER_ROW = 100_128_234 / 98_493_167  # 2024-01-01: events / (trade + depth rows)
+MAX_PEAK_BYTES = 11e9
+
+
+class MemoryGuardError(RuntimeError):
+    pass
+
+
+def estimate_peak_bytes(rows: int) -> float:
+    return rows * EVENTS_PER_ROW * PEAK_BYTES_PER_EVENT
+
+
+def available_memory_bytes() -> float:
+    """Free, inactive and speculative pages (macOS vm_stat): memory usable without swapping.
+    Elsewhere, MemAvailable from /proc/meminfo."""
+    import subprocess
+
+    try:
+        out = subprocess.run(["vm_stat"], capture_output=True, text=True).stdout
+        page = int(out.split("page size of ")[1].split(" ")[0])
+        pages = {
+            k.strip(): int(v.strip(" ."))
+            for k, v in (line.split(":") for line in out.splitlines()[1:] if ":" in line)
+        }
+        return page * sum(pages[k] for k in ("Pages free", "Pages inactive", "Pages speculative"))
+    except (FileNotFoundError, IndexError, KeyError, ValueError):
+        line = next(
+            x
+            for x in Path("/proc/meminfo").read_text().splitlines()
+            if x.startswith("MemAvailable")
+        )
+        return int(line.split()[1]) * 1024
+
+
+def check_memory(raw_dir: Path, day: str, chunk_bytes: int = 64 << 20) -> float:
+    """Estimated peak bytes for converting the day; MemoryGuardError if it is over the limit
+    or over the memory free now."""
+    rows = sum(
+        _count_rows(raw_dir / day / f"{t}.csv.gz", chunk_bytes)
+        for t in ("trades", "incremental_book_L2")
+    )
+    peak = estimate_peak_bytes(rows)
+    if peak > MAX_PEAK_BYTES:
+        raise MemoryGuardError(
+            f"{day}: {rows} rows, estimated peak {peak / 1e9:.1f} GB, over the 11 GB limit"
+        )
+    avail = available_memory_bytes()
+    if peak > avail:
+        raise MemoryGuardError(
+            f"{day}: estimated peak {peak / 1e9:.1f} GB, {avail / 1e9:.1f} GB available now"
+        )
+    return peak
+
+
 I64 = np.iinfo(np.int64)
 
 
@@ -433,6 +492,7 @@ def convert_day(
         if entry is None or not path.exists() or sha256_file(path) != entry["sha256"]:
             raise ManifestError(f"{path} is missing or does not match data/manifest.json")
         raw[data_type] = entry
+    check_memory(raw_dir, day)
 
     staging = out_dir / f"{day}.partial"
     shutil.rmtree(staging, ignore_errors=True)

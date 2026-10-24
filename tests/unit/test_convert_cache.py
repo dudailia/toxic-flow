@@ -72,7 +72,7 @@ def test_no_conversion_starts_without_room(tmp_path):
     with pytest.raises(DiskSpaceError, match="free"):
         cv.convert_day(DAY, min_free=10**18, **kw)
     assert not kw["out_dir"].exists() or not list(kw["out_dir"].iterdir())
-    assert cv.MIN_FREE_TO_CONVERT >= 15 * 10**9
+    assert cv.MIN_FREE_TO_CONVERT == 12 * 10**9  # Ilia, 2026-10-23 (was 15 GB, then 1.5)
 
 
 def test_eviction_keeps_the_day_when_the_disk_has_room(tmp_path, monkeypatch):
@@ -106,3 +106,26 @@ def test_the_downloader_keeps_the_converted_record(tmp_path):
     save_manifest(path, [{"date": DAY, "data_type": "trades", "sha256": "b"}])
     m = json.loads(path.read_text())
     assert m["converted"][DAY]["parts"] == {"part-00.npz": "a"} and len(m["files"]) == 1
+
+
+def test_peak_memory_is_estimated_from_the_event_count_of_2024_01_01():
+    # 7.55 GB per 100M events, measured on 2024-01-01; events are rows times 100128234 /
+    # 98493167 there (snapshot clears and the like).
+    rows = 98_493_167
+    assert cv.estimate_peak_bytes(rows) == pytest.approx(7.55e9 * 100_128_234 / 1e8, rel=1e-9)
+
+
+def test_a_day_over_the_memory_limit_is_refused_before_any_work(tmp_path, monkeypatch):
+    kw = raw_day(tmp_path)
+    monkeypatch.setattr(cv, "estimate_peak_bytes", lambda rows: 12e9)
+    with pytest.raises(cv.MemoryGuardError, match="11"):
+        cv.convert_day(DAY, min_free=0, **kw)
+    assert not (kw["out_dir"] / DAY).exists()
+
+
+def test_a_day_is_refused_when_memory_is_not_free_now(tmp_path, monkeypatch):
+    kw = raw_day(tmp_path)
+    monkeypatch.setattr(cv, "estimate_peak_bytes", lambda rows: 5e9)
+    monkeypatch.setattr(cv, "available_memory_bytes", lambda: 4e9)
+    with pytest.raises(cv.MemoryGuardError, match="available"):
+        cv.convert_day(DAY, min_free=0, **kw)

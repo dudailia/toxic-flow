@@ -68,3 +68,44 @@ runs. Estimates say so and give their basis.
 
 Verdict: the raw data for all 34 days will not fit with 30 GB to spare, so work stops here
 for an external SSD or a cloud machine, as Ilia asked. No raw file was deleted.
+
+## Rules as revised by Ilia, 2026-10-23 (later the same evening)
+
+- Rule 4 applies at M5, not now. The test days are downloaded only after the tag, and an
+  external SSD or a cloud machine will be added before then. Until M5 the budget is the 18
+  train and val days, already on disk.
+- Conversion floor: 12 GB free (was 15 GB). If free disk falls below 12 GB at any point,
+  work stops and is reported.
+- Memory guard: before each conversion, peak memory is estimated from the day's events at
+  7.55 GB per 100M events (2024-01-01). Events are not known before converting, so they
+  are the raw rows (trades plus book) times 1.0166, the 2024-01-01 ratio of events to rows.
+  A day above 11 GB, or above the memory free at that moment (free, inactive and
+  speculative pages), is skipped and flagged rather than allowed to swap. Days run from
+  smallest to largest.
+
+| Day | Raw rows (M, counted) | Estimated peak (GB) |
+|---|---|---|
+| 2024-06-01 | 44.7 | 3.4 |
+| 2025-01-01 | 75.9 | 5.8 |
+| 2025-02-01 | 78.6 | 6.0 |
+| 2024-12-01 | 83.4 | 6.4 |
+| 2025-06-01 | 84.5 | 6.5 |
+| 2024-07-01 | 86.7 | 6.7 |
+| 2024-01-01 | 98.5 | 7.6 |
+| 2024-02-01 | 99.6 | 7.6 |
+| 2024-09-01 | 102.5 | 7.9 |
+| 2025-05-01 | 103.8 | 8.0 |
+| 2025-03-01 | 120.9 | 9.3 |
+| 2024-11-01 | 127.8 | 9.8 |
+| 2024-10-01 | 129.0 | 9.9 |
+| 2024-03-01 | 132.0 | 10.1 |
+| 2024-04-01 | 133.9 | 10.3 |
+| 2025-04-01 | 142.1 | 10.9 |
+| 2024-08-01 | 157.3 | 12.1 |
+| 2024-05-01 | 184.6 | 14.2 |
+
+Two days are over 11 GB: 2024-08-01 and 2024-05-01, both training days. Splitting them
+differently would not help much: the reader holds the whole day's book rows (34 bytes each,
+6.3 GB for 2024-05-01) before cutting parts. A two-pass reader that keeps only timestamps
+for the cut search would lower it; it is not built. hftbacktest itself takes a day as
+several files, so the limit is this reader, not the engine.
