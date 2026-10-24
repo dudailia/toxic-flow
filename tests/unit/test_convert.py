@@ -204,3 +204,24 @@ def test_header_only_file_raises_conversion_error(tmp_path):
     write_gz(tmp_path / "trades.csv.gz", TRADE_HEADER, [])
     with pytest.raises(ConversionError):
         convert_parts(tmp_path / "trades.csv.gz", depth, n_parts=1)
+
+
+def test_order_part_pads_the_indexes_correct_event_order_reads_past(tmp_path):
+    # hftbacktest's correct_event_order reads data[index[n]] one step past the end of each
+    # index before its bounds check; unpadded that read can segfault (2024-02-01). Padding
+    # with row 0 makes it a valid read, and the output must not change.
+    from hftbacktest.data.validation import correct_event_order
+
+    import toxic_flow.data.convert as cv
+
+    trades, depth = synthetic_day(tmp_path, overtaking_row=True)
+    t = cv.read_trades(trades, 1 << 20)
+    d = cv.read_depth(depth, 1 << 20)
+    tmp = cv.part_events(t, d, 0)
+    unpadded = correct_event_order(
+        tmp.copy(),
+        np.argsort(tmp["exch_ts"], kind="mergesort"),
+        np.argsort(tmp["local_ts"], kind="mergesort"),
+    )
+    assert np.array_equal(cv.order_part(tmp.copy(), 0), unpadded)
+    assert len(cv._padded(np.arange(3))) == 4 and cv._padded(np.arange(3))[-1] == 0

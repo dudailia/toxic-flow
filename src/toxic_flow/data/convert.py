@@ -350,14 +350,23 @@ def part_events(t_seg: np.ndarray, d_seg: np.ndarray, k: int) -> np.ndarray:
     return tmp[:n]
 
 
+def _padded(index: np.ndarray) -> np.ndarray:
+    """index with one more entry, row 0. hftbacktest 2.4.4's correct_event_order reads
+    data[index[n]] one step past the end of each index before its bounds check; numba does
+    not check bounds, so that read returns junk and can crash (2024-02-01 did). With the pad
+    it reads row 0 instead. The value is only used behind the bounds check, so the output
+    does not change."""
+    return np.append(index, 0)
+
+
 def order_part(tmp: np.ndarray, offset: int) -> np.ndarray:
     """correct_local_timestamp's shift, then correct_event_order and its validation."""
     if offset:
         tmp["local_ts"] += offset
     data = correct_event_order(
         tmp,
-        np.argsort(tmp["exch_ts"], kind="mergesort"),
-        np.argsort(tmp["local_ts"], kind="mergesort"),
+        _padded(np.argsort(tmp["exch_ts"], kind="mergesort")),
+        _padded(np.argsort(tmp["local_ts"], kind="mergesort")),
     )
     validate_event_order(data)
     return data
