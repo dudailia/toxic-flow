@@ -788,3 +788,29 @@ it. AC2.4 holds for B1: risk-averse has no more fills than any other queue model
 B1 now has a median of 127 fills a day, so the queue models disagree even less often than
 before. Mean daily BEF over the 8 cells: B0 -0.927 bp, B1 -0.570 bp; no cell has positive
 net PnL at the standard maker fee. results/c7921fce3271 is the run of the earlier choice.
+
+## Stopped at the 12 GB floor during the M4 tuning run (20:3x UTC)
+
+configs/runs/tune_val.yaml (63 overlay candidates on top of B1 gamma 0.4, 10 min; 6
+validation days, primary cell) ran 352 of 378 cells. On the last day, 2025-04-01, free
+disk fell below 12 GB and the watchdog stopped the run, so per Ilia's rule the block
+stops here. Cause: macOS grew its swap file on the same disk (swap total 5 to 6 GB, 5.3
+GB used) while the day's converted parts (1.0 GB) were in the cache. Free disk was 15 GB
+a few minutes later. No cell had zero fills.
+
+State:
+- results/b63a70c9a965 is the partial tuning run: config.yaml and fills files, no
+  metrics.parquet. It is not committed (the session may not delete files under results/),
+  so the working tree is not clean and the engine will refuse to start until Ilia removes
+  it or says to commit its config copy, as was done for results/fddca6f8b9b0.
+- data/manifest.json gained the validation days' events hashes from this run's
+  conversions; committed.
+- docs/M4_draft.md does not exist: the tuning table needs all 378 cells, and the canaries
+  and the MDE need the draft choice.
+- data/converted/2025-04-01 still holds the day's parts (1.0 GB).
+
+To finish M4: clear results/b63a70c9a965, rerun tune_val (the 352 cells repeat, about 1.5
+hours), then scripts/m4_draft.py select, make_configs canaries and mde_train with
+--selected docs/M4_draft_selected.yaml, run both, scripts/m4_draft.py report. Q46: the
+swap file shares the disk, so the 12 GB floor can trip from swap growth alone; a 14 GB
+start margin, or fewer apps open during runs, would avoid it.

@@ -851,6 +851,28 @@
         "part-08.npz": "16819d8045983c164b519849f7d3fdb415039f254e501a5cbfd06ff355395c5f"
       },
       "hftbacktest_version": "2.4.4"
+    },
+    "2025-01-01": {
+      "events_sha256": "58f1877a1152911335dcf0b3312ec8fceb084ae2aa7c82a37b8666b505c49e6c",
+      "parts": {
+        "part-00.npz": "77abf148051943c2d037c9bf7944f14c1ccb09dc97c7174a3b41a68264efd450",
+        "part-01.npz": "5e5c44c1aaf2e5a92f6b36c8ae08f4fe1d199f32ee35a575b6637fcb19ea20e7",
+        "part-02.npz": "bb1bccac342beb2de1238dfa6f68026b3b6d47f136516ff31134eca4bd8678e7",
+        "part-03.npz": "c4b3d9c837115c5dc914cbe93d53fd0baba72abdf8fa38104cd22970128ca24c",
+        "part-04.npz": "8ddc0ed05dd1df52c748259bbb2e288f9277234cb042b4808ab60c66371b1687",
+        "part-05.npz": "c828f6cd1d6e3d96e1c6b303e7d7c525c26e70e4499cf89a46120f0790f7e7b0",
+        "part-06.npz": "764b79518f5bce03d11b4c13a4a2753c43f48914235a4bad41a6ae23070a66b9",
+        "part-07.npz": "de995a2858bf76af539ab89d5cbf7419b4e80e7eb9d362589df4a52fe2ef8f41",
+        "part-08.npz": "44fbdf96a5291a646003767687f62f49ceb31f0f36558113fc60085931320254",
+        "part-09.npz": "53c7c17af6efa8067cb7a4bfaaa9524df8167e8965fe46865f865696fdaf1d4f",
+        "part-10.npz": "ff9c1ba42dc91184ff94481408efb08761a26e98b920e9fb5ba2c643b60d8065",
+        "part-11.npz": "e62d6aadb96ca57b18440aa738d48fffa78b22c594f69d6f649541450f6b5b96",
+        "part-12.npz": "d521b6d915d81ae303f4ed2c7ced082799740b58b3704bd8dec1e841ca964d1f",
+        "part-13.npz": "d690a796447720ec4b1240d219c6825e3b8557c4eaab197e904f9c038707e486",
+        "part-14.npz": "c92590150463ef5152426c240c089c9b3d348eb192113179e1bff4b3b7b6bd3f",
+        "part-15.npz": "a52ddbffe9fd621687dddb5012dc88d78320ed674566a45b72143fea29d2288c"
+      },
+      "hftbacktest_version": "2.4.4"
     }
   }
 }
