@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/mde_train_draft.yaml",
+  "config_hash": "c89d0cb8e412",
+  "commit": "1932098fe984769178406758f4358b2245509084",
+  "started_at": "2026-10-25T02:14:47+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "mde_train_draft",
+  "finished_at": "2026-10-25T03:03:45+00:00"
+}

@@ -89,3 +89,10 @@ def test_identical_b3_and_b2b_are_named_as_the_reason_for_a_zero_s(tmp_path):
         .otherwise(pl.col("break_even_fee_bps")).alias("break_even_fee_bps")
     )  # fmt: skip
     assert m4.same_note(other, m) == []
+
+
+def test_a_comparison_identical_every_day_is_marked_trivial():
+    c = {"n": 2, "mean": 0.0, "bootstrap_ci": (0.0, 0.0), "t_ci": (0.0, 0.0), "n_positive": 0,
+         "dropped": [], "per_day": {"a": 0.0, "b": 0.0}}  # fmt: skip
+    assert "trivial" in m4.cmp_row("C1 - B1", c)
+    assert "trivial" not in m4.cmp_row("C1 - B1", c | {"per_day": {"a": 0.0, "b": 0.1}})

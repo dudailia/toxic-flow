@@ -54,6 +54,9 @@ def ci(c: tuple) -> str:
 
 
 def cmp_row(name: str, c: dict) -> str:
+    # A pass that only holds because both sides ran the same quotes every day says nothing.
+    if c["per_day"] and all(v == 0 for v in c["per_day"].values()):
+        name += ", identical every day, so the verdict is trivial"
     return (f"| {name} | {c['n']} | {fmt(c['mean'])} | {ci(c['bootstrap_ci'])} | {ci(c['t_ci'])} "
             f"| {c['n_positive']} | {', '.join(c['dropped']) or 'none'} |")  # fmt: skip
 

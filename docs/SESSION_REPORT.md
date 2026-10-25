@@ -896,3 +896,27 @@ Ilia's answer: lower the floor to 11 GB for these M4 runs only. The run watchdog
 at 11 GB for the canary and mde_train runs. The converter's own check (12 GB free when a
 day's conversion starts, data/convert.py) is unchanged; each day is evicted after its
 cells, so free disk is back above 12 GB before the next conversion.
+
+## M4 draft written (docs/M4_draft.md)
+
+From three committed runs through scripts/m4_draft.py: tuning results/b63a70c9a965,
+canaries results/9eaa1b3d693c (6 validation days, 48 cells), and the training run for s
+results/c89d0cb8e412 (configs/runs/mde_train_draft.yaml, 12 days, 24 cells). Nothing was
+written to PREREGISTRATION.md or configs/selected.yaml.
+
+- Tuning: the tables for B2, B2b and B3 with mean and pooled BEF and median fills; draft
+  choice B2 c 0, d 1, W 1 s; B2b and B3 c = d = 0.
+- MDE: s = 0 on training and validation days, MDE = 0, because B3 and B2b are identical
+  every day under the draft choice (Q47). The draft says so next to the numbers.
+- Canaries: AC4.2 fails. C2 minus B1 is -0.872 bp a day (bootstrap [-1.783, -0.066],
+  t [-2.120, 0.376]); by section 10 the study stops here unless the design changes (Q51).
+  AC4.3 passes, but only because C1 is identical to B1 every day; C4 likewise matches B3
+  trivially; the draft marks these verdicts as trivial. C3: B3 at zero latency 0.836 bp
+  against 0.660 at high latency, no flag.
+- No cell of the training run has positive net PnL at the standard maker fee. In the
+  canary run the positive cells are the audited 2025-01-01 B1 round trips and their
+  zero-latency twin.
+
+What this means for Ilia, stated plainly: under the pre-registered rules as they stand,
+the validation evidence says the overlays do not beat B1 and the oracle canary fails, so
+the study as designed would stop before the tag. The design questions are Q47 to Q51.
