@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/canaries_val_draft.yaml",
+  "config_hash": "9eaa1b3d693c",
+  "commit": "88f9b4a255f764571db2481cf86b193085b80fa0",
+  "started_at": "2026-10-25T01:36:26+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "canaries_val_draft",
+  "finished_at": "2026-10-25T02:13:29+00:00"
+}
