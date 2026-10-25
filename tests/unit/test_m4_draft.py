@@ -75,3 +75,17 @@ def test_select_then_report(tmp_path, monkeypatch):
                  f"n = {n} test days"):  # fmt: skip
         assert part in text, part
     assert "AC4.2, C2 beats B1 by more than 3 x MDE: passes." in text
+
+
+def test_identical_b3_and_b2b_are_named_as_the_reason_for_a_zero_s(tmp_path):
+    days = m4.kept("val")
+    same = rows(days, "B2b", {"c": 0.0, "d": 0.0}, -0.7) + rows(
+        days, "B3", {"c": 0.0, "d": 0.0}, -0.7
+    )
+    m = pl.DataFrame(same).with_columns(pl.col("break_even_fee_bps").round(0))
+    assert "by construction" in " ".join(m4.same_note(m, m))
+    other = m.with_columns(
+        pl.when(pl.col("label") == "B3").then(pl.col("break_even_fee_bps") + 0.1)
+        .otherwise(pl.col("break_even_fee_bps")).alias("break_even_fee_bps")
+    )  # fmt: skip
+    assert m4.same_note(other, m) == []

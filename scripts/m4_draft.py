@@ -123,6 +123,25 @@ def tuning_section(m: pl.DataFrame, meta: dict) -> list[str]:
     return lines
 
 
+def same_note(train: pl.DataFrame, val: pl.DataFrame) -> list[str]:
+    """A limitation stated next to s: when B3 and B2b give the same BEF on every day of
+    both splits (both reduce to B1 at c = d = 0), D_i is 0 by construction, so s and the MDE
+    are 0 for that reason and say nothing about noise."""
+    same = all(
+        all(v == 0 for v in analysis.compare(m, "B3", "B2b")["per_day"].values())
+        for m in (train, val)
+    )
+    if not same:
+        return []
+    return [
+        "Limitation: B3 and B2b have the same BEF on every training and validation day under",
+        "this draft choice (both have c = d = 0 and so reduce to B1), so D_i = 0 by construction",
+        "and s, the MDE and the C2 threshold are 0 for that reason. They measure nothing about",
+        "noise, and H1 cannot be tested with this choice (Q47 in docs/SESSION_REPORT.md).",
+        "",
+    ]
+
+
 def cmd_report(tune: Path, canaries: Path, train: Path) -> None:
     mt, meta_t = load(tune, "tune_val", "val")
     mc, meta_c = load(canaries, "canaries_val_draft", "val")
@@ -153,6 +172,7 @@ def cmd_report(tune: Path, canaries: Path, train: Path) -> None:
         f"| MDE = 0.70 s, bp | {fmt(mde['mde_bp'])} |",
         f"| 3 x MDE (C2 threshold), bp | {fmt(3 * mde['mde_bp'])} |",
         "",
+        *same_note(mtr, mc),
         "## Canaries on the validation days (section 10)",
         "",
         f"Run {meta_c['config_hash']} ({meta_c['config']}, commit {meta_c['commit'][:7]}), primary cell;",
