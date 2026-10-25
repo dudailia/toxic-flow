@@ -944,3 +944,8 @@ signal study needs the mid grid of the 9 training days not yet saved; the 6 vali
 days and 3 training days have theirs). To finish: free about 3 GB or more, then
 `uv run python tests/canary/run_c2.py configs/runs/diag_train_touch.yaml --save-mids`,
 `uv run python scripts/signal_info.py`, and the tables scripts.
+
+Ilia's answer (2026-10-25): "continue everything until it is 3 GB". For this block the run
+watchdog stops at 3 GB free, and the converter's floor is set per run with
+TOXIC_FLOW_MIN_FREE_GB=3 (default still 12, engine/run.py day_parts). The memory guard is
+unchanged. Swap shares the disk, so the machine may slow as it fills.

@@ -11,6 +11,7 @@ Fees are zero in the simulation and applied in evaluation (PREREGISTRATION.md se
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import time
@@ -61,9 +62,12 @@ def day_parts(day: str, sleep=time.sleep) -> list[str]:
     events hash checked against the manifest)."""
     dest = CONVERTED / day
     if not (dest / "convert.json").exists():
+        # The disk floor for a conversion, 12 GB unless Ilia lowers it for a block
+        # (2026-10-25: "continue until it is 3 GB"); the memory guard is unchanged.
+        min_free = int(float(os.environ.get("TOXIC_FLOW_MIN_FREE_GB", "12")) * 1e9)
         code = (
             "import sys\nfrom toxic_flow.data.convert import MemoryGuardError, convert_day\n"
-            f"try:\n    convert_day({day!r})\nexcept MemoryGuardError as e:\n"
+            f"try:\n    convert_day({day!r}, min_free={min_free})\nexcept MemoryGuardError as e:\n"
             f"    print(e, file=sys.stderr)\n    sys.exit({MEMORY_REFUSED})"
         )
         waited = 0
