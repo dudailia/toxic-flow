@@ -82,12 +82,10 @@ def hourly(m: pl.DataFrame, label: str) -> pl.DataFrame:
     )  # fmt: skip
 
 
-def main(val: Path, train: Path) -> None:
+def main(val: Path, train: Path | None, window: Path | None) -> None:
     mv, meta_v = load(val, "diag_val")
-    mt, meta_t = load(train, "diag_train")
     L = [f"Runs: validation {meta_v['config_hash']} (configs/runs/diag_val.yaml, commit "
-         f"{meta_v['commit'][:7]}), training {meta_t['config_hash']} (configs/runs/diag_train.yaml, "
-         f"commit {meta_t['commit'][:7]}). Exploratory throughout.", ""]  # fmt: skip
+         f"{meta_v['commit'][:7]}). Exploratory throughout.", ""]  # fmt: skip
 
     L += ["## 1. Sign check", "", *CMP_HEAD, cmp_line(mv, "C2", "B1"), cmp_line(mv, "C2_flip", "B1"),
           cmp_line(mv, "C2_flip", "C2"), ""]  # fmt: skip
@@ -102,6 +100,11 @@ def main(val: Path, train: Path) -> None:
           "share of decision steps with our target bid at or above the best bid (ask at or",
           "below the best ask).", "", *profile(mv, ["B1", "C2", "C2_flip"], COLS), ""]  # fmt: skip
 
+    if train is None:
+        L += part_4_without_train(mv, window)
+        print("\n".join(L))
+        return
+    mt, meta_t = load(train, "diag_train_touch")
     L += ["## 4. Why B1 barely trades", "",
           *profile(pl.concat([mt.with_columns(pl.lit("train").alias("split")),
                               mv.with_columns(pl.lit("val").alias("split"))], how="diagonal_relaxed")
@@ -140,9 +143,73 @@ def main(val: Path, train: Path) -> None:
     print("\n".join(L))
 
 
+def part_4_without_train(mv: pl.DataFrame, window: Path) -> list[str]:
+    """Item 4 while the training diagnosis run is missing: fills a day on training days
+    from the committed selection run (same B1 settings, primary cell), and the quote
+    distance on validation days only."""
+    mw, meta_w = load(window, "train_select_window")
+    sel = {"B1": '"gamma": 0.4', "B1_g0.2": '"gamma": 0.2'}
+    L = ["## 4. Why B1 barely trades (partial: the training diagnosis run did not finish)", "",
+         f"Training-day fills from run {meta_w['config_hash']} (configs/runs/train_select_window.yaml),",
+         "the same B1 settings in the same cell; distance from mid is measured on validation days",
+         "only, because the instrumented training run stopped at the disk floor.", "",
+         "| Strategy | Training fills a day (mean) | Training BEF bp | Validation fills a day | Validation BEF bp | Validation bid from mid, ticks |",
+         "|---|---|---|---|---|---|"]  # fmt: skip
+    for lab, key in sel.items():
+        w = "600" if lab == "B1" else "1200"
+        t = mw.filter(pl.col("strategy").eq("B1") & pl.col("params").str.contains(key)
+                      & pl.col("params").str.contains(f'"window_s": {w}'))  # fmt: skip
+        v = mv.filter(pl.col("label") == lab)
+        L.append(f"| {lab} | {f(float(t['fills'].mean()), 1)} | {f(float(t['break_even_fee_bps'].mean()))} | "
+                 f"{f(float(v['fills'].mean()), 1)} | {f(float(v['break_even_fee_bps'].mean()))} | "
+                 f"{f(float(v['median_bid_dist_ticks'].mean()), 1)} |")  # fmt: skip
+    L += ["", "Fills a day and the mid by day, B1 at the selected setting:", "",
+          "| Day | Split | B1 fills | B1_g0.2 fills | Mid at the mark |", "|---|---|---|---|---|"]  # fmt: skip
+    for day in sorted(set(mw["day"])):
+        d = mw.filter(pl.col("day") == day)
+        a = d.filter(
+            pl.col("params").str.contains('"gamma": 0.4')
+            & pl.col("params").str.contains('"window_s": 600')
+        )
+        b = d.filter(
+            pl.col("params").str.contains('"gamma": 0.2')
+            & pl.col("params").str.contains('"window_s": 1200')
+        )
+        L.append(
+            f"| {day} | train | {a['fills'][0]} | {b['fills'][0]} | {f(float(a['mark_mid'][0]), 0)} |"
+        )
+    for day in sorted(set(mv["day"])):
+        d = mv.filter(pl.col("day") == day)
+        a, b = d.filter(pl.col("label") == "B1"), d.filter(pl.col("label") == "B1_g0.2")
+        L.append(
+            f"| {day} | val | {a['fills'][0]} | {b['fills'][0]} | {f(float(a['mark_mid'][0]), 0)} |"
+        )
+    L += [
+        "",
+        "B1 (selected) on validation days by UTC hour, median over days:",
+        "",
+        "| Hour | Bid from mid, ticks | Ask from mid, ticks | Fills (mean) |",
+        "|---|---|---|---|",
+    ]
+    for r in hourly(mv, "B1").iter_rows(named=True):
+        L.append(
+            f"| {r['hour']} | {f(r['bid_dist_ticks'], 1)} | {f(r['ask_dist_ticks'], 1)} | {f(r['fills'], 2)} |"
+        )
+    L += [
+        "",
+        "## 5. Exploratory touch base on training days",
+        "",
+        "Not done: the training run (configs/runs/diag_train_touch.yaml) stopped at the disk floor",
+        "after 173 of 564 cells and wrote no metrics. See docs/SESSION_REPORT.md.",
+        "",
+    ]
+    return L
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--val", type=Path, required=True)
-    p.add_argument("--train", type=Path, required=True)
+    p.add_argument("--train", type=Path)
+    p.add_argument("--window", type=Path, help="train_select_window run, when --train is missing")
     a = p.parse_args()
-    main(a.val, a.train)
+    main(a.val, a.train, a.window)

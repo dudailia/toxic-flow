@@ -928,3 +928,19 @@ cells (swap had grown to 8 GB on the shared disk). Ilia's answer: resume after e
 the cached day. The partial run's config copy (identical to the config) is committed so the
 tree is clean, and the run restarts from the start; mid grids already saved for training
 days are kept (save_in_child skips a day that has one).
+
+Stopped again before the restart: after evicting the cached day, free disk was 9.86 GB
+and still falling with nothing from this project running (12.13 GB during the run, 10.90
+GB at the stop). Something else on the machine is writing to the disk; swap was back to
+6 GB. Below 11 GB the watchdog, and below 12 GB the converter's own check, refuse to run,
+so per Ilia's rule the block stops here.
+
+Written from committed runs: docs/M4_diagnosis.md with items 1 to 3 complete, item 4
+partial (training-day fills from the committed selection run, quote distances on
+validation days only) and the ranked "What I think is wrong". No sign bug (item 1).
+Not done for lack of disk: item 5 and items 9 to 12 (they need
+configs/runs/diag_train_touch.yaml, 564 cells, about 2.5 hours), and items 6 to 8 (the
+signal study needs the mid grid of the 9 training days not yet saved; the 6 validation
+days and 3 training days have theirs). To finish: free about 3 GB or more, then
+`uv run python tests/canary/run_c2.py configs/runs/diag_train_touch.yaml --save-mids`,
+`uv run python scripts/signal_info.py`, and the tables scripts.
