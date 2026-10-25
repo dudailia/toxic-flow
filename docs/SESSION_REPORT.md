@@ -891,3 +891,8 @@ so with about 13 GB free the canary and MDE runs cannot finish above the floor.
 docs/M4_draft.md is not written. What it needs: about 2 GB more free disk (or a lower
 floor, Q46), results/9eaa1b3d693c cleared or its partial fills overwritten by a full
 rerun, then the canary rerun, the mde_train_draft run and scripts/m4_draft.py report.
+
+Ilia's answer: lower the floor to 11 GB for these M4 runs only. The run watchdog now stops
+at 11 GB for the canary and mde_train runs. The converter's own check (12 GB free when a
+day's conversion starts, data/convert.py) is unchanged; each day is evicted after its
+cells, so free disk is back above 12 GB before the next conversion.
