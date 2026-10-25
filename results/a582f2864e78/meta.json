@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/diag_train_touch.yaml",
+  "config_hash": "a582f2864e78",
+  "commit": "9315a553c3ced48f21ec9fd7f973e9c03619ca72",
+  "started_at": "2026-10-25T15:45:24+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "diag_train_touch",
+  "finished_at": "2026-10-25T19:26:13+00:00"
+}
