@@ -883,3 +883,11 @@ mde_train_draft.yaml, then scripts/m4_draft.py report.
 Resumed on Ilia's answer ("Resume now"): 2025-03-01's cached parts evicted (free disk
 11.97 to 12.89 GB), the partial canary run's config copy (identical to the config)
 committed, and the canary run restarted from the start with the 12 GB watchdog.
+
+Stopped again at the 12 GB floor: the restarted canary run did 2 of 6 days (16 cells)
+before free disk fell to 11.96 GB while 2025-06-01 (0.6 GB of parts) was cached. Free disk
+outside the cache keeps shrinking by a few hundred MB between runs (other programs, swap),
+so with about 13 GB free the canary and MDE runs cannot finish above the floor.
+docs/M4_draft.md is not written. What it needs: about 2 GB more free disk (or a lower
+floor, Q46), results/9eaa1b3d693c cleared or its partial fills overwritten by a full
+rerun, then the canary rerun, the mde_train_draft run and scripts/m4_draft.py report.
