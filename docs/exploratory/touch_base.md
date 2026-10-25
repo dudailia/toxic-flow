@@ -82,8 +82,39 @@ Against B1 (selected) and B1 at gamma 0.2 in the primary cell:
 | {"c": 1.0, "d": 1.0, "tau_s": 1.0} | -0.941 | -0.950 | 58767 | 0 |
 | {"c": 0.5, "d": 1.0, "tau_s": 1.0} | -0.942 | -0.950 | 58715 | 0 |
 
-The B2 (OFI) grid on this base (configs/runs/diag_train_touch_b2.yaml) was not run for
-time; B2 enters neither H1 nor the power projection.
+### B2_touch (run 6fa8c5414f52, configs/runs/diag_train_touch_b2.yaml, commit 3231ba8)
+
+| Candidate | Mean daily BEF bp | Pooled BEF bp | Median fills | Days without fills |
+|---|---|---|---|---|
+| {"c": 0.0, "d": 0.0, "ofi_window_s": 30.0} | -0.933 | -0.942 | 59858 | 0 |
+| {"c": 0.0, "d": 0.0, "ofi_window_s": 5.0} | -0.933 | -0.942 | 59858 | 0 |
+| {"c": 0.0, "d": 0.0, "ofi_window_s": 1.0} | -0.933 | -0.942 | 59858 | 0 |
+| {"c": 0.0, "d": 0.5, "ofi_window_s": 30.0} | -0.934 | -0.943 | 59528 | 0 |
+| {"c": 0.0, "d": 1.0, "ofi_window_s": 30.0} | -0.935 | -0.943 | 59498 | 0 |
+| {"c": 0.0, "d": 0.5, "ofi_window_s": 5.0} | -0.936 | -0.944 | 59343 | 0 |
+| {"c": 0.0, "d": 1.0, "ofi_window_s": 5.0} | -0.936 | -0.945 | 59309 | 0 |
+| {"c": 0.0, "d": 0.5, "ofi_window_s": 1.0} | -0.937 | -0.946 | 59318 | 0 |
+| {"c": 0.0, "d": 1.0, "ofi_window_s": 1.0} | -0.938 | -0.946 | 59296 | 0 |
+| {"c": 0.5, "d": 0.0, "ofi_window_s": 30.0} | -0.938 | -0.947 | 59152 | 0 |
+| {"c": 0.5, "d": 0.5, "ofi_window_s": 30.0} | -0.939 | -0.947 | 59131 | 0 |
+| {"c": 0.5, "d": 1.0, "ofi_window_s": 30.0} | -0.939 | -0.948 | 59092 | 0 |
+| {"c": 0.5, "d": 0.0, "ofi_window_s": 5.0} | -0.939 | -0.948 | 58956 | 0 |
+| {"c": 1.0, "d": 0.0, "ofi_window_s": 30.0} | -0.939 | -0.948 | 59166 | 0 |
+| {"c": 1.0, "d": 0.5, "ofi_window_s": 30.0} | -0.940 | -0.948 | 59146 | 0 |
+| {"c": 0.5, "d": 0.5, "ofi_window_s": 5.0} | -0.940 | -0.949 | 58929 | 0 |
+| {"c": 0.5, "d": 1.0, "ofi_window_s": 5.0} | -0.940 | -0.949 | 58899 | 0 |
+| {"c": 1.0, "d": 0.0, "ofi_window_s": 5.0} | -0.940 | -0.949 | 58980 | 0 |
+| {"c": 1.0, "d": 1.0, "ofi_window_s": 30.0} | -0.940 | -0.949 | 59112 | 0 |
+| {"c": 1.0, "d": 0.5, "ofi_window_s": 5.0} | -0.940 | -0.949 | 58955 | 0 |
+| {"c": 1.0, "d": 1.0, "ofi_window_s": 5.0} | -0.941 | -0.949 | 58939 | 0 |
+| {"c": 0.5, "d": 1.0, "ofi_window_s": 1.0} | -0.942 | -0.949 | 58936 | 0 |
+| {"c": 0.5, "d": 0.0, "ofi_window_s": 1.0} | -0.942 | -0.950 | 58986 | 0 |
+| {"c": 1.0, "d": 0.5, "ofi_window_s": 1.0} | -0.942 | -0.950 | 59007 | 0 |
+| {"c": 1.0, "d": 0.0, "ofi_window_s": 1.0} | -0.942 | -0.950 | 59032 | 0 |
+| {"c": 0.5, "d": 0.5, "ofi_window_s": 1.0} | -0.942 | -0.950 | 58954 | 0 |
+| {"c": 1.0, "d": 1.0, "ofi_window_s": 1.0} | -0.942 | -0.951 | 58981 | 0 |
+
+No B2 candidate beats c = d = 0 either; the grid spans 0.01 bp.
 
 | Comparison | Days | Mean daily BEF difference bp | Bootstrap 95% | t 95% | Days > 0 |
 |---|---|---|---|---|---|

@@ -973,8 +973,8 @@ three times better than by |OFI|.
 T0 in all 8 cells: about 59,000 to 72,000 fills a day, BEF -0.89 to -0.94 bp. B3 and B2b
 grids on it: no candidate beats c = d = 0 (spread of 0.01 bp). C2 on it: +0.018 bp a day,
 12 of 12 days. Power: s about 0.004 bp for the best pair with c or d above 0, MDE about
-0.003 bp on 16 days. The B2 grid on this base (configs/runs/diag_train_touch_b2.yaml, 324
-cells) was not run for time; B2 enters neither H1 nor the power projection.
+0.003 bp on 16 days. The B2 grid on this base ran afterwards (results/6fa8c5414f52, 324
+cells): no candidate beats c = d = 0 either.
 
 Decisions taken without asking (least change, for Ilia to check): the diagnosis runs used
 the 11 GB watchdog, then 3 GB on Ilia's answer, with the converter floor set by
