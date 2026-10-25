@@ -1,0 +1,117 @@
+# Written by scripts/make_configs.py canaries.
+name: canaries_val_draft
+label: canaries_val_draft
+days:
+- '2025-01-01'
+- '2025-02-01'
+- '2025-06-01'
+- '2025-05-01'
+- '2025-03-01'
+- '2025-04-01'
+strategies:
+- name: B1
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+- name: B2b
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  tau_s: 1.0
+  K: 3.450032
+- name: B3
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  K: 3.878084
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: C1
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  seed: 1729
+  K: 3.878084
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: C2
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+- name: C4
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  label: C4_x10
+  decay_factor: 10.0
+  K: 9.303423
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: C4
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  label: C4_x0.1
+  decay_factor: 0.1
+  K: 2.197368
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: B3
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  K: 3.878084
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+  cells:
+  - - risk_averse
+    - zero
+queue_models:
+- risk_averse
+latencies:
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1

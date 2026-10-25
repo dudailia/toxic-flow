@@ -1,0 +1,51 @@
+# Written by scripts/make_configs.py mde_train.
+name: mde_train_draft
+label: mde_train_draft
+days:
+- '2024-06-01'
+- '2024-12-01'
+- '2024-07-01'
+- '2024-01-01'
+- '2024-02-01'
+- '2024-09-01'
+- '2024-11-01'
+- '2024-10-01'
+- '2024-03-01'
+- '2024-04-01'
+- '2024-08-01'
+- '2024-05-01'
+strategies:
+- name: B2b
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  tau_s: 1.0
+  K: 3.450032
+- name: B3
+  gamma: 0.4
+  window_s: 600
+  update_every: 50
+  c: 0.0
+  d: 0.0
+  K: 3.878084
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+queue_models:
+- risk_averse
+latencies:
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1

@@ -1,0 +1,20 @@
+# Draft overlay choice for Ilia's review (scripts/m4_draft.py select). Not
+# configs/selected.yaml: make_configs.py --selected reads it for the draft runs.
+draft: M4 draft from run b63a70c9a965, not approved
+B0:
+  h: 13
+B1:
+  gamma: 0.4
+  update_every: 50
+  window_s: 600
+B2:
+  c: 0.0
+  d: 1.0
+  ofi_window_s: 1.0
+B2b:
+  c: 0.0
+  d: 0.0
+  tau_s: 1.0
+B3:
+  c: 0.0
+  d: 0.0
