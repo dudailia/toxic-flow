@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/diag_val.yaml",
+  "config_hash": "4de702fe5d20",
+  "commit": "7ed144fe5086fb295366ae9f5aee8d041a693683",
+  "started_at": "2026-10-25T03:53:52+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "diag_val",
+  "finished_at": "2026-10-25T04:24:33+00:00"
+}
