@@ -818,3 +818,64 @@ start margin, or fewer apps open during runs, would avoid it.
 Resumed on Ilia's answer ("Resume"): the partial run's config copy (identical to
 configs/runs/tune_val.yaml) is committed so the tree is clean, and tune_val is rerun from
 the start into the same directory, overwriting the partial fills.
+
+# M4 draft block (goal set 2026-10-24 evening)
+
+## Memory guard wait
+
+The first tuning rerun stopped because the memory guard refused 2025-01-01 (estimated
+peak 3.3 GB, 3.1 GB available) while another session rendered video. day_parts now waits
+and asks again every minute for up to 30 minutes when the guard refuses, then stops
+(63fa2cc, with a test); the guard still decides. In the runs since, it never refused.
+
+## Tuning on the validation days
+
+results/b63a70c9a965 (configs/runs/tune_val.yaml), 378 cells, exit 0. Draft choice by the
+section 4 rule, in docs/M4_draft_selected.yaml (not configs/selected.yaml): B2 c = 0,
+d = 1, W = 1 s; B2b and B3 c = d = 0.
+
+Findings that need Ilia before anything is filled in (leakage-auditor, read-only):
+- Q47, H1 is zero by construction under this choice. Every c = d = 0 candidate is B1,
+  identical on every day (checked: one distinct value per day across the 7 such rows). The
+  best B2b and B3 candidates with c or d above 0 score 0.473 and 0.571 bp against B1's
+  0.660, so the tie rule picks c = d = 0 for both. Then D_i = 0 every day, s = 0, MDE = 0,
+  the C2 bar (3 x MDE) is 0, and C1 and C4 equal B3 trivially. The pre-registered design
+  cannot test H1 with this selection; this is a design question, not a code defect.
+- Q48, the validation days are thin. B1 (gamma 0.4, 10 min) has 6 to 28 fills a day on
+  validation against about 127 on training. The auditor traces it to the market: GLFT
+  works in ticks, fills fall steeply with BTC price (log-log slope -2.5 on training days,
+  R2 0.85) and the validation days are at 84k to 105k with the lowest volume. Test days
+  will likely be similar, so day BEF rests on a few wick round trips; the 100-fill floor
+  that made gamma 0.4 eligible fails on validation (median 11).
+- Q49, every overlay choice is decided by one 4-fill day. B2's pick beats B1 by 0.20 bp on
+  the mean but is 0.16 bp worse without 2025-01-01; its day-bootstrap interval is
+  [-0.43, 0.97]. Pooled BEF (shown in the draft) would pick B2b c 0, d 1, tau 5 s and
+  B3 c 0.5, d 0 instead.
+- Q50, 5 to 14 percent of B1 fills on every day, training and validation, have no
+  opposite trade at their exchange time: hftbacktest fills a resting quote when the book
+  moves through it. One such fill on 2025-01-01 would have been rejected as post-only on a
+  real venue. Not look-ahead and not biased across days, but at about 10 fills a day one
+  fill moves a day's BEF by 1 to 2 bp. Changing the fill model is an hftbacktest question.
+- The CLAUDE.md trigger fired: 9 cells on 2025-01-01 (4 to 8 fills) had positive net PnL
+  at the standard maker fee. Auditor: one set of 4 round trips during price wicks, 7 of
+  the 9 cells are B1 copies; no look-ahead, accounting or mark defect.
+
+## Stopped at the 12 GB floor during the canary run
+
+configs/runs/canaries_val_draft.yaml (run with tests/canary/run_c2.py) ran 32 of 48 cells,
+on 4 of the 6 validation days (2025-01-01, 02-01, 06-01, 05-01), before free disk fell
+below 12 GB while the next day was converted; per Ilia's rule the block stops here. Free
+disk had been 12.96 GB at the start, so the margin was under 1 GB again (swap shares the
+disk; Q46). results/9eaa1b3d693c is the partial run: no metrics.parquet, not committed.
+
+Seen in the log, not a result (4 of 6 days): C2, the oracle, fills 3,600 to 8,300 times a
+day with BEF -0.14 to -0.24 bp, while B1 makes a positive mean on 6 to 28 fills. If that
+holds on all 6 days, AC4.2 fails and by section 10 the study stops: the harness would not
+turn the oracle's information into PnL at these settings (c = 1 moves the centre by a full
+half-spread, which at gamma 0.4 means far more fills, all at the touch). Q51 for Ilia.
+
+Still missing for docs/M4_draft.md: the 2 remaining canary days and the 12-day mde_train
+run (configs/runs/mde_train_draft.yaml, committed). Under the draft choice its s is 0 by
+construction (Q47). To finish: free a few GB (or decide Q46), clear results/9eaa1b3d693c,
+rerun tests/canary/run_c2.py configs/runs/canaries_val_draft.yaml, run
+mde_train_draft.yaml, then scripts/m4_draft.py report.
