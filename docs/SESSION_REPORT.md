@@ -949,3 +949,35 @@ Ilia's answer (2026-10-25): "continue everything until it is 3 GB". For this blo
 watchdog stops at 3 GB free, and the converter's floor is set per run with
 TOXIC_FLOW_MIN_FREE_GB=3 (default still 12, engine/run.py day_parts). The memory guard is
 unchanged. Swap shares the disk, so the machine may slow as it fills.
+
+## Diagnosis items 1 to 5 (docs/M4_diagnosis.md)
+
+From results/4de702fe5d20 (validation, 36 cells) and results/a582f2864e78 (training, 564
+cells), both exploratory. No sign bug (tests and the flip run); C2 loses to B1 even at
+zero latency in the log queue model; B1 quotes 370 ticks from mid on training days and 860
+on validation days (the grid extension doubled it, GLFT in ticks widens with price); on a
+join-the-touch base the oracle beats its base on 12 of 12 training days. Ranked causes are
+in the file; the first is that passive quoting at the touch loses about 0.9 bp of notional
+to adverse selection while the one-tick spread is worth about 0.01 bp.
+
+## Block B, signal information (docs/exploratory/signal_information.md)
+
+All signals carry direction information on every training day and hold out of sample;
+OFI over 1 s predicts direction best (about 0.18 at 1 s); the fitted Hawkes beats EWMA
+only against the slow decays or at the 1 s horizon; the slower C4 decay is more
+informative than the fitted one. Magnitude is predicted by the EWMA and slow Hawkes about
+three times better than by |OFI|.
+
+## Block C, touch base (docs/exploratory/touch_base.md)
+
+T0 in all 8 cells: about 59,000 to 72,000 fills a day, BEF -0.89 to -0.94 bp. B3 and B2b
+grids on it: no candidate beats c = d = 0 (spread of 0.01 bp). C2 on it: +0.018 bp a day,
+12 of 12 days. Power: s about 0.004 bp for the best pair with c or d above 0, MDE about
+0.003 bp on 16 days. The B2 grid on this base (configs/runs/diag_train_touch_b2.yaml, 324
+cells) was not run for time; B2 enters neither H1 nor the power projection.
+
+Decisions taken without asking (least change, for Ilia to check): the diagnosis runs used
+the 11 GB watchdog, then 3 GB on Ilia's answer, with the converter floor set by
+TOXIC_FLOW_MIN_FREE_GB for those runs only; diag_train was superseded before it ran by
+diag_train_touch so the training days converted once; the touch base skews one tick per
+order size of inventory.
