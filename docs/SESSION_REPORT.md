@@ -920,3 +920,11 @@ written to PREREGISTRATION.md or configs/selected.yaml.
 What this means for Ilia, stated plainly: under the pre-registered rules as they stand,
 the validation evidence says the overlays do not beat B1 and the oracle canary fails, so
 the study as designed would stop before the tag. The design questions are Q47 to Q51.
+
+# M4 diagnosis block (2026-10-25)
+
+Stopped at the 11 GB floor during configs/runs/diag_train_touch.yaml after 173 of 564
+cells (swap had grown to 8 GB on the shared disk). Ilia's answer: resume after evicting
+the cached day. The partial run's config copy (identical to the config) is committed so the
+tree is clean, and the run restarts from the start; mid grids already saved for training
+days are kept (save_in_child skips a day that has one).
