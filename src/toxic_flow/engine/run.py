@@ -30,12 +30,12 @@ from toxic_flow.data.split_lock import assert_allowed
 from toxic_flow.data.venue import venue_for
 from toxic_flow.engine.grid import LATENCY_MUL, QUEUE_MODELS, config_hash, expand
 from toxic_flow.eval.markouts import HORIZONS_S, markouts
-from toxic_flow.eval.metrics import day_metrics, window_metrics
+from toxic_flow.eval.metrics import day_metrics, quote_metrics, window_metrics
 from toxic_flow.signals.hawkes_fit import rescale_decay
 from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
 from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
-from toxic_flow.strategies.overlay import EWMA, EXTERNAL, HAWKES, OFI, run_b1, run_overlay
+from toxic_flow.strategies.overlay import EWMA, EXTERNAL, HAWKES, NONE, OFI, run_b1, run_overlay
 
 ROOT = Path(__file__).resolve().parents[3]
 RESULTS = ROOT / "results"
@@ -149,11 +149,18 @@ def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
         if oracle is None:
             raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
         ts, u, m = oracle(day, cfg)
+        if s.get("flip"):
+            u = -u  # M4 diagnosis item 1: the oracle's sign reversed, exploratory
         return (
             EXTERNAL, 1.0, 0.0, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), np.zeros(1),
             1.0, 1, mu, alpha, beta, u, m, np.zeros((0, 3)),
         )  # fmt: skip
     tau, ofi_window = 1.0, 1
+    if s["name"] == "B1":  # only with touch (M4 diagnosis): no signal, c = d = 0
+        return (
+            NONE, 0.0, 0.0, 1.0, NORM_STEPS, np.zeros(0, np.int64), np.zeros(0, np.int64),
+            np.zeros(1), 1.0, 1, mu, alpha, beta, np.zeros(0), np.zeros(0), np.zeros((0, 3)),
+        )  # fmt: skip
     if s["name"] == "B2":
         mode = OFI
         sig_ts, cum = ofi_inputs(day)
@@ -229,14 +236,15 @@ def run_cell(
     try:
         if s["name"] == "B0":
             run_b0(hbt, int(s["h"]), *common, start, end, step, steps, fills, out)
-        elif s["name"] == "B1":
+        elif s["name"] == "B1" and not s.get("touch"):
             window = int(float(s["window_s"]) * 1e9 / step)
             run_b1(hbt, float(s["gamma"]), window, int(s.get("update_every", 50)), *common,
                    start, end, step, steps, fills, out)  # fmt: skip
         else:
             window = int(float(s["window_s"]) * 1e9 / step)
             run_overlay(hbt, float(s["gamma"]), window, int(s.get("update_every", 50)), *common,
-                        start, end, step, steps, fills, out, *_overlay_args(s, day, cfg, oracle))  # fmt: skip
+                        start, end, step, steps, fills, out, *_overlay_args(s, day, cfg, oracle),
+                        bool(s.get("touch", False)))  # fmt: skip
     finally:
         hbt.close()
     wall = time.perf_counter() - t0
@@ -289,7 +297,10 @@ def run_cell(
         "engine_traded_value": out[11],
         "wall_seconds": round(wall, 1),
         **sel,
-    }
+        # Diagnostics (M4 diagnosis, exploratory): not section 6 metrics.
+        **{k: (json.dumps(v) if k == "hourly_quotes" else v)
+           for k, v in quote_metrics(fills, steps).items()},
+    }  # fmt: skip
     fills_df = pl.DataFrame({name: fills[name] for name in FILL_DTYPE.names} | mk)
     return row, fills_df
 

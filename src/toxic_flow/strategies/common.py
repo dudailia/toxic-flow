@@ -5,9 +5,14 @@ import numpy as np
 from hftbacktest import BUY, CANCELED, FILLED, GTX, LIMIT, NEW
 from numba import njit
 
+# bid_tick and ask_tick are the step's target quotes (NaN for a side not quoted), best_*
+# the book's best prices, cancels the cancels sent that step: diagnostics only (M4
+# diagnosis, 2026-10-24); no metric of section 6 reads them.
 STEP_DTYPE = np.dtype(
-    [("ts", "i8"), ("mid", "f8"), ("position", "f8"), ("balance", "f8"), ("both_quoted", "?")]
-)
+    [("ts", "i8"), ("mid", "f8"), ("position", "f8"), ("balance", "f8"), ("both_quoted", "?"),
+     ("bid_tick", "f8"), ("ask_tick", "f8"), ("best_bid_tick", "f8"), ("best_ask_tick", "f8"),
+     ("cancels", "i4")]
+)  # fmt: skip
 FILL_DTYPE = np.dtype(
     [
         ("exch_ts", "i8"),
@@ -68,8 +73,8 @@ def place_quotes(hbt, bid_tick, ask_tick, want_bid, want_ask, qty, next_id, q_lo
     inventory cap, which counts every open order on the side, cancels in flight
     included, as if all of them filled: a bid goes out only if q + open bids + 1 <= Q.
     q_lots is the inventory in order sizes. Returns (next order id, our buy orders, our
-    sell orders) as seen before sending."""
-    n_buy, n_sell = 0, 0
+    sell orders as seen before sending, cancels sent)."""
+    n_buy, n_sell, n_cancel = 0, 0, 0
     keep_buy, keep_sell = False, False  # an order already at the target price
     wait_buy, wait_sell = False, False  # an unacknowledged order that cannot be cancelled
     values = hbt.orders(0).values()
@@ -90,6 +95,7 @@ def place_quotes(hbt, bid_tick, ask_tick, want_bid, want_ask, qty, next_id, q_lo
                 keep_sell = True
         elif o.cancellable:
             hbt.cancel(0, o.order_id, False)
+            n_cancel += 1
         elif buy:
             wait_buy = True
         else:
@@ -101,7 +107,7 @@ def place_quotes(hbt, bid_tick, ask_tick, want_bid, want_ask, qty, next_id, q_lo
     if want_ask and not keep_sell and not wait_sell and -q_lots + n_sell + 1 <= max_lots:
         hbt.submit_sell_order(0, next_id, ask_tick * tick, qty, GTX, LIMIT, False)
         next_id += 1
-    return next_id, n_buy, n_sell
+    return next_id, n_buy, n_sell, n_cancel
 
 
 @njit

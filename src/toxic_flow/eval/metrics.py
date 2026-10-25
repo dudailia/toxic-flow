@@ -73,3 +73,39 @@ def window_metrics(fills, steps, mark_mid, from_ns: int) -> dict:
         "traded_notional": notional,
         "break_even_fee_bps": 1e4 * gross / notional if notional else float("nan"),
     }
+
+
+def quote_metrics(fills, steps) -> dict:
+    """Diagnostics of how a strategy quotes (M4 diagnosis, exploratory; not section 6):
+    cancels per quoting hour, median seconds from an order's request to its fill, share of
+    steps with our target bid at or above the best bid (ask at or below the best ask), the
+    median distance of each target from the mid in ticks, and the same by UTC hour."""
+    hours = len(steps) * 0.1 / 3600 if len(steps) else float("nan")
+    mid = (steps["best_bid_tick"] + steps["best_ask_tick"]) / 2
+    bid_d, ask_d = mid - steps["bid_tick"], steps["ask_tick"] - mid
+    with np.errstate(invalid="ignore"):
+        bid_best = steps["bid_tick"] >= steps["best_bid_tick"]
+        ask_best = steps["ask_tick"] <= steps["best_ask_tick"]
+    wait = (fills["exch_ts"] - fills["local_ts"]) / 1e9
+
+    def med(x):
+        x = x[np.isfinite(x)]
+        return float(np.median(x)) if len(x) else float("nan")
+
+    hour = (steps["ts"] // 3_600_000_000_000) % 24
+    fill_hour = (fills["exch_ts"] // 3_600_000_000_000) % 24
+    hourly = [
+        {"hour": int(h), "bid_dist_ticks": med(bid_d[hour == h]), "ask_dist_ticks": med(ask_d[hour == h]),
+         "bid_at_best": float(bid_best[hour == h].mean()), "ask_at_best": float(ask_best[hour == h].mean()),
+         "fills": int((fill_hour == h).sum())}
+        for h in np.unique(hour)
+    ]  # fmt: skip
+    return {
+        "cancels_per_hour": float(steps["cancels"].sum() / hours) if hours else float("nan"),
+        "median_fill_wait_s": med(wait),
+        "bid_at_best_share": float(bid_best.mean()) if len(steps) else float("nan"),
+        "ask_at_best_share": float(ask_best.mean()) if len(steps) else float("nan"),
+        "median_bid_dist_ticks": med(bid_d),
+        "median_ask_dist_ticks": med(ask_d),
+        "hourly_quotes": hourly,
+    }

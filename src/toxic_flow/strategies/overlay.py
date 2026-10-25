@@ -75,6 +75,7 @@ def run_overlay(
     ext_u,
     ext_m,
     diag,
+    touch=False,
 ):
     """GLFT with an overlay. out as in strategies.b0_fixed.run_b0; diag receives
     (time, u, m) for every step, warm-up included, while it has room."""
@@ -167,23 +168,33 @@ def run_overlay(
 
         position = hbt.position(0)
         both = False
-        if valid and np.isfinite(A) and np.isfinite(k) and np.isfinite(sigma) and k > 0:
+        bid_rec, ask_rec, n_cancel = np.nan, np.nan, 0
+        glft_ok = valid and np.isfinite(A) and np.isfinite(k) and np.isfinite(sigma) and k > 0
+        if glft_ok or (touch and valid):
             if order_qty == 0.0:
                 order_qty = order_size(mid_tick * tick, lot_size, min_notional)
-            c1, c2 = compute_coeff(gamma, gamma, 1.0, A, k)
-            half = c1 + 0.5 * c2 * sigma
-            r = mid_tick - c2 * sigma * (position / order_qty)
+            if touch:
+                # Exploratory base (M4 diagnosis, item 5): quotes at the touch, skewed by
+                # one tick per order size of inventory, instead of the GLFT price.
+                half = 0.5 * (ba - bb)
+                r = mid_tick - position / order_qty
+            else:
+                c1, c2 = compute_coeff(gamma, gamma, 1.0, A, k)
+                half = c1 + 0.5 * c2 * sigma
+                r = mid_tick - c2 * sigma * (position / order_qty)
             bid_t, ask_t = overlay_ticks(r, half, u, m, c, d, bb, ba)
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
+            bid_rec = bid_t if want_bid else np.nan
+            ask_rec = ask_t if want_ask else np.nan
             both = both_resting(hbt)
-            next_id, n_buy, n_sell = place_quotes(
+            next_id, n_buy, n_sell, n_cancel = place_quotes(
                 hbt, int(bid_t), int(ask_t), want_bid, want_ask, order_qty, next_id,
                 round(position / order_qty), max_lots,
             )  # fmt: skip
             out[6] = max(out[6], n_buy, n_sell)
             out[7] = max(out[7], abs(round(position / order_qty)))
         else:
-            next_id, _, _ = place_quotes(
+            next_id, _, _, n_cancel = place_quotes(
                 hbt, 0, 0, False, False, 1.0, next_id, 0, max_lots
             )  # cancel all
         if n_steps < len(steps):
@@ -192,6 +203,9 @@ def run_overlay(
             steps[n_steps].position = position
             steps[n_steps].balance = hbt.state_values(0).balance
             steps[n_steps].both_quoted = both
+            steps[n_steps].bid_tick, steps[n_steps].ask_tick = bid_rec, ask_rec
+            steps[n_steps].best_bid_tick, steps[n_steps].best_ask_tick = bb, ba
+            steps[n_steps].cancels = n_cancel
             n_steps += 1
         out[8] = now
     out[0] = n_steps

@@ -37,8 +37,10 @@ def oracle_for_day(day: str, cfg: dict):
     return oracle_series(bbo, grid)
 
 
-def run_loop_on_file(path, ts, u, m):
-    """The C2 loop on one synthetic event file; returns (time, u, m) for every step."""
+def run_loop_on_file(path, ts, u, m, touch=False, with_steps=False):
+    """The C2 loop on one synthetic event file; returns (time, u, m) for every step, and
+    the step records too when with_steps. touch quotes at the best prices (no GLFT fit
+    needed), which lets a short synthetic day show where the loop puts its quotes."""
     from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
 
     from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
@@ -51,12 +53,14 @@ def run_loop_on_file(path, ts, u, m):
     )  # fmt: skip
     hbt = HashMapMarketDepthBacktest([asset])
     diag = np.zeros((1000, 3))
+    steps, out = np.zeros(1000, STEP_DTYPE), np.zeros(13)
     t0 = int(ts[0])
     run_overlay(
         hbt, 0.05, 6000, 50, 0.001, 100.0, 10, t0 + 10**9, t0 + 5 * 10**9, 100_000_000,
-        np.zeros(1000, STEP_DTYPE), np.zeros(1000, FILL_DTYPE), np.zeros(13),
+        steps, np.zeros(1000, FILL_DTYPE), out,
         EXTERNAL, 1.0, 0.0, 1.0, 18_000, ts, np.zeros(len(ts), np.int64), np.zeros(1), 1.0, 1,
-        np.zeros(2), np.zeros((2, 2)), 1.0, u, m, diag,
+        np.zeros(2), np.zeros((2, 2)), 1.0, u, m, diag, touch,
     )  # fmt: skip
     hbt.close()
-    return diag[: int(np.count_nonzero(diag[:, 0]))]
+    diag = diag[: int(np.count_nonzero(diag[:, 0]))]
+    return (diag, steps[: int(out[0])], out[5]) if with_steps else diag

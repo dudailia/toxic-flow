@@ -79,6 +79,7 @@ def run_b0(
         bb, ba = depth.best_bid_tick, depth.best_ask_tick
         position = hbt.position(0)
         mid, both = np.nan, False
+        bid_t, ask_t, n_cancel = np.nan, np.nan, 0
         if np.isfinite(depth.best_bid) and np.isfinite(depth.best_ask) and bb < ba:
             mid = (depth.best_bid + depth.best_ask) / 2.0
             if order_qty == 0.0:
@@ -87,10 +88,12 @@ def run_b0(
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
             out[7] = max(out[7], abs(round(position / order_qty)))
             both = both_resting(hbt)
-            next_id, n_buy, n_sell = place_quotes(
+            next_id, n_buy, n_sell, n_cancel = place_quotes(
                 hbt, bid_tick, ask_tick, want_bid, want_ask, order_qty, next_id,
                 round(position / order_qty), max_lots,
             )  # fmt: skip
+            bid_t = bid_tick if want_bid else np.nan
+            ask_t = ask_tick if want_ask else np.nan
             out[6] = max(out[6], n_buy, n_sell)
             out[8] = now
         if n_steps < len(steps):
@@ -99,6 +102,9 @@ def run_b0(
             steps[n_steps].position = position
             steps[n_steps].balance = hbt.state_values(0).balance
             steps[n_steps].both_quoted = both
+            steps[n_steps].bid_tick, steps[n_steps].ask_tick = bid_t, ask_t
+            steps[n_steps].best_bid_tick, steps[n_steps].best_ask_tick = bb, ba
+            steps[n_steps].cancels = n_cancel
             n_steps += 1
     out[0] = n_steps
     out[5] = order_qty
