@@ -879,3 +879,7 @@ run (configs/runs/mde_train_draft.yaml, committed). Under the draft choice its s
 construction (Q47). To finish: free a few GB (or decide Q46), clear results/9eaa1b3d693c,
 rerun tests/canary/run_c2.py configs/runs/canaries_val_draft.yaml, run
 mde_train_draft.yaml, then scripts/m4_draft.py report.
+
+Resumed on Ilia's answer ("Resume now"): 2025-03-01's cached parts evicted (free disk
+11.97 to 12.89 GB), the partial canary run's config copy (identical to the config)
+committed, and the canary run restarted from the start with the 12 GB watchdog.
