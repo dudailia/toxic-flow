@@ -117,7 +117,10 @@ def _summary():
          "fills": 100, "traded_notional": 1e6, "break_even_fee_bps": v,
          "mean_markout_1s_bps": v, "mean_markout_10s_bps": v, "mean_markout_60s_bps": v}
         for q in ("risk_averse", "power3", "power2", "log") for lat in ("low", "high")
-        for lab, vals in (("B1", [0.0] * 12), ("B2", [0.0] * 12), ("B2b", [0.0] * 12), ("B3", d))
+        for lab, vals in (("B1", [0.0] * 12), ("B2", [0.0] * 12), ("B2b", [0.0] * 12), ("B3", d),
+                          ("C1", [0.0] * 12), ("C2", [2.0] * 12),
+                          *((f"{r}_s{k}", list(d * k / 10)) for r in ("R1", "R_B3", "R_B2b")
+                            for k in (1, 2, 3)))
         for day, v in zip(days, vals, strict=True)
     ]  # fmt: skip
     meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "t", "n_train_days": 12, "n_val_days": 6}
@@ -128,9 +131,30 @@ def test_figures_and_the_one_page_pdf_come_from_the_summary(tmp_path):
     # AC6.2 and the per-day plot of D_i in section 8, from summary.json only.
     from figures import build_figures
 
-    paths = build_figures(_summary(), tmp_path)
+    s = _summary()
+    template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
+    (tmp_path / "s.json").write_text(json.dumps({k: v for k, v in s.items()
+                                                 if not isinstance(v, dict)}))  # fmt: skip
+    page = build(template, tmp_path / "s.json", tmp_path / "paper.md", PRE_TEST).read_text()
+    paths = build_figures(s, tmp_path, page)
     assert {p.name for p in paths} == {"fig_daily_d.svg", "fig_cells.svg", "summary.pdf"}
-    pdf = (tmp_path / "summary.pdf").read_bytes()
+    assert one_page_count(tmp_path / "summary.pdf") == 1
+
+
+def one_page_count(path: Path) -> int:
     import re
 
-    assert pdf.startswith(b"%PDF") and len(re.findall(rb"/Type\s*/Page(?!s)", pdf)) == 1
+    pdf = path.read_bytes()
+    assert pdf.startswith(b"%PDF")
+    return len(re.findall(rb"/Type\s*/Page(?!s)", pdf))
+
+
+def test_the_draft_pdf_is_one_page_with_the_same_paragraphs_as_the_page(tmp_path):
+    from figures import one_page, page_text
+
+    template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
+    draft = build(template, None, tmp_path / "draft.md", PRE_TEST, draft=True).read_text()
+    _, paras = page_text(draft)
+    assert "{{h1_statement}}" in paras and "{{canary_statement}}" in paras
+    assert all(p in " ".join(draft.split()) for p in paras if not p.isupper())
+    assert one_page_count(one_page(draft, tmp_path / "d.pdf", None)) == 1
