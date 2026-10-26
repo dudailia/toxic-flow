@@ -59,6 +59,12 @@ the leakage audit found that R starts more pulled runs than the signals do (1.3 
 many as B3 and 23.7 times as many as B2b; docs/M4_v2_draft.md), and before any test-day
 data was downloaded. They are exploratory and change no pass rule.
 
+The fill-hold control F (sections 7 and 10) was added on 2026-10-26 by Ilia Duda, after the
+leakage audit of the run-length run found that many of B3's pulled runs start just after
+our own fill on that side, when pulling costs no queue place (docs/audit_run_length.md),
+and before any test-day data was downloaded. Its hold rule was committed before F was run
+on any day. It is exploratory and changes no pass rule.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -317,6 +323,8 @@ Exploratory, same statistic, reported with intervals and labelled exploratory:
 - B3 against RL_B3 and B2b against RL_B2b: the same, against controls matched on the
   number of pulled runs on each day as well as the rate (section 10), 3 seeds, the
   control's day value being the mean over seeds. Added 2026-10-26 (Design history).
+- B3 against F: does B3 do better than the simple rule of not rejoining the side just
+  filled, at B3's training-day pull rate (section 10)? Added 2026-10-26 (Design history).
 - Markout differences for the same pairs at each horizon.
 
 ## 8. Analysis
@@ -386,6 +394,14 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
   cell; the day value is the mean over seeds. B3 minus RL_B3 and B2b minus RL_B2b are
   reported as exploratory comparisons (section 7), with no pass rule. On test days they
   run in the second planned run with R, at the first run's realised r and e.
+- F, fill hold, exploratory (added 2026-10-26, Design history): B1 that, after each of our
+  fills, does not quote that side from the first step that knows of the fill until the
+  fill's exchange time plus h; those steps count as steps with that side marked toxic. h
+  is the value in {0.05, 0.075, 0.1, 0.125, 0.15, 0.2, 0.3, 0.5} s whose mean share of
+  such steps over the 12 training days, primary cell, is closest to B3's mean share at its
+  selected settings there (run 58c46cc49981); a tie goes to the shorter hold. F reads no
+  signal and has no seed. B3 minus F is reported as an exploratory comparison (section 7),
+  with no pass rule. On test days F runs in the second planned run, at the h chosen here.
 - C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
   5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
   at least one tick below; no magnitude rule. The only strategy allowed to see the future.

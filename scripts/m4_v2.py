@@ -20,6 +20,12 @@
       Writes the section "Run-length controls" after it (replacing it if present): B3 and
       B2b against RL, random pulls matched on the number of pulled runs as well as the rate
       (exploratory, sections 7 and 10, added 2026-10-26).
+  uv run python scripts/m4_v2.py fillhold --train results/<v2_fill_hold_train> \
+      --mde results/<v2_mde_train> [--val results/<v2_fill_hold_val> \
+      --runlength results/<v2_run_length_val>]
+      Writes the section "Fill-hold control F": the hold chosen on training days by B3's
+      pull rate there (configs.choose_hold) and, with --val, B3 against F on the
+      validation days.
 """
 
 import argparse
@@ -32,7 +38,7 @@ import yaml
 
 from toxic_flow.data.exclusions import excluded_days
 from toxic_flow.data.split_lock import load_splits
-from toxic_flow.engine.configs import quote_hours
+from toxic_flow.engine.configs import F_HOLDS_S, choose_hold, quote_hours
 from toxic_flow.eval import analysis
 from toxic_flow.eval.analysis import BEF
 from toxic_flow.eval.select import PRIMARY, candidate_table, select
@@ -370,13 +376,8 @@ def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
           "Runs " + ", ".join(x["config_hash"] for x in metas_t) + ". Exploratory; the selected B3 is p 0.05",
           "and the selected B2b p 0.25, so H1's pair compares different pull rates.", "",
           *matched_p(mt, selected)]  # fmt: skip
-    out = ROOT / "docs" / "M4_v2_draft.md"
-    text = out.read_text()
-    keep = text.split("\n" + RANDOM_HEAD)[0].rstrip("\n")
-    after = text.split("\n" + RUNLENGTH_HEAD)  # the run-length section stays after this one
-    tail = "\n" + RUNLENGTH_HEAD + after[1] if len(after) > 1 else ""
-    out.write_text(keep + "\n\n" + "\n".join(L) + "\n" + tail)
-    print(out, "C1 vs R1:", verdict, fmt(c1["mean"]), ci(c1["bootstrap_ci"]))
+    put_section(RANDOM_HEAD, L)
+    print(DRAFT, "C1 vs R1:", verdict, fmt(c1["mean"]), ci(c1["bootstrap_ci"]))
 
 
 RUNLENGTH_HEAD = "## Run-length controls (exploratory, sections 7 and 10, added 2026-10-26)"
@@ -433,11 +434,85 @@ def cmd_runlength(runlength: Path, random: Path) -> None:
           "order. So B3 - RL_B3 does not separate what the Hawkes direction knows from a simple rule",
           "such as not rejoining the side just hit, and part of it may be RL's extra cancels.",
           "B2b - RL_B2b is inconclusive. Six validation days."]  # fmt: skip
-    out = ROOT / "docs" / "M4_v2_draft.md"
-    keep = out.read_text().split("\n" + RUNLENGTH_HEAD)[0].rstrip("\n")
-    out.write_text(keep + "\n\n" + "\n".join(L) + "\n")
+    put_section(RUNLENGTH_HEAD, L)
     rl = analysis.compare(both, "B3", "RL_B3")
-    print(out, "B3 - RL_B3:", fmt(rl["mean"]), ci(rl["bootstrap_ci"]))
+    print(DRAFT, "B3 - RL_B3:", fmt(rl["mean"]), ci(rl["bootstrap_ci"]))
+
+
+FILLHOLD_HEAD = "## Fill-hold control F (exploratory, sections 7 and 10, added 2026-10-26)"
+DRAFT = ROOT / "docs" / "M4_v2_draft.md"
+SECTIONS = (RANDOM_HEAD, RUNLENGTH_HEAD, FILLHOLD_HEAD)  # their order after the report
+
+
+def cmd_fillhold(train: Path, mde: Path, val: Path | None, runlength: Path | None) -> None:
+    mt, (meta,) = load([train], ["v2_fill_hold_train"], "train")
+    mm, (meta_m,) = load([mde], ["v2_mde_train"], "train")
+    target = float(mm.filter(pl.col("label") == "B3")["toxic_share"].mean())
+    hours = quote_hours()
+    by = {h: mt.filter(pl.col("label") == f"F_h{h:g}") for h in F_HOLDS_S}
+    shares = {h: float(g["toxic_share"].mean()) for h, g in by.items()}
+    hold = choose_hold(shares, target)
+    approved = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text()).get("F", {})
+    L = [FILLHOLD_HEAD, "",
+         "Exploratory, not a test of section 7 or 10. F is B1 that does not quote a side from the",
+         "step that sees our fill on it until the fill's exchange time plus the hold h, and counts",
+         "those steps as pulled. h is the value below whose mean share of pulled steps over the",
+         f"{len(kept('train'))} training days, primary cell, is closest to B3's there ({fmt(target)}, run "
+         f"{meta_m['config_hash']}); a tie goes to the shorter hold.", "",
+         f"Run {meta['config_hash']} ({meta['config']}, commit {meta['commit'][:7]}), training days:", "",
+         "| Hold s | Toxic share | Toxic episodes an hour | Fills a day | Mean daily BEF bp |",
+         "|---|---|---|---|---|"]  # fmt: skip
+    for h, g in by.items():
+        L.append(f"| {h:g}{' (chosen)' if h == hold else ''} | {fmt(shares[h])} | "
+                 f"{g['toxic_episodes'].mean() / hours:.0f} | {g['fills'].mean():.0f} | {fmt(g[BEF].mean())} |")  # fmt: skip
+    L += ["", f"Chosen h = {hold:g} s. configs/selected.yaml F: {approved or 'missing'}"
+          f"{' (matches)' if approved.get('hold_s') == hold else ' (DIFFERS from the rule)'}."]  # fmt: skip
+    if val is not None:
+        mv, (meta_v,) = load([val], ["v2_fill_hold_val"], "val")
+        both = mv
+        if runlength is not None:
+            mr, _ = load([runlength], ["v2_run_length_val"], "val")
+            rl = analysis.with_seed_means(mr).filter(pl.col("strategy") == "RL")
+            both = pl.concat([mv, rl], how="diagonal_relaxed")
+        L += ["", f"Run {meta_v['config_hash']} ({meta_v['config']}, commit {meta_v['commit'][:7]}), primary cell, "
+              f"{len(kept('val'))} validation days" + (f"; against run {runlength.name}: "
+              f"{reproduced(mv, mr, ('B1', 'B3'))}. RL_B3 is from run {runlength.name}." if runlength else "."), "",
+              "| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |",
+              "|---|---|---|---|---|---|"]  # fmt: skip
+        for lab in ("B1", "B3", "F", *(("RL_B3",) if runlength else ())):
+            g = both.filter(pl.col("label") == lab)
+            L.append(f"| {lab} | {g['fills'].mean():.0f} | {fmt(g[BEF].mean())} | {fmt(g['mean_markout_1s_bps'].mean())} | "
+                     f"{fmt(g['toxic_share'].mean(), 4)} | {g['toxic_episodes'].mean() / hours:.0f} |")  # fmt: skip
+        L += [
+            "",
+            *CMP_HEAD,
+            cmp_row("B3 - F", analysis.compare(both, "B3", "F")),
+            cmp_row("F - B1", analysis.compare(both, "F", "B1")),
+        ]
+        if runlength:
+            L += [
+                cmp_row("F - RL_B3", analysis.compare(both, "F", "RL_B3")),
+                cmp_row("B3 - RL_B3 (as above)", analysis.compare(both, "B3", "RL_B3")),
+            ]
+        L += ["", "Limitation, read with these rows: F matches B3's share of pulled steps on the training",
+              "days, not on these days or in the number of pulled runs (both shown above). Every F pull",
+              "follows one of our fills; B3's also include pulls with an order resting, which cost the",
+              "queue place. Six validation days."]  # fmt: skip
+    put_section(FILLHOLD_HEAD, L)
+    print(DRAFT, "chosen hold", hold, "target", fmt(target))
+
+
+def put_section(head: str, lines: list[str]) -> None:
+    """Write one of the sections that follow the report in docs/M4_v2_draft.md, replacing
+    it if present and keeping the others, in the order of SECTIONS."""
+    text = DRAFT.read_text()
+    starts = sorted((text.index("\n" + h), h) for h in SECTIONS if "\n" + h in text)
+    base = text[: starts[0][0]] if starts else text
+    parts = {h: text[i + 1 : (starts[k + 1][0] if k + 1 < len(starts) else len(text))].rstrip("\n")
+             for k, (i, h) in enumerate(starts)}  # fmt: skip
+    parts[head] = "\n".join(lines)
+    body = "\n\n".join(parts[h] for h in SECTIONS if h in parts)
+    DRAFT.write_text(base.rstrip("\n") + "\n\n" + body + "\n")
 
 
 def main() -> None:
@@ -457,6 +532,11 @@ def main() -> None:
     w = sub.add_parser("runlength")
     w.add_argument("--runlength", type=Path, required=True)
     w.add_argument("--random", type=Path, required=True)
+    f = sub.add_parser("fillhold")
+    f.add_argument("--train", type=Path, required=True)
+    f.add_argument("--mde", type=Path, required=True)
+    f.add_argument("--val", type=Path)
+    f.add_argument("--runlength", type=Path)
     a = p.parse_args()
     if a.cmd == "select":
         cmd_select(a.tune)
@@ -464,6 +544,8 @@ def main() -> None:
         cmd_random(a.random, a.canaries, a.tune)
     elif a.cmd == "runlength":
         cmd_runlength(a.runlength, a.random)
+    elif a.cmd == "fillhold":
+        cmd_fillhold(a.train, a.mde, a.val, a.runlength)
     else:
         cmd_report(a.train_b, a.tune, a.canaries, a.mde)
 
