@@ -153,7 +153,10 @@ Build:
 - eval/markouts.py: per-fill markouts at 1 s, 10 s, 60 s.
 
 Acceptance:
-- AC2.1 results exist for B0 and B1 on 12 train days in all 8 cells.
+- AC2.1 results exist for B0 and B1 on 12 train days in all 8 cells. Under v2, AC2.1 and
+  AC2.4 read the v2 B0 and B1 run (configs/runs/v2_train.yaml) only, so v1 rows with the
+  same labels cannot stand in for it, and AC2.4 covers B0 as well as B1 (Ilia,
+  2026-10-26).
 - AC2.2 PnL reconciles: cash change plus inventory times end mid equals gross PnL, per
   day, to 1e-6 USDT.
 - AC2.3 fee equivalence: on one day, net PnL from hftbacktest run with its own maker fee
@@ -162,12 +165,20 @@ Acceptance:
   day and latency for B1; a tie passes, since the purpose is that risk-averse is never more
   optimistic than the others (Ilia, Q42, 2026-10-24; was "the fewest fills of the four").
   If not, stop: the pessimistic reference is not pessimistic.
-- AC2.5 B0 h and B1 gamma and estimation window chosen by the pre-registered rule and
-  written to configs/selected.yaml with the training-day table behind the choice.
+- AC2.5 v2 B0 and B1 have no parameters, so nothing is chosen on training days:
+  configs/selected.yaml lists B0 and B1 with no parameters, and results exist for v2 B0
+  and B1 on the 12 training days in all 8 cells (configs/runs/v2_train.yaml). The v1
+  choice (B0 h = 13, GLFT gamma 0.4 with a 10-minute window, run ccbf1a18e770) stays in
+  the git history of configs/selected.yaml and is reported in docs/exploratory/glft.md.
+  Revised after the v2 decision of 2026-10-25 (Ilia approved the text on 2026-10-26).
+  Was: "B0 h and B1 gamma and estimation window chosen by the pre-registered rule and
+  written to configs/selected.yaml with the training-day table behind the choice."
 - AC2.6 layering test passes: no import path from strategies or signals into eval.
 
 Viva topics: derive the GLFT half-spread and skew on a whiteboard; why markouts belong
-in eval only; what the risk-averse model assumes about cancellations.
+in eval only; what the risk-averse model assumes about cancellations; why a quote that
+joins the touch loses about 0.93 bp per unit of traded notional before fees
+(docs/M4_diagnosis.md, item 5).
 
 ## M3: Signals, Hawkes fit, canaries
 
