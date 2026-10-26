@@ -1,28 +1,39 @@
 # M4 v2: overlay tuning, canaries and MDE (draft for Ilia's review)
 
-Draft. Nothing here is written into PREREGISTRATION.md or configs/selected.yaml; every
-[TBD] there is unchanged. All numbers come from the runs named below, through
+Draft for Ilia's review. Nothing here is written into PREREGISTRATION.md or
+configs/selected.yaml yet. All numbers come from the runs named below, through
 scripts/m4_v2.py. Training and validation days only; no test day was loaded.
 
 Reading (written by hand from the tables below):
 - AC4.2: the v2 oracle C2 beats B1 by 2.10 bp a day (bootstrap [1.92, 2.30], 6 of 6 days),
   far above 3 x MDE (0.069 bp). The harness turns information into PnL on this base.
   C2's own mean BEF is +1.16 bp, below the 2 bp standard maker fee.
-- AC4.3 fails narrowly: C1 - B1 = -0.009 bp (bootstrap [-0.013, -0.006], 0 of 6 days
-  above 0), so the interval excludes 0. C1 is worse than B1, not better, which is not
-  the pattern a leak would give. The leakage audit found no leak and a likely mechanism:
-  shuffling removes the runs of same-side market orders (63 to 65% of next orders share
-  the last one's side), so |u| is rarely extreme and C1 marks a side toxic on 1.3% of
-  steps against B3's 4.1% with the same threshold; and fills on a side within 5 s after
-  a pull mark out worse (-0.917 against -0.900 bp at 10 s), as a cancelled quote rejoins
-  at the back of the queue. So pulling has a cost even without information, and with
-  day-to-day spread this small the interval moves off 0. Section 10's sentence "C1 steps
-  back about as often as B3" does not hold under v2 (Q53). C1 - B3 (-0.013 bp) does not
-  show that the signs carry what B3 uses, since C1 pulls a third as often and B3 - B1
-  itself includes 0. The generated sentence at the end ("the signal's gain does not
-  depend on event signs") is v1 wording written for a C1 that beats B1 and does not
-  describe this result. The test that would separate the two readings, not run: B1 with
-  random pulls on 1.3% and 4.1% of steps, and C1 with three more seeds.
+- AC4.3 as first written fails narrowly: C1 - B1 = -0.009 bp (bootstrap [-0.013, -0.006],
+  0 of 6 days above 0). The leakage audit found no leak and a mechanism: shuffling removes
+  the runs of same-side market orders, so C1 marks a side toxic on 1.3% of steps against
+  B3's 4.1% with the same threshold, and a pulled quote rejoins at the back of the queue,
+  so pulling costs something even without information. On 2026-10-26 Ilia revised the
+  rule (Q53, PREREGISTRATION.md Design history): C1 is judged against R1, B1 that pulls a
+  random side at C1's realised rate on each day, 3 seeds. That result is in the section
+  "Random-pull controls" below; both are reported.
+- AC4.3 as revised passes: C1 - R1 = +0.0009 bp (bootstrap [-0.0023, 0.0038], t
+  [-0.0036, 0.0053], 3 of 6 days above 0), and each seed alone also includes 0. R1 loses
+  0.0099 bp a day to B1 (bootstrap [-0.0119, -0.0079]), about what C1 loses, so random
+  pulls at C1's rate account for C1's gap to B1. C1 and R1 also pull in similar runs
+  (438 and 459 runs of one toxic side an hour).
+- Exploratory, not tests: B3 beats random pulls at its own rate by 0.028 bp (bootstrap
+  [0.023, 0.035], 6 of 6 days) and B2b beats its own by 0.062 bp ([0.030, 0.101], 6 of
+  6). These overstate what the signals add, because the random controls pull in shorter
+  runs, so they give up queue place more often: R_B3 starts 1,452 runs an hour against
+  B3's 1,094, and R_B2b 8,017 against B2b's 338. A control matched on run length as well
+  was not run. At matched p (K pull, magnitude off, B2b at tau 5 s), B3 - B2b is -0.001 bp
+  at p 5% (interval includes 0) and negative beyond it (-0.027, -0.063 and -0.078 bp at
+  10%, 25% and 50%; the bootstrap interval excludes 0 at all three, the t interval at 10%
+  and 25% only), so the fitted Hawkes signal
+  did no better than the decay-weighted count at any matched pull rate on these days.
+- Q52: C4 at beta x 10 marks 46.0% of training-day steps at p = 50%, not 50%, because its
+  intensity returns to baseline between events and |u| ties there. B3 was selected at
+  p = 5%, so C4 runs at p = 5% and the tie at 50% affects no result.
 - C4: the slower wrong decay (beta x 0.1) beat B3, +0.0086 bp (bootstrap [0.0021,
   0.0154], 5 of 6 days), with B3's p and K chosen on these same days; the faster one
   (x 10) did worse. The generated text says only "differed".
@@ -316,3 +327,70 @@ C3 is B3 at zero latency in the risk-averse queue model.
 - C4, matches B3 within the interval: {'C4_x0.1': False, 'C4_x10': False}.
 
 Statement from eval/analysis.canaries: The signal's gain does not depend on event signs, so it is not order-flow information. Primary result reported but not interpreted. C2, the oracle, beat B1 by 2.10 bp, more than 3 times the MDE. C3, zero latency, was above B3 at every non-zero latency on the mean. C4_x0.1 differed from B3; C4_x10 differed from B3.
+
+## Random-pull controls (section 10, C1 rule revised 2026-10-26; exploratory comparisons)
+
+Run c274b2def28e (configs/runs/v2_random_pulls_val.yaml, commit e00de09), primary cell, 6 validation days. R is B1 that marks a side toxic at each 100 ms step with
+probability r and pulls it, the side chosen at random; r on each day is the realised toxic
+share of C1 (R1), B3 (R_B3) or B2b (R_B2b) in run 5d27bc8ae820. Three seeds each; the bare
+label (R1) is the mean over the seeds of each day's value. B1, C1, B3 and B2b run again in
+this run so each comparison is within one run; against run 5d27bc8ae820: identical fills on every day, largest BEF difference 0.0e+00 bp.
+
+| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |
+|---|---|---|---|---|---|
+| B1 | 39004 | -0.9429 | -0.7063 | 0.0000 | 0 |
+| C1 | 38095 | -0.9519 | -0.7133 | 0.0129 | 438 |
+| R1 | 38263 | -0.9527 | -0.7143 | 0.0128 | 459 |
+| R1_s1 | 38269 | -0.9539 | -0.7146 | 0.0129 | 460 |
+| R1_s2 | 38244 | -0.9530 | -0.7143 | 0.0128 | 458 |
+| R1_s3 | 38276 | -0.9514 | -0.7141 | 0.0128 | 457 |
+| B3 | 31958 | -0.9385 | -0.7015 | 0.0413 | 1094 |
+| R_B3 | 37059 | -0.9663 | -0.7252 | 0.0412 | 1452 |
+| R_B3_s1 | 37083 | -0.9674 | -0.7251 | 0.0413 | 1455 |
+| R_B3_s2 | 37020 | -0.9668 | -0.7254 | 0.0412 | 1449 |
+| R_B3_s3 | 37074 | -0.9646 | -0.7251 | 0.0412 | 1450 |
+| B2b | 32597 | -0.9330 | -0.7129 | 0.2562 | 338 |
+| R_B2b | 32518 | -0.9952 | -0.7527 | 0.2561 | 8017 |
+| R_B2b_s1 | 32548 | -0.9929 | -0.7529 | 0.2562 | 8024 |
+| R_B2b_s2 | 32495 | -0.9922 | -0.7531 | 0.2561 | 8015 |
+| R_B2b_s3 | 32510 | -1.0006 | -0.7520 | 0.2559 | 8011 |
+
+### C1 against R1 (the section 10 pass rule since 2026-10-26)
+
+| Comparison | Days | Mean bp | Bootstrap 95% | t 95% | Days > 0 | Dropped (no fills) |
+|---|---|---|---|---|---|---|
+| C1 - R1 (pass: interval includes 0) | 6 | 0.0009 | [-0.0023, 0.0038] | [-0.0036, 0.0053] | 3 | none |
+| C1 - B1 (the rule first written, reported) | 6 | -0.0090 | [-0.0126, -0.0055] | [-0.0142, -0.0038] | 0 | none |
+| C1 - B3 (descriptive) | 6 | -0.0134 | [-0.0214, -0.0070] | [-0.0237, -0.0031] | 0 | none |
+| C1 - R1_s1 (one seed) | 6 | 0.0020 | [-0.0009, 0.0052] | [-0.0025, 0.0066] | 3 | none |
+| C1 - R1_s2 (one seed) | 6 | 0.0011 | [-0.0013, 0.0036] | [-0.0026, 0.0048] | 3 | none |
+| C1 - R1_s3 (one seed) | 6 | -0.0005 | [-0.0047, 0.0033] | [-0.0064, 0.0054] | 4 | none |
+| R1 - B1 (the cost of random pulls at C1's rate) | 6 | -0.0099 | [-0.0119, -0.0079] | [-0.0129, -0.0069] | 0 | none |
+
+- AC4.3 as revised, the C1 interval against R1 includes 0: passes.
+- Statement from eval/analysis.canaries on this run: C1, shuffled signs, did not differ detectably from R1.
+
+### Exploratory: the selected overlays against random pulls at their own rates
+
+Exploratory, not a test of section 7 or 10. Reported in the paper as exploratory.
+
+| Comparison | Days | Mean bp | Bootstrap 95% | t 95% | Days > 0 | Dropped (no fills) |
+|---|---|---|---|---|---|---|
+| B3 - R_B3 | 6 | 0.0278 | [0.0227, 0.0351] | [0.0186, 0.0370] | 6 | none |
+| B2b - R_B2b | 6 | 0.0622 | [0.0298, 0.1007] | [0.0115, 0.1128] | 6 | none |
+| R_B3 - B1 | 6 | -0.0234 | [-0.0286, -0.0189] | [-0.0305, -0.0163] | 0 | none |
+| R_B2b - B1 | 6 | -0.0524 | [-0.0730, -0.0346] | [-0.0795, -0.0252] | 0 | none |
+
+### Exploratory: B3 against B2b at matched p
+
+Runs 0bd4181a312a, 9e93e4415b6b. Exploratory; the selected B3 is p 0.05
+and the selected B2b p 0.25, so H1's pair compares different pull rates.
+
+Tuning runs, primary cell; K pull, magnitude rule off, B2b at tau 5 s.
+
+| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share |
+|---|---|---|---|---|---|---|---|---|
+| 0.05 | -0.0010 | [-0.0067, 0.0049] | [-0.0093, 0.0073] | 2 | -0.9385 | -0.9375 | 0.041 | 0.042 |
+| 0.1 | -0.0273 | [-0.0382, -0.0153] | [-0.0438, -0.0108] | 0 | -0.9604 | -0.9331 | 0.087 | 0.095 |
+| 0.25 | -0.0627 | [-0.0947, -0.0322] | [-0.1072, -0.0183] | 0 | -0.9958 | -0.9330 | 0.228 | 0.256 |
+| 0.5 | -0.0781 | [-0.1398, -0.0217] | [-0.1625, 0.0064] | 1 | -1.0304 | -0.9523 | 0.464 | 0.517 |
