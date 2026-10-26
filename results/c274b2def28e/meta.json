@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_random_pulls_val.yaml",
+  "config_hash": "c274b2def28e",
+  "commit": "e00de09f2e50bb4ae5a2105b871947f4b26d9b23",
+  "started_at": "2026-10-26T10:32:42+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_random_pulls_val",
+  "finished_at": "2026-10-26T11:15:49+00:00"
+}
