@@ -31,7 +31,15 @@ Reading (written by hand from the tables below):
   at p 5% (interval includes 0) and negative beyond it (-0.027, -0.063 and -0.078 bp at
   10%, 25% and 50%; the bootstrap interval excludes 0 at all three, the t interval at 10%
   and 25% only), so the fitted Hawkes signal
-  did no better than the decay-weighted count at any matched pull rate on these days.
+  did no better than the decay-weighted count at any matched pull rate on these days. B3
+  marks in shorter runs and so cancels more often (2,529 against 2,090 an hour at 5%, 8,809
+  against 1,992 at 50%), so part of that deficit may be the cost of re-queuing rather than
+  worse information.
+- A leakage audit of the random-pull run (2026-10-26) found no leak and reproduced every
+  number above from metrics.parquet: R reads no market data, its series gives exactly one
+  point per engine step (the count of pulled runs matches independent draws to 0.2%), and
+  B1, C1, B3 and B2b equal the canary run. It ranked the run-length mismatch first; the
+  limitation is now printed next to both exploratory tables.
 - Q52: C4 at beta x 10 marks 46.0% of training-day steps at p = 50%, not 50%, because its
   intensity returns to baseline between events and |u| ties there. B3 was selected at
   p = 5%, so C4 runs at p = 5% and the tie at 50% affects no result.
@@ -382,6 +390,14 @@ Exploratory, not a test of section 7 or 10. Reported in the paper as exploratory
 | R_B3 - B1 | 6 | -0.0234 | [-0.0286, -0.0189] | [-0.0305, -0.0163] | 0 | none |
 | R_B2b - B1 | 6 | -0.0524 | [-0.0730, -0.0346] | [-0.0795, -0.0252] | 0 | none |
 
+Limitation, read with these rows: R pulls independently at each step, so it starts a new
+pulled run far more often than a signal whose marks persist (toxic episodes an hour in the
+table above), and each new run gives up the queue place once. B3 - R_B3 and B2b - R_B2b
+therefore mix what the signal chooses with how often it pulls; for B2b the gap in runs is
+about 24 times, so its difference overstates the signal's part the most, and the order of
+the two differences may not hold under a control matched on run length as well. R1 and
+C1 start about as many runs (C1 a few percent fewer), so C1 - R1 is close to matched.
+
 ### Exploratory: B3 against B2b at matched p
 
 Runs 0bd4181a312a, 9e93e4415b6b. Exploratory; the selected B3 is p 0.05
@@ -389,9 +405,15 @@ and the selected B2b p 0.25, so H1's pair compares different pull rates.
 
 Tuning runs, primary cell; K pull, magnitude rule off, B2b at tau 5 s.
 
-| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share |
-|---|---|---|---|---|---|---|---|---|
-| 0.05 | -0.0010 | [-0.0067, 0.0049] | [-0.0093, 0.0073] | 2 | -0.9385 | -0.9375 | 0.041 | 0.042 |
-| 0.1 | -0.0273 | [-0.0382, -0.0153] | [-0.0438, -0.0108] | 0 | -0.9604 | -0.9331 | 0.087 | 0.095 |
-| 0.25 | -0.0627 | [-0.0947, -0.0322] | [-0.1072, -0.0183] | 0 | -0.9958 | -0.9330 | 0.228 | 0.256 |
-| 0.5 | -0.0781 | [-0.1398, -0.0217] | [-0.1625, 0.0064] | 1 | -1.0304 | -0.9523 | 0.464 | 0.517 |
+| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share | B3 cancels an hour | B2b cancels an hour | B3 / B2b notional |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.05 | -0.0010 | [-0.0067, 0.0049] | [-0.0093, 0.0073] | 2 | -0.9385 | -0.9375 | 0.041 | 0.042 | 2529 | 2090 | 0.837 |
+| 0.1 | -0.0273 | [-0.0382, -0.0153] | [-0.0438, -0.0108] | 0 | -0.9604 | -0.9331 | 0.087 | 0.095 | 3499 | 2119 | 0.786 |
+| 0.25 | -0.0627 | [-0.0947, -0.0322] | [-0.1072, -0.0183] | 0 | -0.9958 | -0.9330 | 0.228 | 0.256 | 6494 | 2142 | 0.726 |
+| 0.5 | -0.0781 | [-0.1398, -0.0217] | [-0.1625, 0.0064] | 1 | -1.0304 | -0.9523 | 0.464 | 0.517 | 8809 | 1992 | 0.722 |
+
+Limitation, read with this table: at the same p the two signals mark in runs of different
+length, so B3 cancels and re-queues more often than B2b at every p, more so as p grows (cancels
+column), and part of B3's deficit at matched p may be that cost rather than worse
+information. B3 also trades less notional than B2b at every p (last column, all six
+days pooled).

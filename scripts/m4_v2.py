@@ -255,8 +255,8 @@ def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
         raise SystemExit("B3 and B2b differ in K or the magnitude rule; matched p is not defined")
     prim = mt.filter((pl.col("queue") == PRIMARY[0]) & (pl.col("latency") == PRIMARY[1]))
     L = [f"Tuning runs, primary cell; K {k}, magnitude rule {'on' if mg else 'off'}, B2b at tau {tau:g} s.", "",
-         "| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share |",
-         "|---|---|---|---|---|---|---|---|---|"]  # fmt: skip
+         "| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share | B3 cancels an hour | B2b cancels an hour | B3 / B2b notional |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|"]  # fmt: skip
     for p in (0.05, 0.10, 0.25, 0.50):
         rows = []
         for name, extra in (("B3", {}), ("B2b", {"tau_s": tau})):
@@ -275,7 +275,9 @@ def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
         g = {n: both.filter(pl.col("label") == n) for n in ("B3", "B2b")}
         L.append(f"| {p:g} | {fmt(c['mean'])} | {ci(c['bootstrap_ci'])} | {ci(c['t_ci'])} | {c['n_positive']} | "
                  f"{fmt(g['B3'][BEF].mean())} | {fmt(g['B2b'][BEF].mean())} | "
-                 f"{fmt(g['B3']['toxic_share'].mean(), 3)} | {fmt(g['B2b']['toxic_share'].mean(), 3)} |")  # fmt: skip
+                 f"{fmt(g['B3']['toxic_share'].mean(), 3)} | {fmt(g['B2b']['toxic_share'].mean(), 3)} | "
+                 f"{g['B3']['cancels_per_hour'].mean():.0f} | {g['B2b']['cancels_per_hour'].mean():.0f} | "
+                 f"{g['B3']['traded_notional'].sum() / g['B2b']['traded_notional'].sum():.3f} |")  # fmt: skip
     return L
 
 
@@ -319,10 +321,23 @@ def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
           cmp_row("B2b - R_B2b", analysis.compare(m, "B2b", "R_B2b")),
           cmp_row("R_B3 - B1", analysis.compare(m, "R_B3", "B1")),
           cmp_row("R_B2b - B1", analysis.compare(m, "R_B2b", "B1")),
+          "",
+          "Limitation, read with these rows: R pulls independently at each step, so it starts a new",
+          "pulled run far more often than a signal whose marks persist (toxic episodes an hour in the",
+          "table above), and each new run gives up the queue place once. B3 - R_B3 and B2b - R_B2b",
+          "therefore mix what the signal chooses with how often it pulls; for B2b the gap in runs is",
+          "about 24 times, so its difference overstates the signal's part the most, and the order of",
+          "the two differences may not hold under a control matched on run length as well. R1 and",
+          "C1 start about as many runs (C1 a few percent fewer), so C1 - R1 is close to matched.",
           "", "### Exploratory: B3 against B2b at matched p", "",
           "Runs " + ", ".join(x["config_hash"] for x in metas_t) + ". Exploratory; the selected B3 is p 0.05",
           "and the selected B2b p 0.25, so H1's pair compares different pull rates.", "",
-          *matched_p(mt, selected)]  # fmt: skip
+          *matched_p(mt, selected), "",
+          "Limitation, read with this table: at the same p the two signals mark in runs of different",
+          "length, so B3 cancels and re-queues more often than B2b at every p, more so as p grows (cancels",
+          "column), and part of B3's deficit at matched p may be that cost rather than worse",
+          "information. B3 also trades less notional than B2b at every p (last column, all six",
+          "days pooled)."]  # fmt: skip
     out = ROOT / "docs" / "M4_v2_draft.md"
     text = out.read_text()
     keep = text.split("\n" + RANDOM_HEAD)[0].rstrip("\n")
