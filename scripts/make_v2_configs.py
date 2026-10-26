@@ -8,9 +8,11 @@
   uv run python scripts/make_v2_configs.py random results/<v2_canaries_val>
       random-pull controls; the rates are the realised toxic shares of C1, B3 and B2b in
       that run, primary cell, per day
-  uv run python scripts/make_v2_configs.py runlength results/<v2_canaries_val>
+  uv run python scripts/make_v2_configs.py runlength results/<v2_random_pulls_val>
       run-length controls RL_B3 and RL_B2b (exploratory): B3's and B2b's realised toxic
-      shares and numbers of toxic episodes in that run, primary cell, per day
+      shares and numbers of toxic episodes in that run, primary cell, per day. It reads the
+      random-pull run, not the canary run, because the canary run predates the
+      toxic_episodes column; B3 and B2b in the random-pull run reproduce the canary run.
   uv run python scripts/make_v2_configs.py confirmatory   needs configs/selected.yaml
   uv run python scripts/make_v2_configs.py controls results/<confirmatory>
       M5, the two planned test-day runs (section 10): the grid on the kept test days, then
@@ -85,8 +87,8 @@ def main(kind: str) -> None:
         write(configs.v2_random_pulls(const, th, selected, rates, kept("val")))
     elif kind == "runlength":
         run = Path(sys.argv[2])
-        rates = realised_rates(run, "v2_canaries_val")
-        runs = realised_rates(run, "v2_canaries_val", "toxic_episodes")
+        rates = realised_rates(run, "v2_random_pulls_val")
+        runs = realised_rates(run, "v2_random_pulls_val", "toxic_episodes")
         episodes = {k: runs[k] for k in ("B3", "B2b")}
         write(configs.v2_run_length(const, th, selected, rates, episodes, kept("val")))
     elif kind in ("confirmatory", "controls"):

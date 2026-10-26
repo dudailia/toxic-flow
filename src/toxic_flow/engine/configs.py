@@ -350,7 +350,7 @@ def v2_run_length(constants: dict, thresholds: dict, selected: dict, rates: dict
                   episodes: dict, days) -> dict:  # fmt: skip
     """v2 M4 on validation days, primary cell, exploratory: RL_B3 and RL_B2b with B1, B3
     and B2b at the selected settings in the same run. rates and episodes map B3 and B2b to
-    {day: realised toxic share} and {day: toxic episodes} from the canary run."""
+    {day: realised toxic share} and {day: toxic episodes} from a committed run."""
     _check(constants)
     _check_thresholds(thresholds)
     sel = lambda n: _v2_selected(n, constants, thresholds, selected)  # noqa: E731
