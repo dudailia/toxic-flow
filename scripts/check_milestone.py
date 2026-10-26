@@ -18,6 +18,7 @@ import sys
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
+import polars as pl
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -226,7 +227,419 @@ def m0(r: Results) -> None:
     r.add("AC0.7 make check passes", proc.returncode == 0, last[-1] if last else "")
 
 
-MILESTONES = {"M0": m0}
+def m1(r: Results) -> None:
+    splits = check_splits(r)
+    days = splits["train"] + splits["val"]
+    test_dates = set(splits["test"])
+    entries = json.loads(read("data/manifest.json") or '{"files": []}')["files"]
+    have = {(e.get("date"), e.get("data_type")) for e in entries}
+    missing = [(d, t) for d in days for t in DATA_TYPES if (d, t) not in have]
+    r.add("AC1.1 manifest has 36 train and val files", not missing, f"missing {len(missing)}")
+    r.add("AC1.1 no test date in manifest", not any(e.get("date") in test_dates for e in entries))
+
+    slow = read("tests/unit/test_raw_hashes.py")
+    r.add("AC1.2 slow re-hash test exists", "pytest.mark.slow" in slow and "sha256" in slow)
+
+    quality = ROOT / "docs" / "data_quality"
+    reports = {d: quality / f"{d}.json" for d in days}
+    r.add(
+        "AC1.3 data-quality file per day",
+        all(p.exists() for p in reports.values()),
+        f"missing {[d for d, p in reports.items() if not p.exists()][:4]}",
+    )
+    flagged = {}
+    for d, p in reports.items():
+        if p.exists():
+            q = json.loads(p.read_text())
+            rules = [n for n in (1, 2, 3) if q.get(f"exclusion_rule_{n}")]
+            if rules:
+                flagged[d] = rules
+    listed = read("docs/data_quality/EXCLUSIONS.md")
+    # The closing "Days assessed so far" line names every assessed day; only the lines
+    # above it list excluded days.
+    excluded_part = listed.split("Days assessed")[0]
+    listed_days = set(re.findall(r"\b(20\d\d-\d\d-\d\d)\b", excluded_part))
+    ok = all(
+        d in listed_days and all(f"rule {n}" in listed for n in rules)
+        for d, rules in flagged.items()
+    )
+    r.add(
+        "AC1.3 excluded days listed with rule numbers",
+        ok and listed_days <= set(flagged),
+        f"flagged {flagged}, listed {sorted(listed_days)}",
+    )
+
+    tests = read("tests/unit/test_market_orders.py")
+    r.add(
+        "AC1.4 collapse unit tests exist",
+        "def test_ac1_4_three_prints" in tests and "def test_ac1_4_opposite_sides" in tests,
+    )
+
+    want = ["exch_ts", "local_ts", "side", "size", "vwap", "n_prints", "levels"]
+    bad = []
+    for d in days:
+        p = ROOT / "data" / "events" / f"{d}.parquet"
+        if not p.exists() or pl.read_parquet_schema(p) != dict(
+            zip(
+                want,
+                [pl.Int64, pl.Int64, pl.String, pl.Float64, pl.Float64, pl.Int64, pl.Int64],
+                strict=True,
+            )
+        ):
+            bad.append(d)
+    r.add("AC1.5 event table per day with the schema", not bad, f"bad {bad[:4]}")
+
+    sized = [
+        e
+        for e in entries
+        if e.get("date") in days and isinstance(e.get("bytes"), int) and e["bytes"] > 0
+    ]
+    r.add(
+        "AC1.6 bytes recorded for all 36 train and val files",
+        len(sized) == 2 * len(days),
+        f"{len(sized)}",
+    )
+
+
+def m3(r: Results) -> None:
+    check_splits(r)
+    leak = read("tests/leakage/test_future_perturbation.py")
+    r.add(
+        "AC3.1 perturbation test per signal in tests/leakage",
+        all(s in leak for s in ("ewma_at", "hawkes_signal", "ofi_signal")),
+    )
+    hawkes = read("tests/unit/test_hawkes.py")
+    r.add(
+        "AC3.2 online equals offline test exists",
+        "def test_ac3_2_" in hawkes and "rtol=1e-9" in hawkes,
+    )
+    proc = subprocess.run(
+        ["uv", "run", "pytest", "tests/unit/test_hawkes.py", "-m", "slow", "-q", "-k", "ac3_3"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    last = (proc.stdout + proc.stderr).strip().splitlines()
+    r.add("AC3.3 parameter recovery (slow) passes", proc.returncode == 0, last[-1] if last else "")
+    fit_text = read("docs/signals/train_constants.json")
+    br = json.loads(fit_text)["hawkes"].get("branching_ratio") if fit_text else None
+    r.add("AC3.4 fitted branching ratio below 1", br is not None and br < 1, f"{br}")
+    doc = read("docs/hawkes_fit.md")
+    r.add(
+        "AC3.5 docs/hawkes_fit.md has residuals and KS",
+        "## Time-rescaling diagnostics" in doc and "KS" in doc,
+    )
+    canary = ROOT / "tests" / "canary"
+    forward = re.compile(r"\bfuture_mid\b|\bforward_\w+")
+    leaks = [
+        p.relative_to(ROOT).as_posix()
+        for d in ("src/toxic_flow/strategies", "src/toxic_flow/signals")
+        for p in (ROOT / d).rglob("*.py")
+        if forward.search(p.read_text())
+    ]
+    r.add(
+        "AC3.6 oracle canary lives under tests/canary",
+        canary.exists() and any(canary.glob("test_*c2*.py")),
+    )
+    r.add("AC3.6 no strategy or signal file reads forward arrays", not leaks, str(leaks[:3]))
+
+
+M2_QUEUES = ("risk_averse", "power3", "power2", "log")
+M2_LATENCIES = ("low", "high")
+
+
+def study_runs(config: str) -> pl.DataFrame | None:
+    """Metrics of the non-smoke runs of configs/runs/<config>.yaml."""
+    frames = []
+    for p in sorted((ROOT / "results").glob("*/metrics.parquet")):
+        meta = json.loads((p.parent / "meta.json").read_text())
+        if meta.get("config") == f"configs/runs/{config}.yaml" and meta.get("label") != "smoke":
+            frames.append(pl.read_parquet(p))
+    return pl.concat(frames, how="diagonal_relaxed") if frames else None
+
+
+def every_run() -> pl.DataFrame | None:
+    """Metrics of every run, smoke included: the accounting must hold everywhere."""
+    frames = [pl.read_parquet(p) for p in sorted((ROOT / "results").glob("*/metrics.parquet"))]
+    return pl.concat(frames, how="diagonal_relaxed") if frames else None
+
+
+def m2(r: Results) -> None:
+    splits = check_splits(r)
+    train = splits["train"]
+    # AC2.1 and AC2.4 read the v2 B0 and B1 run only (SPEC.md, Ilia 2026-10-26): v1 rows
+    # carry the same labels and must not stand in for it.
+    runs = study_runs("v2_train")
+    have = set()
+    if runs is not None:
+        have = set(runs.select(["strategy", "day", "queue", "latency"]).iter_rows())
+    want = [
+        (s, d, q, lat)
+        for s in ("B0", "B1")
+        for d in train
+        for q in M2_QUEUES
+        for lat in M2_LATENCIES
+    ]
+    missing = [k for k in want if k not in have]
+    r.add(
+        "AC2.1 v2 B0 and B1 on 12 train days in all 8 cells",
+        not missing,
+        f"missing {len(missing)} of {len(want)}",
+    )
+
+    every = every_run()
+    if every is None:
+        r.add("AC2.2 PnL reconciles to 1e-6 USDT", False, "no results")
+    else:
+        gap = (
+            every["gross_pnl"]
+            - (every["engine_cash"] + every["engine_position"] * every["mark_mid"])
+        ).abs()
+        r.add(
+            "AC2.2 PnL reconciles to 1e-6 USDT",
+            bool((gap <= 1e-6).all()),
+            f"max gap {gap.max():.2e} over {len(gap)} rows",
+        )
+
+    proc = subprocess.run(
+        ["uv", "run", "pytest", "tests/unit/test_accounting.py", "-m", "slow", "-q", "-k", "ac2_3"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    last = (proc.stdout + proc.stderr).strip().splitlines()
+    # The test skips when 2024-01-01 is not converted; a skip proves nothing (2026-10-26).
+    ran = proc.returncode == 0 and "1 passed" in (last[-1] if last else "")
+    r.add("AC2.3 fee equivalence (slow) passes", ran, last[-1] if last else "")
+
+    bad = []
+    if runs is not None:
+        base = runs.filter(pl.col("strategy").is_in(["B0", "B1"]) & pl.col("day").is_in(train))
+        for (s, day, lat), g in base.group_by(["strategy", "day", "latency"]):
+            fills = dict(zip(g["queue"], g["fills"], strict=True))
+            ra = fills.get("risk_averse")
+            if ra is None or any(ra > fills[q] for q in M2_QUEUES[1:] if q in fills):
+                bad.append((s, day, lat))
+    r.add(
+        "AC2.4 risk-averse has no more fills than any other queue model, B0 and B1",
+        runs is not None and not missing and not bad,
+        f"bad {sorted(bad)[:4]}",
+    )
+
+    ac2_5_v2(r, train)
+
+    r.add(
+        "AC2.6 layering test in tests/leakage",
+        "def test_ac2_6_" in read("tests/leakage/test_layering.py"),
+    )
+
+
+def ac2_5_v2(r: Results, train: list[str]) -> None:
+    """v2: B0 and B1 have no parameters, so nothing is chosen. selected.yaml says so, and
+    v2 B0 and B1 ran on every training day in all 8 cells."""
+    sel = yaml.safe_load(read("configs/selected.yaml") or "{}") or {}
+    r.add(
+        "AC2.5 selected.yaml has v2 B0 and B1 with no parameters",
+        sel.get("B0") == {} and sel.get("B1") == {},
+        f"B0 {sel.get('B0')}, B1 {sel.get('B1')}",
+    )
+    m = study_runs("v2_train")
+    want = {
+        (s, q, lat, d)
+        for s in ("B0", "B1")
+        for q in M2_QUEUES
+        for lat in M2_LATENCIES
+        for d in train
+    }
+    have = set() if m is None else set(m.select("strategy", "queue", "latency", "day").iter_rows())
+    r.add(
+        "AC2.5 v2 B0 and B1 on every training day in all 8 cells",
+        want <= have,
+        f"missing {len(want - have)} of {len(want)}",
+    )
+
+
+def kept(days: list[str]) -> list[str]:
+    from toxic_flow.data.exclusions import excluded_days
+
+    return [d for d in days if d not in excluded_days(days)]
+
+
+def m4(r: Results) -> None:
+    from toxic_flow.eval import analysis
+    from toxic_flow.eval.select import candidate_table, select
+
+    splits = check_splits(r)
+    val, train = kept(splits["val"]), kept(splits["train"])
+    sel_file = ROOT / "configs" / "selected.yaml"
+    selected = yaml.safe_load(sel_file.read_text()) if sel_file.exists() else {}
+    halves = [study_runs(c) for c in ("v2_tune_val_a", "v2_tune_val_b")]
+    problems = []
+    if any(h is None for h in halves):
+        problems.append("needs the v2_tune_val_a and v2_tune_val_b runs")
+    else:
+        tune = pl.concat(halves, how="diagonal_relaxed")
+        for name in ("B2", "B2b", "B3"):
+            if name not in selected:
+                problems.append(f"{name}: no entry")
+                continue
+            try:
+                pick = select(candidate_table(tune, name, val), name)["params"]
+            except ValueError as e:
+                problems.append(f"{name}: {e}")
+                continue
+            if any(pick.get(k) != v for k, v in selected[name].items()):
+                problems.append(f"{name}: differs from the rule's choice {pick}")
+    r.add(
+        "AC4.1 selected.yaml has B2, B2b and B3 by the section 4 rule",
+        not problems,
+        "; ".join(problems) or "matches the rule on the validation days",
+    )
+
+    c2_id, c1_id = (
+        "AC4.2 C2 beats B1 by more than 3 x MDE",
+        "AC4.3 C1 interval against R1 includes 0",
+    )
+    can, mde_tr = study_runs("v2_canaries_val"), study_runs("v2_mde_train")
+    if can is None or mde_tr is None:
+        r.add(c2_id, False, "needs the v2_canaries_val and v2_mde_train runs")
+    else:
+        can = can.filter(pl.col("day").is_in(val))
+        mde_in = analysis.mde_inputs(
+            mde_tr.filter(pl.col("day").is_in(train)), can, SPLIT_SIZES["test"]
+        )
+        c2 = analysis.canaries(can, mde_in["mde_bp"]).get("C2", {})
+        r.add(
+            c2_id,
+            bool(c2.get("pass")),
+            f"gain {c2.get('mean', float('nan')):.3f} bp, 3 x MDE {3 * mde_in['mde_bp']:.3f} bp",
+        )
+    rnd = study_runs("v2_random_pulls_val")
+    if rnd is None:
+        r.add(c1_id, False, "needs the v2_random_pulls_val run")
+    else:
+        c1 = analysis.canaries(rnd.filter(pl.col("day").is_in(val)), float("nan")).get("C1", {})
+        r.add(
+            c1_id,
+            c1.get("rule") == "C1 - R1" and bool(c1.get("pass")),
+            f"{c1.get('rule')}: bootstrap interval {c1.get('bootstrap_ci')}",
+        )
+
+    tbd = read("PREREGISTRATION.md").count("[TBD")
+    lint = subprocess.run(
+        ["uv", "run", "pytest", "tests/test_writing.py", "-q"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    r.add(
+        "AC4.4 PREREGISTRATION.md has no [TBD] and passes the writing lint",
+        tbd == 0 and lint.returncode == 0,
+        f"{tbd} [TBD] left; writing lint exit {lint.returncode}",
+    )
+
+
+def tag_created() -> datetime | None:
+    out = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(ROOT),
+            "for-each-ref",
+            "refs/tags/prereg-v1",
+            "--format=%(creatordate:iso-strict)",
+        ],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return datetime.fromisoformat(out) if out else None
+
+
+def test_runs(test: list[str]) -> list[tuple[dict, list[str]]]:
+    """(meta, test days) for every non-smoke results directory that touches a test day."""
+    out = []
+    for p in sorted((ROOT / "results").glob("*/meta.json")):
+        meta = json.loads(p.read_text())
+        days = [str(d) for d in yaml.safe_load((p.parent / "config.yaml").read_text())["days"]]
+        if meta.get("label") != "smoke" and set(days) & set(test):
+            out.append((meta, sorted(set(days) & set(test))))
+    return out
+
+
+def m5(r: Results) -> None:
+    test = check_splits(r)["test"]
+    created = tag_created()
+    manifest = json.loads(read("data/manifest.json") or '{"files": []}')["files"]
+    entries = [e for e in manifest if e["date"] in test]
+    early = [
+        e["path"]
+        for e in entries
+        if created is None or datetime.fromisoformat(e["downloaded_at"]) <= created
+    ]
+    r.add(
+        "AC5.1 every test-day download is later than the tag",
+        bool(entries) and not early,
+        f"{len(entries)} test entries, {len(early)} not after the tag"
+        if created
+        else "no prereg-v1 tag",
+    )
+
+    runs = test_runs(test)
+    starts: dict[str, datetime] = {}
+    for meta, days in runs:
+        t = datetime.fromisoformat(meta["started_at"])
+        for d in days:
+            starts[d] = min(starts.get(d, t), t)
+    late = []
+    for d, t in starts.items():
+        # The first commit that names the day in EXCLUSIONS.md must precede its first run.
+        log = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(ROOT),
+                "log",
+                "--reverse",
+                "--format=%cI",
+                "-S",
+                d,
+                "--",
+                "docs/data_quality/EXCLUSIONS.md",
+            ],
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+        if not log or datetime.fromisoformat(log[0]) >= t:
+            late.append(d)
+    r.add(
+        "AC5.2 exclusion rules applied before any result on a test day",
+        bool(starts) and not late,
+        f"{len(starts)} test days with results, {len(late)} without an earlier exclusion record",
+    )
+
+    deviations = read("DEVIATIONS.md")
+    ordered = sorted(runs, key=lambda x: x[0]["started_at"])
+    # v2 plans two test-day runs (section 10): the grid, then the random-pull controls at
+    # its realised rates. The first run of each is planned; any other is a rerun.
+    planned = ("configs/runs/confirmatory.yaml", "configs/runs/confirmatory_controls.yaml")
+    firsts = {c: next((m["config_hash"] for m, _ in ordered if m["config"] == c), None)
+              for c in planned}  # fmt: skip
+    reruns = [m for m, _ in ordered if m["config_hash"] not in firsts.values()]
+    unlisted = [m["config_hash"] for m in reruns if m["config_hash"] not in deviations]
+    r.add(
+        "AC5.3 one confirmatory results directory; any rerun named in DEVIATIONS.md",
+        bool(runs) and not unlisted,
+        f"{len(runs)} test-day runs, {len(unlisted)} reruns not in DEVIATIONS.md",
+    )
+    audit = read("docs/audit_M5.md")
+    r.add(
+        "AC5.4 leakage-auditor report in docs/audit_M5.md",
+        bool(audit.strip()),
+        f"{len(audit)} characters",
+    )
+
+
+MILESTONES = {"M0": m0, "M1": m1, "M2": m2, "M3": m3, "M4": m4, "M5": m5}
 
 
 def main() -> int:
