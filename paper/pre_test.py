@@ -36,6 +36,7 @@ RUNS = {
     "v2_canaries_val": "5d27bc8ae820",
     "v2_mde_train": "58c46cc49981",
     "v2_random_pulls_val": "c274b2def28e",
+    "v2_run_length_val": "7ac2bbe74a19",
     "canaries_val_draft": "9eaa1b3d693c",  # v1 canaries (GLFT base)
     "diag_train_touch": "a582f2864e78",  # v1 B1 and the touch base, training days
     "diag_val": "4de702fe5d20",  # v1 B1 on validation days
@@ -193,6 +194,10 @@ def validation(out: dict) -> None:
     for lab in ("C1", "R1", "B3", "R_B3", "B2b", "R_B2b"):
         ep = m.filter(pl.col("label") == lab)["toxic_episodes"].mean() / hours
         out[f"pre_rp_runs_{lab.lower()}"] = f"{ep:,.0f}"
+    # RL: random pulls matched on the number of pulled runs as well (exploratory).
+    rl = analysis.with_seed_means(run("v2_run_length_val"))
+    for a, b in (("B3", "RL_B3"), ("B2b", "RL_B2b")):
+        put_compare(out, f"pre_rl_{a}_{b}".lower(), analysis.compare(rl, a, b))
 
 
 def matched_p(out: dict) -> None:

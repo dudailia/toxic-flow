@@ -1126,3 +1126,32 @@ Judgment calls: the PDF reprints chosen paragraphs of the built page rather than
 separate summary text, so the two cannot drift apart; the pre-test numbers are
 placeholders too, so no number in the paper is typed by hand; summary keys for the test
 day were added (C1 against R1, C2, H2 to H4, random pulls, the cell count).
+
+## Continued, 2026-10-26: approvals with Ilia, run-length control, SSD plan
+
+With Ilia at the keyboard, through his permission prompt:
+- Q14 lock applied (annotated tag, origin from configs/repo.yaml, same hash); the three
+  pending leakage tests moved into tests/leakage/; scripts/check_milestone.py has M1 to M5
+  (M0 21/21, M1 12/12, M2 11/11, M3 11/11, M4 8/8, M5 4/8 until the tag); AC0.5 walks
+  data/ through symlinks.
+- SPEC: AC2.5 for v2, AC2.1 and AC2.4 on v2_train only with B0 included, an M2 viva topic
+  added, AC6.1 counts any script-filled number from a committed results file, AC5.3's two
+  runs confirmed.
+
+Then, on Ilia's instruction to choose the best option on open questions: Q2, Q3, Q6, Q24,
+Q26, Q29 and Q30 confirmed as written (they state what the code runs); RL controls only
+for B3 and B2b, since C1 already starts 0.95 times as many runs as R1; RL also in the
+second test-day run, so the exploratory comparison is pre-registered and not only a
+validation-day result.
+
+- Run-length control RL (engine.run.run_length_pulls): a two-state chain matched per day
+  to the strategy's pull rate and number of pulled runs. Run 7ac2bbe74a19 on the
+  validation days: B3 - RL_B3 +0.0230 bp [0.0179, 0.0298], 6 of 6; B2b - RL_B2b +0.0165 bp
+  [-0.0084, 0.0423], 4 of 6. The matching inputs came from c274b2def28e, because the canary
+  run predates the toxic_episodes column; its B3 and B2b reproduce the canary run exactly.
+- docs/ssd_move.md and scripts/verify_raw.py for moving data/raw to an SSD; nothing moved.
+  Found on the way: git's `data/raw/` ignore pattern does not cover a symlink (changed to
+  `data/raw`), and AC0.5 would have skipped a linked data/raw (fixed, above).
+
+No test-day URL was requested, no tag was touched, nothing was downloaded, no raw file was
+deleted. The disk watchdog ran during the run.

@@ -207,7 +207,14 @@ B2b {{pre_rp_b2b_r_b2b_mean}} bp ({{pre_rp_b2b_r_b2b_ci}}). Limitation, which we
 random pulls start a new pulled run far more often than a signal does ({{pre_rp_runs_r_b3}}
 against {{pre_rp_runs_b3}} runs an hour for B3, {{pre_rp_runs_r_b2b}} against
 {{pre_rp_runs_b2b}} for B2b), and each new run gives up the queue place once, so these
-differences overstate what the signal chooses, most for B2b. And B3 against B2b at the same
+differences overstate what the signal chooses, most for B2b. Against random pulls matched
+on the number of pulled runs as well as the rate, B3 gained {{pre_rl_b3_rl_b3_mean}} bp
+({{pre_rl_b3_rl_b3_ci}}) and B2b {{pre_rl_b2b_rl_b2b_mean}} bp ({{pre_rl_b2b_rl_b2b_ci}}).
+Limitation: many of B3's pulls start just after one of our own orders on that side was
+filled, when pulling costs no queue place, while the matched control almost always cancels
+a resting order; so B3's gain over it may be partly that cost, or a simple rule of not
+rejoining the side just hit, rather than what the Hawkes direction knows. The control also
+spreads its runs evenly over the day where the signals' gather in busy periods. And B3 against B2b at the same
 pull rate: {{pre_mp_5_mean}} bp at 5% ({{pre_mp_5_ci}}), {{pre_mp_10_mean}} at 10%,
 {{pre_mp_25_mean}} at 25% and {{pre_mp_50_mean}} at 50%. Limitation: B3 marks in shorter
 runs and so cancels more often at the same p, so part of that deficit may be the cost of
@@ -257,7 +264,10 @@ Exploratory, same statistic: B3 minus B2 {{h2_mean_bp}} bp ({{h2_ci_low_bp}} to
 B2b minus B1 {{h4_mean_bp}} bp ({{h4_ci_low_bp}} to {{h4_ci_high_bp}}). Against random
 pulls at their own rates: B3 {{rp_b3_mean_bp}} bp ({{rp_b3_ci_low_bp}} to
 {{rp_b3_ci_high_bp}}), B2b {{rp_b2b_mean_bp}} bp ({{rp_b2b_ci_low_bp}} to
-{{rp_b2b_ci_high_bp}}), with the run-length limitation stated above.
+{{rp_b2b_ci_high_bp}}), with the run-length limitation stated above. Against random pulls
+matched on the number of pulled runs as well: B3 {{rl_b3_mean_bp}} bp ({{rl_b3_ci_low_bp}}
+to {{rl_b3_ci_high_bp}}), B2b {{rl_b2b_mean_bp}} bp ({{rl_b2b_ci_low_bp}} to
+{{rl_b2b_ci_high_bp}}).
 
 ![Fig. 1. B3 minus B2b in break-even fee on each test day in the primary cell, with the
 mean and both intervals. Simulated fills on historical data.](fig_daily_d.svg)

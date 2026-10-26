@@ -119,7 +119,7 @@ def _summary():
         for q in ("risk_averse", "power3", "power2", "log") for lat in ("low", "high")
         for lab, vals in (("B1", [0.0] * 12), ("B2", [0.0] * 12), ("B2b", [0.0] * 12), ("B3", d),
                           ("C1", [0.0] * 12), ("C2", [2.0] * 12),
-                          *((f"{r}_s{k}", list(d * k / 10)) for r in ("R1", "R_B3", "R_B2b")
+                          *((f"{r}_s{k}", list(d * k / 10)) for r in ("R1", "R_B3", "R_B2b", "RL_B3", "RL_B2b")
                             for k in (1, 2, 3)))
         for day, v in zip(days, vals, strict=True)
     ]  # fmt: skip

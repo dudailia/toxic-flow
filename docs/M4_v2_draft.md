@@ -461,5 +461,10 @@ RL_B3 starts 1.00 times as many pulled runs as B3 and RL_B2b 1.00 times as many 
 
 Limitation, read with these rows: RL matches the number and the mean length of pulled
 runs, not their distribution (geometric in RL), their time of day, or how often the next
-run pulls the same side. RL places its runs with the same chance at any time of day; a
-signal's runs may gather at busy hours, which was not measured. Six validation days.
+run pulls the same side, and its runs fall evenly over the day where the signals' gather
+in busy periods. The leakage audit of this run (docs/audit_run_length.md, no leak) found
+that many of B3's pulled runs start just after our own fill on that side, when no order
+rests there and the pull costs no queue place, while RL's almost always cancel a resting
+order. So B3 - RL_B3 does not separate what the Hawkes direction knows from a simple rule
+such as not rejoining the side just hit, and part of it may be RL's extra cancels.
+B2b - RL_B2b is inconclusive. Six validation days.
