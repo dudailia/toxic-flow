@@ -83,15 +83,25 @@ Setup:
 
        make data DAYS=test
        (quality reports, events and exclusions as in step 1)
+       git add data/manifest.json docs/data_quality && git commit   (AC5.2: exclusions first)
        uv run python scripts/make_v2_configs.py confirmatory
+       git add configs/runs/confirmatory.yaml && git commit
        uv run python tests/canary/run_c2.py configs/runs/confirmatory.yaml
+       git add results/<confirmatory> && git commit
        uv run python scripts/make_v2_configs.py controls results/<confirmatory>
+       git add configs/runs/confirmatory_controls.yaml && git commit
        make run CFG=configs/runs/confirmatory_controls.yaml
+       git add results/<controls> && git commit
        uv run python scripts/analyse.py summary --s-bp <s from section 9> \
            --out results/summary.json results/<confirmatory> results/<controls>
+       git add results/summary.json && git commit
        make paper
+       (AC5.4) the leakage-auditor on both runs, its report in docs/audit_M5.md
+       uv run python scripts/check_milestone.py M5
 
-C2, the oracle canary, is the only strategy allowed to look ahead, so configs that include
+A run refuses a config that is not committed or a working tree with changes, so each
+result maps to a commit; the commits above come after the tag, which scripts/analyse.py
+checks. C2, the oracle canary, is the only strategy allowed to look ahead, so configs that include
 it run through tests/canary/run_c2.py rather than make run. `make check-full` adds the
 slow tests; three of them need 2024-01-01 converted on disk.
 
