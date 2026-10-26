@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_tune_val_a.yaml",
+  "config_hash": "0bd4181a312a",
+  "commit": "1e68ba909a059dae7f972404194ab5dab61db667",
+  "started_at": "2026-10-26T01:58:21+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_tune_val_a",
+  "finished_at": "2026-10-26T04:41:25+00:00"
+}
