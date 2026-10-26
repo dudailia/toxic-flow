@@ -1,8 +1,8 @@
 # Proposal: protect configs/repo.yaml
 
 From the /code-review of 2026-10-26 (docs/reviews/code_review_2026-10-26.md, finding 1).
-Nothing is applied: the fix is a line in .claude/protected-paths.txt, which Ilia keeps by
-hand.
+Applied on 2026-10-26 on Ilia's instruction: configs/repo.yaml is now a line in
+.claude/protected-paths.txt, and the guard hook asks Ilia before any edit to it.
 
 Since Q14 (commit 3d98a41), the test-day lock opens a test day only if `git remote get-url
 origin` equals `origin` in configs/repo.yaml. src/toxic_flow/data/split_lock.py is

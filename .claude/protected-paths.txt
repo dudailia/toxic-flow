@@ -1,6 +1,7 @@
 # Edits to these paths make Claude Code ask Ilia first. Ilia maintains this list by hand.
 # A trailing slash means everything under that directory.
 configs/splits.yaml
+configs/repo.yaml
 scripts/check_milestone.py
 src/toxic_flow/data/split_lock.py
 tests/leakage/
