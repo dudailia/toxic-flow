@@ -418,3 +418,48 @@ length. B3 cancels 1.2 to 4.4 times as often as B2b across these p (cancels
 columns), so part of B3's deficit at matched p may be the cost of re-queuing rather than
 worse information. B3 trades 0.72 to 0.84 of B2b's notional (last column, all
 six days pooled).
+
+## Run-length controls (exploratory, sections 7 and 10, added 2026-10-26)
+
+Run 7ac2bbe74a19 (configs/runs/v2_run_length_val.yaml, commit be76d43), primary cell, 6 validation days. Exploratory, not a test of section 7 or 10.
+RL is B1 that pulls a random side in runs: a two-state chain on the 100 ms grid whose
+pulled runs and gaps last a geometric number of steps, set on each day so that the
+expected share of pulled steps and the expected number of pulled runs equal B3's
+(RL_B3) or B2b's (RL_B2b) in run c274b2def28e. Each run pulls one side, chosen at
+random, stepped back by the strategy's K. Three seeds each; the bare label is the mean
+over the seeds of each day's value. B1, B3 and B2b run again in this run; against run c274b2def28e:
+identical fills on every day, largest BEF difference 0.0e+00 bp. R_B3 and R_B2b below are from run c274b2def28e.
+
+| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |
+|---|---|---|---|---|---|
+| B1 | 39004 | -0.9429 | -0.7063 | 0.0000 | 0 |
+| B3 | 31958 | -0.9385 | -0.7015 | 0.0413 | 1094 |
+| R_B3 | 37059 | -0.9663 | -0.7252 | 0.0412 | 1452 |
+| RL_B3 | 37241 | -0.9615 | -0.7218 | 0.0414 | 1096 |
+| RL_B3_s1 | 37258 | -0.9602 | -0.7220 | 0.0412 | 1093 |
+| RL_B3_s2 | 37241 | -0.9619 | -0.7217 | 0.0414 | 1098 |
+| RL_B3_s3 | 37224 | -0.9622 | -0.7218 | 0.0414 | 1096 |
+| B2b | 32597 | -0.9330 | -0.7129 | 0.2562 | 338 |
+| R_B2b | 32518 | -0.9952 | -0.7527 | 0.2561 | 8017 |
+| RL_B2b | 33776 | -0.9495 | -0.7122 | 0.2568 | 337 |
+| RL_B2b_s1 | 33684 | -0.9447 | -0.7118 | 0.2580 | 340 |
+| RL_B2b_s2 | 33763 | -0.9534 | -0.7112 | 0.2566 | 335 |
+| RL_B2b_s3 | 33882 | -0.9506 | -0.7136 | 0.2560 | 336 |
+
+RL_B3 starts 1.00 times as many pulled runs as B3 and RL_B2b 1.00 times as many as B2b (R: 1.3 and 23.7), at 1.002 and 1.002 times their toxic share.
+
+| Comparison | Days | Mean bp | Bootstrap 95% | t 95% | Days > 0 | Dropped (no fills) |
+|---|---|---|---|---|---|---|
+| B3 - RL_B3 | 6 | 0.0230 | [0.0179, 0.0298] | [0.0142, 0.0317] | 6 | none |
+| B2b - RL_B2b | 6 | 0.0165 | [-0.0084, 0.0423] | [-0.0204, 0.0534] | 4 | none |
+| B3 - R_B3 (rate only, as above) | 6 | 0.0278 | [0.0227, 0.0351] | [0.0186, 0.0370] | 6 | none |
+| B2b - R_B2b (rate only, as above) | 6 | 0.0622 | [0.0298, 0.1007] | [0.0115, 0.1128] | 6 | none |
+| RL_B3 - R_B3 (the cost of the extra runs) | 6 | 0.0048 | [0.0037, 0.0059] | [0.0032, 0.0064] | 6 | none |
+| RL_B2b - R_B2b (the cost of the extra runs) | 6 | 0.0457 | [0.0382, 0.0583] | [0.0299, 0.0614] | 6 | none |
+| RL_B3 - B1 | 6 | -0.0186 | [-0.0239, -0.0140] | [-0.0258, -0.0114] | 0 | none |
+| RL_B2b - B1 | 6 | -0.0067 | [-0.0166, 0.0043] | [-0.0216, 0.0083] | 2 | none |
+
+Limitation, read with these rows: RL matches the number and the mean length of pulled
+runs, not their distribution (geometric in RL), their time of day, or how often the next
+run pulls the same side. RL places its runs with the same chance at any time of day; a
+signal's runs may gather at busy hours, which was not measured. Six validation days.

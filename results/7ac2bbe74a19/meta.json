@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_run_length_val.yaml",
+  "config_hash": "7ac2bbe74a19",
+  "commit": "be76d4398f020d522c39ad053de96b9f8dc9b1e1",
+  "started_at": "2026-10-26T15:55:09+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_run_length_val",
+  "finished_at": "2026-10-26T16:32:07+00:00"
+}

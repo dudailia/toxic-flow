@@ -15,6 +15,11 @@
       it if present): C1 against R1 (the section 10 rule as revised on 2026-10-26), and the
       exploratory comparisons: B3 and B2b against random pulls at their own rates, and B3
       against B2b at each matched p from the tuning runs.
+  uv run python scripts/m4_v2.py runlength --runlength results/<v2_run_length_val> \
+      --random results/<v2_random_pulls_val>
+      Writes the section "Run-length controls" after it (replacing it if present): B3 and
+      B2b against RL, random pulls matched on the number of pulled runs as well as the rate
+      (exploratory, sections 7 and 10, added 2026-10-26).
 """
 
 import argparse
@@ -236,13 +241,15 @@ RANDOM_HEAD = (
 REPRO = ("B1", "C1", "B3", "B2b")
 
 
-def reproduced(m: pl.DataFrame, mc: pl.DataFrame) -> str:
-    """Whether the random-pull run's B1, C1, B3 and B2b equal the canary run's, day by day."""
+def reproduced(m: pl.DataFrame, mc: pl.DataFrame, labels=REPRO) -> str:
+    """Whether this run's B1, C1, B3 and B2b (or the labels given) equal another run's, day by
+    day."""
     cols = ["day", "label", "fills", "break_even_fee_bps"]
-    a = m.filter(pl.col("label").is_in(REPRO)).select(cols)
-    b = mc.filter(pl.col("label").is_in(REPRO) & (pl.col("latency") == PRIMARY[1])).select(cols)
+    a = m.filter(pl.col("label").is_in(labels)).select(cols)
+    b = mc.filter(pl.col("label").is_in(labels) & (pl.col("latency") == PRIMARY[1])).select(cols)
     j = a.join(b, on=["day", "label"], suffix="_c")
-    same = j.height == a.height == 4 * len(kept("val")) and (j["fills"] == j["fills_c"]).all()
+    full = len(labels) * len(kept("val"))
+    same = j.height == a.height == full and (j["fills"] == j["fills_c"]).all()
     diff = float((j["break_even_fee_bps"] - j["break_even_fee_bps_c"]).abs().max())
     return (f"identical fills on every day, largest BEF difference {diff:.1e} bp" if same
             else f"NOT reproduced: {j.height} of {a.height} rows matched, largest BEF difference {diff:.1e} bp")  # fmt: skip
@@ -366,8 +373,66 @@ def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
     out = ROOT / "docs" / "M4_v2_draft.md"
     text = out.read_text()
     keep = text.split("\n" + RANDOM_HEAD)[0].rstrip("\n")
-    out.write_text(keep + "\n\n" + "\n".join(L) + "\n")
+    after = text.split("\n" + RUNLENGTH_HEAD)  # the run-length section stays after this one
+    tail = "\n" + RUNLENGTH_HEAD + after[1] if len(after) > 1 else ""
+    out.write_text(keep + "\n\n" + "\n".join(L) + "\n" + tail)
     print(out, "C1 vs R1:", verdict, fmt(c1["mean"]), ci(c1["bootstrap_ci"]))
+
+
+RUNLENGTH_HEAD = "## Run-length controls (exploratory, sections 7 and 10, added 2026-10-26)"
+
+
+def cmd_runlength(runlength: Path, random: Path) -> None:
+    ml, (meta,) = load([runlength], ["v2_run_length_val"], "val")
+    mr, (meta_r,) = load([random], ["v2_random_pulls_val"], "val")
+    m = analysis.with_seed_means(ml)
+    r = analysis.with_seed_means(mr)
+    # R comes from the other run; R and RL read no market data, and B1, B3 and B2b are
+    # identical in both runs (checked below), so the cross-run comparison is like for like.
+    both = pl.concat([m, r.filter(pl.col("strategy") == "R")], how="diagonal_relaxed")
+    hours = quote_hours()
+    runs = {lab: both.filter(pl.col("label") == lab)["toxic_episodes"].mean()
+            for lab in ("B3", "R_B3", "RL_B3", "B2b", "R_B2b", "RL_B2b")}  # fmt: skip
+    share = {lab: both.filter(pl.col("label") == lab)["toxic_share"].mean() for lab in runs}
+    L = [RUNLENGTH_HEAD, "",
+         f"Run {meta['config_hash']} ({meta['config']}, commit {meta['commit'][:7]}), primary cell, "
+         f"{len(kept('val'))} validation days. Exploratory, not a test of section 7 or 10.",
+         "RL is B1 that pulls a random side in runs: a two-state chain on the 100 ms grid whose",
+         "pulled runs and gaps last a geometric number of steps, set on each day so that the",
+         "expected share of pulled steps and the expected number of pulled runs equal B3's",
+         f"(RL_B3) or B2b's (RL_B2b) in run {random.name}. Each run pulls one side, chosen at",
+         "random, stepped back by the strategy's K. Three seeds each; the bare label is the mean",
+         f"over the seeds of each day's value. B1, B3 and B2b run again in this run; against run {random.name}:",
+         f"{reproduced(ml, mr, ('B1', 'B3', 'B2b'))}. R_B3 and R_B2b below are from run {random.name}.", "",
+         "| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |",
+         "|---|---|---|---|---|---|"]  # fmt: skip
+    order = ["B1", "B3", "R_B3", "RL_B3", "RL_B3_s1", "RL_B3_s2", "RL_B3_s3",
+             "B2b", "R_B2b", "RL_B2b", "RL_B2b_s1", "RL_B2b_s2", "RL_B2b_s3"]  # fmt: skip
+    for lab in order:
+        g = both.filter(pl.col("label") == lab)
+        L.append(f"| {lab} | {g['fills'].mean():.0f} | {fmt(g[BEF].mean())} | {fmt(g['mean_markout_1s_bps'].mean())} | "
+                 f"{fmt(g['toxic_share'].mean(), 4)} | {g['toxic_episodes'].mean() / hours:.0f} |")  # fmt: skip
+    L += ["", f"RL_B3 starts {runs['RL_B3'] / runs['B3']:.2f} times as many pulled runs as B3 and RL_B2b "
+          f"{runs['RL_B2b'] / runs['B2b']:.2f} times as many as B2b (R: {runs['R_B3'] / runs['B3']:.1f} and "
+          f"{runs['R_B2b'] / runs['B2b']:.1f}), at {share['RL_B3'] / share['B3']:.3f} and "
+          f"{share['RL_B2b'] / share['B2b']:.3f} times their toxic share.", "", *CMP_HEAD,
+          cmp_row("B3 - RL_B3", analysis.compare(both, "B3", "RL_B3")),
+          cmp_row("B2b - RL_B2b", analysis.compare(both, "B2b", "RL_B2b")),
+          cmp_row("B3 - R_B3 (rate only, as above)", analysis.compare(both, "B3", "R_B3")),
+          cmp_row("B2b - R_B2b (rate only, as above)", analysis.compare(both, "B2b", "R_B2b")),
+          cmp_row("RL_B3 - R_B3 (the cost of the extra runs)", analysis.compare(both, "RL_B3", "R_B3")),
+          cmp_row("RL_B2b - R_B2b (the cost of the extra runs)", analysis.compare(both, "RL_B2b", "R_B2b")),
+          cmp_row("RL_B3 - B1", analysis.compare(both, "RL_B3", "B1")),
+          cmp_row("RL_B2b - B1", analysis.compare(both, "RL_B2b", "B1")),
+          "", "Limitation, read with these rows: RL matches the number and the mean length of pulled",
+          "runs, not their distribution (geometric in RL), their time of day, or how often the next",
+          "run pulls the same side. RL places its runs with the same chance at any time of day; a",
+          "signal's runs may gather at busy hours, which was not measured. Six validation days."]  # fmt: skip
+    out = ROOT / "docs" / "M4_v2_draft.md"
+    keep = out.read_text().split("\n" + RUNLENGTH_HEAD)[0].rstrip("\n")
+    out.write_text(keep + "\n\n" + "\n".join(L) + "\n")
+    rl = analysis.compare(both, "B3", "RL_B3")
+    print(out, "B3 - RL_B3:", fmt(rl["mean"]), ci(rl["bootstrap_ci"]))
 
 
 def main() -> None:
@@ -384,11 +449,16 @@ def main() -> None:
     q.add_argument("--random", type=Path, required=True)
     q.add_argument("--canaries", type=Path, required=True)
     q.add_argument("--tune", type=Path, nargs=2, required=True)
+    w = sub.add_parser("runlength")
+    w.add_argument("--runlength", type=Path, required=True)
+    w.add_argument("--random", type=Path, required=True)
     a = p.parse_args()
     if a.cmd == "select":
         cmd_select(a.tune)
     elif a.cmd == "random":
         cmd_random(a.random, a.canaries, a.tune)
+    elif a.cmd == "runlength":
+        cmd_runlength(a.runlength, a.random)
     else:
         cmd_report(a.train_b, a.tune, a.canaries, a.mde)
 
