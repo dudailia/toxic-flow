@@ -123,3 +123,30 @@ def quote_metrics(fills, steps) -> dict:
         "toxic_episodes": toxic_episodes(steps["toxic"]),
         "hourly_quotes": hourly,
     }
+
+
+def no_print_share(fills, prints: dict, tick: float) -> float:
+    """Share of our fills with no opposite print at or through our price at the fill's
+    exchange time (PREREGISTRATION.md section 3, Q50). hftbacktest also fills a resting
+    quote when the book moves through its price, with no trade there; a real venue may treat
+    some of those fills differently, so the share is reported for each day.
+
+    prints: aggressor side "b" or "s" -> (sorted exchange times, the price furthest through
+    at each time: the highest buyer-initiated print, the lowest seller-initiated one). Our
+    sell (side -1) is reached by a buyer-initiated print at or above its price, our buy by
+    a seller-initiated print at or below it. Prices are compared in ticks, not as floats.
+    """
+    if not len(fills):
+        return float("nan")
+    printed = np.zeros(len(fills), bool)
+    for side, agg, sign in ((-1, "b", 1), (1, "s", -1)):
+        ts, px = prints[agg]
+        mine = fills["side"] == side
+        t = fills["exch_ts"][mine]
+        if not len(ts) or not len(t):
+            continue
+        i = np.clip(np.searchsorted(ts, t), 0, len(ts) - 1)
+        ours = np.round(fills["price"][mine] / tick)
+        theirs = np.round(px[i] / tick)
+        printed[mine] = (ts[i] == t) & (sign * (theirs - ours) >= 0)
+    return float(1 - printed.mean())

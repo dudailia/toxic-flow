@@ -106,3 +106,29 @@ def test_toxic_episodes_count_runs_of_one_side():
     assert toxic_episodes(np.array([0, 1, 1, 0, -1, 1, 1, 0, 0, -1], np.int8)) == 4
     assert toxic_episodes(np.array([1, 1, 1], np.int8)) == 1
     assert toxic_episodes(np.zeros(5, np.int8)) == 0 and toxic_episodes(np.zeros(0)) == 0
+
+
+def test_no_print_share_counts_fills_without_an_opposite_print_at_or_through_our_price():
+    from toxic_flow.eval.metrics import no_print_share
+
+    prints = {
+        # Buyer-initiated prints reach our sells at or below their price.
+        "b": (np.array([10, 20]), np.array([100.2, 100.1])),
+        # Seller-initiated prints reach our buys at or above their price.
+        "s": (np.array([30, 40]), np.array([99.9, 100.0])),
+    }
+    f = fills([
+        (10, -1, 100.2, 1.0),  # buy print at our ask: printed
+        (20, -1, 100.2, 1.0),  # buy print below our ask: the book moved through
+        (25, -1, 100.0, 1.0),  # no print at that time
+        (30, 1, 100.0, 1.0),   # sell print through our bid: printed
+        (40, 1, 100.0, 1.0),   # sell print at our bid: printed
+        (10, 1, 100.2, 1.0),   # only a buy print then, which cannot fill our buy
+    ])  # fmt: skip
+    assert no_print_share(f, prints, tick=0.1) == pytest.approx(3 / 6)
+    assert np.isnan(no_print_share(f[:0], prints, tick=0.1))
+    empty = {
+        "b": (np.array([], np.int64), np.array([])),
+        "s": (np.array([], np.int64), np.array([])),
+    }
+    assert no_print_share(f, empty, tick=0.1) == 1.0

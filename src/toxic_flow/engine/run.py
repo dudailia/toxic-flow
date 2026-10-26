@@ -9,6 +9,7 @@ Fees are zero in the simulation and applied in evaluation (PREREGISTRATION.md se
 """
 
 import fcntl
+import functools
 import hashlib
 import io
 import json
@@ -28,11 +29,12 @@ from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
 from hftbacktest.data.utils.feed_order_latency import generate_order_latency
 
 from toxic_flow.data.convert import CONVERTED
+from toxic_flow.data.download import RAW
 from toxic_flow.data.split_lock import assert_allowed
 from toxic_flow.data.venue import venue_for
 from toxic_flow.engine.grid import LATENCY_MUL, QUEUE_MODELS, config_hash, expand
 from toxic_flow.eval.markouts import HORIZONS_S, markouts
-from toxic_flow.eval.metrics import day_metrics, quote_metrics, window_metrics
+from toxic_flow.eval.metrics import day_metrics, no_print_share, quote_metrics, window_metrics
 from toxic_flow.signals.hawkes_fit import rescale_decay
 from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
@@ -128,6 +130,27 @@ def event_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
         build_day(day)
     ev = pl.read_parquet(path, columns=["local_ts", "side"])
     return ev["local_ts"].to_numpy(), (ev["side"] == "s").to_numpy().astype(np.int64)
+
+
+@functools.lru_cache(maxsize=1)
+def opposite_prints(day: str) -> dict:
+    """For eval.metrics.no_print_share (Q50): per exchange time, the highest
+    buyer-initiated and the lowest seller-initiated print of the day, from the hashed raw
+    trades. Cached for the day's cells, which expand() runs one after another."""
+    assert_allowed(day)
+    tr = pl.read_csv(
+        RAW / day / "trades.csv.gz",
+        columns=["timestamp", "side", "price"],
+        schema_overrides={"timestamp": pl.Int64},
+    ).with_columns(exch_ts=pl.col("timestamp") * 1000)  # microseconds, like the events
+    out = {}
+    for agg, side, through in (
+        ("b", "buy", pl.col("price").max()),
+        ("s", "sell", pl.col("price").min()),
+    ):
+        g = tr.filter(pl.col("side") == side).group_by("exch_ts").agg(through).sort("exch_ts")
+        out[agg] = (g["exch_ts"].to_numpy(), g["price"].to_numpy())
+    return out
 
 
 def ofi_inputs(day: str) -> tuple[np.ndarray, np.ndarray]:
@@ -408,6 +431,7 @@ def run_cell(
             else float("nan")
             for h in HORIZONS_S
         },  # fmt: skip
+        "no_print_fill_share": no_print_share(fills, opposite_prints(day), venue["tick_size"]),
         "order_qty": out[5],
         "mark_mid": out[4],
         "max_orders_one_side": int(out[6]),
