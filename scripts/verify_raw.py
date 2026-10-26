@@ -37,13 +37,24 @@ def problems(raw: Path, entries: list[dict]) -> list[str]:
             out.append(f"{rel}: SHA-256 differs from the manifest")
         elif path.stat().st_mode & 0o222:
             out.append(f"{rel}: writable, raw files are read-only")
-    # os.walk follows the link at raw itself; nothing under it should be a link.
-    for parent, _, files in os.walk(raw):
-        for f in files:
-            rel = (Path(parent) / f).relative_to(raw)
-            if rel not in pinned:
+    # os.walk follows the link at raw itself but not links below it, which it lists with
+    # the folders; nothing under raw should be a link, so each one is a problem.
+    for parent, dirs, files in os.walk(raw):
+        for name in dirs + files:
+            path = Path(parent) / name
+            rel = path.relative_to(raw)
+            if path.is_symlink():
+                out.append(f"{rel}: a symlink inside the raw folder")
+            elif name in dirs or is_finder_metadata(name):
+                continue
+            elif rel not in pinned:
                 out.append(f"{rel}: on disk but not in the manifest")
     return out
+
+
+def is_finder_metadata(name: str) -> bool:
+    """.DS_Store and ._* files that macOS writes on some disks: not data, never read."""
+    return name == ".DS_Store" or name.startswith("._")
 
 
 def main() -> int:

@@ -15,7 +15,7 @@
       toxic_episodes column; B3 and B2b in the random-pull run reproduce the canary run.
   uv run python scripts/make_v2_configs.py holdtrain   F at every hold on training days
   uv run python scripts/make_v2_configs.py holdval     F at the hold in configs/selected.yaml
-      with B1 and B3, validation days (the hold comes from scripts/m4_v2.py hold)
+      with B1 and B3, validation days (the hold comes from scripts/m4_v2.py fillhold)
   uv run python scripts/make_v2_configs.py confirmatory   needs configs/selected.yaml
   uv run python scripts/make_v2_configs.py controls results/<confirmatory>
       M5, the two planned test-day runs (section 10): the grid on the kept test days, then

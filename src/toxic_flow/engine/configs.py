@@ -372,6 +372,18 @@ def _fill_hold(hold_s: float, label: str = "F") -> dict:
     return {"name": "F", "design": "v2", "label": label, "hold_s": float(hold_s)}
 
 
+def frozen_hold(selected: dict) -> float:
+    """F's hold from configs/selected.yaml, which scripts/m4_v2.py fillhold checks against
+    the training-day rule; a clear stop if it is not there yet."""
+    hold = (selected.get("F") or {}).get("hold_s")
+    if hold not in F_HOLDS_S:
+        raise ValueError(
+            f"configs/selected.yaml F hold_s is {hold!r}, not one of {list(F_HOLDS_S)}: run "
+            "scripts/m4_v2.py fillhold on the training-day run and copy the chosen hold"
+        )
+    return float(hold)
+
+
 def v2_fill_hold_train(days) -> dict:
     """v2 M4 on training days, primary cell: F at every hold in F_HOLDS_S, for the choice
     of hold_s (choose_hold)."""
@@ -393,7 +405,7 @@ def v2_fill_hold_val(constants: dict, thresholds: dict, selected: dict, days) ->
     _check(constants)
     _check_thresholds(thresholds)
     s = [{"name": "B1", "design": "v2"}, _v2_selected("B3", constants, thresholds, selected),
-         _fill_hold(selected["F"]["hold_s"])]  # fmt: skip
+         _fill_hold(frozen_hold(selected))]  # fmt: skip
     return _config("v2_fill_hold_val", days, s, [PRIMARY[0]], [PRIMARY[1]])
 
 
@@ -419,5 +431,5 @@ def v2_confirmatory_controls(selected: dict, rates: dict, episodes: dict, days) 
     at B3's and B2b's shares and numbers of pulled runs; and F at the hold chosen on
     training days (configs/selected.yaml), which does not depend on the first run."""
     s = _controls(selected, rates, days) + _run_length_controls(selected, rates, episodes, days)
-    s.append(_fill_hold(selected["F"]["hold_s"]))
+    s.append(_fill_hold(frozen_hold(selected)))
     return _config("confirmatory_controls", days, s, [PRIMARY[0]], [PRIMARY[1]])

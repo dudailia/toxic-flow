@@ -338,13 +338,16 @@ def _flat(c: dict) -> dict:
 CONFIRMATORY = ("configs/runs/confirmatory.yaml", "configs/runs/confirmatory_controls.yaml")
 
 
-def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str]):
+def confirmatory_problem(
+    metas: list[dict], m: pl.DataFrame, test_days: list[str], f_hold: float | None = None
+):
     """Why these runs may not write results/summary.json, or None if they may. The runs are
     the two planned test-day runs, one of each: configs/runs/confirmatory.yaml and its
     random-pull controls, configs/runs/confirmatory_controls.yaml (section 10). None is
     smoke, every label has every non-excluded test day in every cell it runs in, and every
     control pulls at the realised toxic share of the strategy it controls for, on each day,
-    in the first run (an RL control also at its number of toxic episodes). The caller checks s, the config hashes and the commits against the
+    in the first run (an RL control also at its number of toxic episodes), and F at f_hold,
+    the hold frozen in configs/selected.yaml by the training-day rule. The caller checks s, the config hashes and the commits against the
     tag."""
     for meta in metas:
         if meta.get("label") == "smoke":
@@ -369,4 +372,8 @@ def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str
             return f"{r['label']} on {r['day']} does not pull at {p['rate_of']}'s realised rate"
         if r["strategy"] == "RL" and done["toxic_episodes"][0] != p["episodes"][r["day"]]:
             return f"{r['label']} on {r['day']} is not matched to {p['rate_of']}'s pulled runs"
+    for r in m.filter(pl.col("strategy") == "F").iter_rows(named=True):
+        hold = json.loads(r["params"]).get("hold_s")
+        if f_hold is None or hold != f_hold:
+            return f"F on {r['day']} holds {hold} s, not the frozen hold {f_hold}"
     return None

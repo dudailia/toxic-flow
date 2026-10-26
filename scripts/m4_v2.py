@@ -236,11 +236,19 @@ def cmd_report(train_b: Path, tune: list[Path], canaries: Path, mde_run: Path) -
           + f"; flag (a non-zero latency above zero latency): {c3.get('flag')}.",
           f"- C4, matches B3 within the interval: {can.get('C4', {}).get('matches_b3')}.",
           "", f"Statement from eval/analysis.canaries: {can['statement']}"]  # fmt: skip
-    out = ROOT / "docs" / "M4_v2_draft.md"
-    out.write_text("\n".join(L) + "\n")
-    print(out)
+    # The sections the later subcommands wrote stay after the report (put_section). A
+    # reading written by hand at the top is not regenerated, so the report stops rather
+    # than overwrite it.
+    old = DRAFT.read_text() if DRAFT.exists() else ""
+    if HAND_READING in old:
+        raise SystemExit(f"{DRAFT} has a reading written by hand; move it aside to regenerate")
+    starts = sorted(old.index("\n" + h) for h in SECTIONS if "\n" + h in old)
+    tail = old[starts[0] :].strip("\n") if starts else ""
+    DRAFT.write_text("\n".join(L) + ("\n\n" + tail if tail else "") + "\n")
+    print(DRAFT)
 
 
+HAND_READING = "Reading (written by hand"
 RANDOM_HEAD = (
     "## Random-pull controls (section 10, C1 rule revised 2026-10-26; exploratory comparisons)"
 )
@@ -428,15 +436,35 @@ def cmd_runlength(runlength: Path, random: Path) -> None:
           "", "Limitation, read with these rows: RL matches the number and the mean length of pulled",
           "runs, not their distribution (geometric in RL), their time of day, or how often the next",
           "run pulls the same side, and its runs fall evenly over the day where the signals' gather",
-          "in busy periods. The leakage audit of this run (docs/audit_run_length.md, no leak) found",
-          "that many of B3's pulled runs start just after our own fill on that side, when no order",
-          "rests there and the pull costs no queue place, while RL's almost always cancel a resting",
-          "order. So B3 - RL_B3 does not separate what the Hawkes direction knows from a simple rule",
-          "such as not rejoining the side just hit, and part of it may be RL's extra cancels.",
-          "B2b - RL_B2b is inconclusive. Six validation days."]  # fmt: skip
+          "in busy periods.", *audit_note(meta["config_hash"]),
+          f"The bootstrap interval of B2b - RL_B2b {zero(analysis.compare(both, 'B2b', 'RL_B2b'))} 0. "
+          f"{len(kept('val'))} validation days."]  # fmt: skip
     put_section(RUNLENGTH_HEAD, L)
     rl = analysis.compare(both, "B3", "RL_B3")
     print(DRAFT, "B3 - RL_B3:", fmt(rl["mean"]), ci(rl["bootstrap_ci"]))
+
+
+# The run the leakage audit of docs/audit_run_length.md read; its finding is printed only
+# next to that run's numbers.
+AUDITED_RUN_LENGTH = "7ac2bbe74a19"
+
+
+def audit_note(config_hash: str) -> list[str]:
+    if config_hash != AUDITED_RUN_LENGTH:
+        return [f"Run {config_hash} has not had a leakage audit; docs/audit_run_length.md is about run",
+                f"{AUDITED_RUN_LENGTH}."]  # fmt: skip
+    return ["The leakage audit of this run (docs/audit_run_length.md, no leak) found that many of",
+            "B3's pulled runs start just after our own fill on that side, when no order rests there",
+            "and the pull costs no queue place, while RL's almost always cancel a resting order. So",
+            "B3 - RL_B3 does not separate what the Hawkes direction knows from a simple rule such as",
+            "not rejoining the side just hit, and part of it may be RL's extra cancels."]  # fmt: skip
+
+
+def zero(c: dict) -> str:
+    """Whether a comparison's bootstrap interval includes 0, in words."""
+    lo, hi = c["bootstrap_ci"]
+    return "has no value" if not (np.isfinite(lo) and np.isfinite(hi)) else (
+        "includes" if lo <= 0 <= hi else "excludes")  # fmt: skip
 
 
 FILLHOLD_HEAD = "## Fill-hold control F (exploratory, sections 7 and 10, added 2026-10-26)"
@@ -497,7 +525,7 @@ def cmd_fillhold(train: Path, mde: Path, val: Path | None, runlength: Path | Non
         L += ["", "Limitation, read with these rows: F matches B3's share of pulled steps on the training",
               "days, not on these days or in the number of pulled runs (both shown above). Every F pull",
               "follows one of our fills; B3's also include pulls with an order resting, which cost the",
-              "queue place. Six validation days."]  # fmt: skip
+              f"queue place. {len(kept('val'))} validation days."]  # fmt: skip
     put_section(FILLHOLD_HEAD, L)
     print(DRAFT, "chosen hold", hold, "target", fmt(target))
 

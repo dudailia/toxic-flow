@@ -44,3 +44,14 @@ def test_a_changed_missing_writable_or_extra_file_fails(tmp_path):
     f.chmod(0o644)
     f.unlink()
     assert "missing" in problems(link, [entry])[0]
+
+
+def test_finder_metadata_is_ignored_and_a_link_inside_is_flagged(tmp_path):
+    link, _, entry = make_raw(tmp_path)
+    (link / ".DS_Store").write_bytes(b"x")
+    (link / "2025-01-01" / "._trades.csv.gz").write_bytes(b"x")
+    assert problems(link, [entry]) == []
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    (link / "2025-02-01").symlink_to(other, target_is_directory=True)
+    assert "symlink inside" in problems(link, [entry])[0]

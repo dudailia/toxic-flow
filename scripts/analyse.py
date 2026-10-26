@@ -23,6 +23,7 @@ import yaml
 
 from toxic_flow.data.exclusions import excluded_days
 from toxic_flow.data.split_lock import load_splits
+from toxic_flow.engine.configs import frozen_hold
 from toxic_flow.engine.grid import config_hash
 from toxic_flow.eval import analysis
 
@@ -97,7 +98,9 @@ def main() -> None:
     m, metas = load(args.dirs)
     out = Path(args.out).resolve()
     if out == PAPER_SUMMARY:
-        problem = analysis.confirmatory_problem(metas, m, kept("test")) or paper_problem(
+        selected = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+        hold = frozen_hold(selected)  # F's hold, checked against the training-day rule
+        problem = analysis.confirmatory_problem(metas, m, kept("test"), hold) or paper_problem(
             metas, args.s_bp
         )
         if problem:

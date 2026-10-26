@@ -362,3 +362,19 @@ def test_seed_means_keep_the_controls_own_strategy_name():
     names = dict(means.filter(pl.col("label").is_in(["R_B3", "RL_B3"]))
                  .select("label", "strategy").unique().iter_rows())  # fmt: skip
     assert names == {"R_B3": "R", "RL_B3": "RL"}
+
+
+def test_the_guard_wants_f_at_the_frozen_hold():
+    test_days = DAYS[:2]
+    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"},
+            {"label": "c", "config": "configs/runs/confirmatory_controls.yaml"}]  # fmt: skip
+
+    def f(hold):
+        params = json.dumps({"name": "F", "design": "v2", "label": "F", "hold_s": hold})
+        return pl.DataFrame(rows("F", [0.0] * 12, params=params)).filter(
+            pl.col("day").is_in(test_days)
+        )
+
+    assert analysis.confirmatory_problem(meta, f(0.1), test_days, 0.1) is None
+    assert "frozen hold" in analysis.confirmatory_problem(meta, f(0.3), test_days, 0.1)
+    assert "frozen hold" in analysis.confirmatory_problem(meta, f(0.1), test_days)

@@ -276,3 +276,12 @@ def test_f_on_validation_days_runs_with_b1_and_b3():
     s = {x.get("label", x["name"]): x for x in cfg["strategies"]}
     assert set(s) == {"B1", "B3", "F"} and s["F"]["hold_s"] == 0.125
     assert cfg["name"] == "v2_fill_hold_val"
+
+
+def test_f_needs_a_frozen_hold_from_the_grid():
+    from toxic_flow.engine import configs
+
+    assert configs.frozen_hold({"F": {"hold_s": 0.125}}) == 0.125
+    for bad in ({}, {"F": {}}, {"F": {"hold_s": 0.11}}):
+        with pytest.raises(ValueError, match="fillhold"):
+            configs.frozen_hold(bad)
