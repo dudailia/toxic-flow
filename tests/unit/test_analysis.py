@@ -122,12 +122,16 @@ def test_s_is_the_larger_of_the_training_and_validation_estimates():
 
 def test_summary_has_every_key_the_paper_template_needs():
     template = (Path(__file__).resolve().parents[2] / "paper" / "template.md").read_text()
-    needed = set(re.findall(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", template))
+    # Keys starting with pre_ come from paper/pre_test.json (training and validation days).
+    needed = {k for k in re.findall(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", template)
+              if not k.startswith("pre_")}  # fmt: skip
+    controls = [r for lab in ("R1", "R_B3", "R_B2b") for k in (1, 2, 3)
+                for r in rows(f"{lab}_s{k}", list(NOISE * k))]  # fmt: skip
     m = pl.DataFrame(
         grid("B1", [0.0] * 12) + grid("B2", [0.5] * 12) + grid("B2b", [0.0] * 12)
         + grid("B3", list(1.0 + NOISE)) + rows("C1", list(NOISE)) + rows("C2", [5.0] * 12)
         + rows("B3", [0.2] * 12, latency="zero") + rows("C4_x10", [0.0] * 12)
-        + rows("C4_x0.1", [0.0] * 12)
+        + rows("C4_x0.1", [0.0] * 12) + controls
     )  # fmt: skip
     mde = {"s_bp": 1.0, "mde_bp": 0.7, "n_test": 16}
     meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "2026-11-01T00:00:00+00:00",
@@ -135,6 +139,8 @@ def test_summary_has_every_key_the_paper_template_needs():
     summary = analysis.summary(m, mde, meta)
     assert needed <= set(summary)
     assert summary["n_test_days"] == 12
+    assert summary["c1_r1_mean_bp"] == pytest.approx(NOISE.mean() - 2 * NOISE.mean())
+    assert summary["h1_cells_same_sign"] == 8
 
 
 def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():

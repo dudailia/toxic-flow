@@ -1,4 +1,4 @@
-.PHONY: check check-full hooks data run paper
+.PHONY: check check-full hooks data run paper paper-draft
 
 # Fast gate, run by the pre-commit hook: lint, then every test not marked slow. That
 # includes tests/leakage and the writing lint in tests/test_writing.py.
@@ -27,8 +27,17 @@ run:
 	@test -n "$(CFG)" || (echo "usage: make run CFG=configs/runs/<name>.yaml" && exit 2)
 	uv run python -m toxic_flow.engine.run $(CFG)
 
-# Builds paper/build/paper.md from results/summary.json, then runs the AC6.1 check.
+# Builds paper/build/paper.md from results/summary.json and paper/pre_test.json, the
+# figures and the one-page PDF, then runs the AC6.1 check.
 paper:
+	uv run python paper/pre_test.py
 	uv run python paper/build_paper.py
 	uv run python paper/figures.py
 	uv run python paper/check_paper.py
+
+# The page before the test days: pre-test numbers filled, test-day keys left as {{key}}.
+paper-draft:
+	uv run python paper/pre_test.py
+	uv run python paper/build_paper.py --draft
+	uv run python paper/figures.py --draft
+	uv run python paper/check_paper.py --draft

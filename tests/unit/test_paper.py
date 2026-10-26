@@ -70,10 +70,37 @@ def test_the_real_template_passes_the_check(tmp_path):
     from build_paper import PLACEHOLDER
 
     template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
-    keys = set(PLACEHOLDER.findall(template.read_text()))
+    keys = {k for k in PLACEHOLDER.findall(template.read_text()) if not k.startswith("pre_")}
     (tmp_path / "summary.json").write_text(json.dumps({k: 1.0 for k in keys}))
-    built = build(template, tmp_path / "summary.json", tmp_path / "paper.md")
+    built = build(template, tmp_path / "summary.json", tmp_path / "paper.md", PRE_TEST)
     assert check(template, built) == []
+
+
+PRE_TEST = Path(__file__).resolve().parents[2] / "paper" / "pre_test.json"
+
+
+def test_a_pre_test_key_in_the_summary_is_refused(tmp_path):
+    t, _ = write(tmp_path, template="## Results\n\n{{h1_mean_bp}}\n")
+    (tmp_path / "s.json").write_text(json.dumps({"h1_mean_bp": 0.1, "pre_mde": "0.02"}))
+    with pytest.raises(KeyError, match="pre-test keys"):
+        build(t, tmp_path / "s.json", tmp_path / "paper.md", PRE_TEST)
+
+
+def test_the_draft_fills_pre_test_keys_and_leaves_every_test_key_open(tmp_path):
+    from build_paper import PLACEHOLDER
+
+    template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
+    built = build(template, None, tmp_path / "draft.md", PRE_TEST, draft=True)
+    left = set(PLACEHOLDER.findall(built.read_text()))
+    wanted = {k for k in PLACEHOLDER.findall(template.read_text()) if not k.startswith("pre_")}
+    assert left == wanted and "h1_mean_bp" in left
+    assert check(template, built, draft=True) == []
+
+
+def test_the_committed_pre_test_numbers_are_what_the_script_computes_now():
+    from pre_test import build as pre_build
+
+    assert json.loads(PRE_TEST.read_text()) == pre_build()
 
 
 def _summary():

@@ -2,7 +2,9 @@
 """AC6.1 check: the built paper has no unresolved {{key}}, and no result section of the
 template holds a literal decimal number (every result figure must be a placeholder).
 
-Usage: uv run python paper/check_paper.py   (make paper runs it after the build)
+Usage: uv run python paper/check_paper.py           (make paper runs it after the build)
+       uv run python paper/check_paper.py --draft   (the draft: test-day keys stay open,
+                                                     every pre_ key must be filled)
 Result sections are those whose heading starts with one of RESULT_HEADINGS.
 """
 
@@ -32,15 +34,20 @@ def result_sections(text: str) -> list[tuple[str, str]]:
     return out
 
 
-def check(template: Path, built: Path) -> list[str]:
-    problems = [f"unresolved placeholder {p}" for p in PLACEHOLDER.findall(Path(built).read_text())]
+def check(template: Path, built: Path, draft: bool = False) -> list[str]:
+    left = PLACEHOLDER.findall(Path(built).read_text())
+    if draft:
+        left = [p for p in left if p.strip("{} ").startswith("pre_")]
+    problems = [f"unresolved placeholder {p}" for p in left]
     for heading, body in result_sections(Path(template).read_text()):
         problems += [f"literal decimal {d} in section '{heading}'" for d in DECIMAL.findall(body)]
     return problems
 
 
 def main() -> int:
-    problems = check(ROOT / "paper" / "template.md", ROOT / "paper" / "build" / "paper.md")
+    draft = "--draft" in sys.argv[1:]
+    built = ROOT / "paper" / "build" / ("draft.md" if draft else "paper.md")
+    problems = check(ROOT / "paper" / "template.md", built, draft)
     for p in problems:
         print(p)
     return 1 if problems else 0

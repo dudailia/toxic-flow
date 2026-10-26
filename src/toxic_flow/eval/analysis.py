@@ -259,8 +259,10 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
     with the same s for the number of test days present (section 9)."""
     n_test = int(_labelled(m)["day"].n_unique())
     mde_bp = mde(mde_in["s_bp"], n_test)
+    m = with_seed_means(m)
     h = h1(m, mde_bp)
     c = canaries(m, mde_bp)
+    ex = exploratory(m)
     p = h["primary"]
     if c.get("C1", {}).get("pass") is False:
         # Section 11: when C1 fails, the primary result is reported but not interpreted.
@@ -285,10 +287,41 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
         "n_val_days": meta["n_val_days"],
         "hftbacktest_version": meta["hftbacktest"],
         "prereg_tagged_at": meta["prereg_tagged_at"],
+        "h1_days_positive": p["n_positive"],
+        "h1_n_days": p["n"],
+        "h1_cells_same_sign": int(
+            sum(np.sign(v) == np.sign(p["mean"]) for v in h["cell_means"].values())
+        ),
+        "selectivity_ratio": h["selectivity"]["median_notional_ratio"],
+        **{f"{k.lower()}_{x}": v for k, r in ex.items() for x, v in _flat(r["bef"]).items()},
+        **_canary_keys(m, c),
         "h1": h,
-        "exploratory": exploratory(m),
+        "exploratory": ex,
         "canaries": c,
     }
+
+
+def _canary_keys(m: pl.DataFrame, c: dict) -> dict:
+    """Flat keys for C1 against R1 (and the rule first written, against B1), C2, and the
+    exploratory random-pull comparisons, for whichever of them ran."""
+    out = {}
+    c1 = c.get("C1", {})
+    if c1.get("rule") == "C1 - R1":
+        out |= {f"c1_r1_{x}": v for x, v in _flat(c1).items()}
+        out |= {f"c1_b1_{x}": v for x, v in _flat(c1["vs_B1"]).items()}
+    if "C2" in c:
+        out["c2_b1_mean_bp"] = c["C2"]["mean"]
+    # Exploratory (sections 7 and 10): each overlay against random pulls at its own rate.
+    for a, r in (("B3", "R_B3"), ("B2b", "R_B2b")):
+        if _has(m, a) and _has(m, r):
+            out |= {f"rp_{a.lower()}_{x}": v for x, v in _flat(compare(m, a, r)).items()}
+    return out
+
+
+def _flat(c: dict) -> dict:
+    """The numbers of one comparison the paper prints, as flat keys."""
+    return {"mean_bp": c["mean"], "ci_low_bp": c["bootstrap_ci"][0],
+            "ci_high_bp": c["bootstrap_ci"][1], "days_positive": c["n_positive"]}  # fmt: skip
 
 
 CONFIRMATORY = ("configs/runs/confirmatory.yaml", "configs/runs/confirmatory_controls.yaml")
