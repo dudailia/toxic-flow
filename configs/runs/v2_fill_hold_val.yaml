@@ -1,0 +1,44 @@
+# Written by scripts/make_v2_configs.py (v2).
+name: v2_fill_hold_val
+label: v2_fill_hold_val
+days:
+- '2025-01-01'
+- '2025-02-01'
+- '2025-06-01'
+- '2025-05-01'
+- '2025-03-01'
+- '2025-04-01'
+strategies:
+- name: B1
+  design: v2
+- name: B3
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  K: 3.878084
+  theta_u: 0.5693326056003569
+  theta_m: 0.21842259168624867
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: F
+  design: v2
+  label: F
+  hold_s: 0.1
+queue_models:
+- risk_averse
+latencies:
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1
