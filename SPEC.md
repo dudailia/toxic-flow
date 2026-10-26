@@ -209,9 +209,11 @@ Goal: choose overlay settings on validation days, compute the minimum detectable
 complete PREREGISTRATION.md, and hand over to Ilia for the tag.
 
 Build:
-- Tuning grid in the primary cell on 6 validation days: c in {0, 0.5, 1}, d in
-  {0, 0.5, 1}, B2 window W in {1 s, 5 s, 30 s}, B2b decay tau in {1 s, 5 s, 30 s},
-  B3 with fitted beta. Selection rule from PREREGISTRATION.md section 4.
+- Tuning grid in the primary cell on 6 validation days (v2, PREREGISTRATION.md section 4
+  and Design history): pull rate p in {5%, 10%, 25%, 50%}, step K in {1 tick, 5 ticks,
+  pull}, magnitude rule off or on, B2 window W in {1 s, 5 s, 30 s}, B2b decay tau in
+  {1 s, 5 s, 30 s}, B3 with fitted beta. Selection rule from section 4. (v1 used c and d
+  in {0, 0.5, 1} on a GLFT base; it failed C2, docs/M4_diagnosis.md.)
 - Canaries on validation days.
 - MDE from section 9, then fill every [TBD] in PREREGISTRATION.md.
 

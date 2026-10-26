@@ -5,6 +5,43 @@ pushes to the public GitHub remote after every [TBD] below is resolved. After th
 file does not change. Deviations go in DEVIATIONS.md, and both the original and the
 changed analysis are reported.
 
+## Design history
+
+Two designs exist. The tag prereg-v1 freezes the second one, v2.
+
+v1 (drafted 2026-10-22 to 2026-10-24) used a fixed spread around the mid as B0, the GLFT
+quoting model as B1, and an overlay that moved the GLFT quote centre by c u delta and
+widened both quotes by d m delta. On the validation days v1 failed canary C2: the oracle
+gained -0.872 bp a day over B1 (bootstrap [-1.783, -0.066]), so that design could not show
+that information becomes PnL (docs/M4_draft.md). The diagnosis (docs/M4_diagnosis.md,
+exploratory, training and validation days only) found no sign bug, and found that latency
+and queue pessimism were not the cause. Its reasons, ranked:
+1. Fills at the touch mark out at about -0.7 to -0.9 bp in every queue model and latency,
+   while the one-tick spread is worth about 0.01 bp, so every strategy has a negative
+   break-even fee before any fee is charged.
+2. B1 at its selected setting quoted about 370 ticks from mid on training days and 860 on
+   validation days, so it traded 146 and 14 times a day. GLFT works in ticks, and its
+   quotes widen as the price rises.
+3. With c = 1 the centre shift put one C2 quote at the touch about a quarter of the time,
+   so C2 was not B1 plus information but a different quoting regime that inherited
+   reason 1. On a join-the-touch base the same oracle beat its base on 12 of 12 training
+   days.
+4. Re-quoting at nearly every step the mid moves. Minor: a base that cancels half as
+   often loses as much.
+
+v2 was chosen on 2026-10-25 by Ilia Duda, after seeing these training and validation
+diagnostics and before any test-day data was downloaded. It quotes at the touch and turns
+a signal into stepping back on the side the signal marks as toxic. The v2 overlay mapping
+had not been run on any day when this section was written. Unchanged from v1: the
+question, data, simulation, the signal definitions, metrics, hypotheses, analysis, the MDE
+rule and the pre-committed conclusions. Changed: section 4 (strategies and overlay),
+section 5 (threshold constants added) and section 10 (canaries mapped to v2). GLFT is
+reported as an exploratory result (docs/exploratory/glft.md), not as a strategy. The
+v1 grid-edge and scoring-window rules for choosing B0 and B1 no longer apply, because v2
+B0 and B1 have no parameters. Choosing a design after seeing validation results is a
+degree of freedom of the researcher; it is disclosed here, and the test days stay unseen
+until the tag.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -29,7 +66,7 @@ exchange `binance-futures`, symbol `BTCUSDT`, one full UTC day per file.
 
 | Split      | Dates                      | Days | Used for                                         |
 |------------|----------------------------|------|--------------------------------------------------|
-| train      | 2024-01-01 to 2024-12-01   | 12   | Hawkes fit, B0 and B1 parameters, constant K     |
+| train      | 2024-01-01 to 2024-12-01   | 12   | Hawkes fit, constant K, thresholds, B0 and B1 runs |
 | validation | 2025-01-01 to 2025-06-01   | 6    | Overlay tuning, MDE estimate, canary checks      |
 | test       | 2025-07-01 to 2026-10-01   | 16   | Confirmatory analysis, run once                  |
 
@@ -94,65 +131,50 @@ Primary cell: risk-averse queue model, high latency.
 
 ## 4. Strategies
 
-All strategies use the same engine, order size, inventory cap, latency and queue settings.
+All strategies use the same engine, order size, inventory cap, latency and queue settings,
+and at most one order per side (section 3). Prices are in ticks and q is inventory in
+order sizes.
 
-- B0, fixed spread: bid = mid - h ticks, ask = mid + h ticks, h in {1, 2, 3, 5}.
-- B1, GLFT: closed-form approximation of Gueant, Lehalle and Fernandez-Tapia (2013) as
-  in the hftbacktest GLFT tutorial. Reservation price r = mid - skew * q, half-spread
-  delta. Arrival parameters A and k and volatility sigma are estimated over a trailing
-  window. Risk aversion gamma and the window length are chosen on training days.
+- B0, join the touch: bid at the best bid, ask at the best ask, no skew.
+- B1, join the touch with inventory skew: bid = best bid - q, ask = best ask - q, so each
+  order size of inventory moves both quotes one tick against the position.
 - B2 = B1 + overlay driven by order-flow imbalance.
 - B2b = B1 + overlay driven by signed decay-weighted trade counts.
 - B3 = B1 + overlay driven by the bivariate Hawkes intensity.
 
+For every strategy, a bid at or above the best ask moves to the best ask minus one tick,
+and the mirror rule applies to the ask. No bid is quoted when q >= Q and no ask when
+q <= -Q. B0 and B1 have no free parameters, so nothing is chosen for them; they are run on
+the training days in all 8 cells and reported. GLFT, the v1 B1, is reported as an
+exploratory result in docs/exploratory/glft.md and is not a strategy of this study.
+
 Overlay, identical for B2, B2b and B3, with direction u in [-1, 1] and magnitude m in [0, 1]
-from section 5:
+from section 5, and three settings: pull rate p, step K and the magnitude rule.
 
-    centre = r + c * u * delta
-    bid    = centre - delta * (1 + d * m)
-    ask    = centre + delta * (1 + d * m)
+    toxic side: the ask when u > theta_u(p), the bid when u < -theta_u(p), else none
+    the toxic side steps back K ticks (ask + K or bid - K), or is not quoted when K = pull
+    magnitude rule on: when m > theta_m, both sides step back one more tick
 
-Prices are rounded outward to the tick (bid down, ask up). A bid at or above the best ask
-moves to best ask minus one tick, and the mirror rule applies to the ask. No bid is
-quoted when q >= Q and no ask when q <= -Q. With c = d = 0 every overlay reduces to B1.
-
-Choosing B0 and B1 parameters, on training days in the primary cell: maximise the mean
-daily break-even fee. B0 grid: h in {1, 2, 3, 5}. B1 grid, 12 combinations: gamma in
-{0.025, 0.05, 0.1, 0.2} and estimation window in {5, 10, 20} minutes, with A and k
-refitted every 5 s. The hftbacktest GLFT tutorial uses gamma = 0.05, which it calls
-arbitrarily chosen, and a 10-minute window; the grid spans factors of two around both,
-and every window fits inside the 30-minute warm-up. Chosen values: [TBD M2].
-
-Grid edges (added on 2026-10-24, after the first training selection had been seen: every
-choice was at the top edge of its grid). If a selected value sits at the edge of its grid,
-that grid is extended by two steps in that direction, once, on training days only, in the
-primary cell, and the selection is repeated over the old and new candidates together. The
-steps continue each grid's own spacing: h in {8, 13} after {1, 2, 3, 5}, where each value
-is the sum of the two before; gamma and the window double, so gamma in {0.4, 0.8} and the
-window in {40, 80} minutes. For B1 the new values of one parameter are run with every value
-of the other. A window longer than the 30-minute warm-up must fill from 00:00 before the
-first quote, so such a candidate starts quoting at 00:40 or 01:20 instead of 00:30. A
-candidate whose median training day has fewer than 100 fills in the primary cell is not
-eligible. If the choice is still at the edge after the extension, it is kept and reported
-as at the edge.
-
-One scoring window (added on 2026-10-24 with the rule above, after the first selection had
-been seen). For the selection only, every B0 and B1 candidate, old and new, is scored from
-01:20 to 23:59 UTC, the latest first quote among them: a fill counts when its exchange time
-is at or after 01:20, inventory held at 01:20 enters at the mid of the first decision step
-at or after 01:20, and the fill floor counts fills in that window. Quoting is unchanged.
-Full-day metrics are reported beside the window ones, and so is the choice the rule would
-make without the fill floor.
+u > 0 says buyers are arriving, which tends to come before a rise in the mid, so a resting
+ask is the quote that would be filled just before the price moves against it; the mirror
+holds for u < 0. theta_u(p) is the (1 - p) quantile of |u| on training days for that
+signal and parameter, so the toxic side steps back on a share p of the training-day
+decision steps; theta_m is the 90th percentile of m on training days (section 5). The steps
+add: with K = 5 ticks and the magnitude rule on, the toxic side moves 6 ticks back and the
+other side 1. The step is applied to the B1 quote, then the cross rule and the cap apply.
 
 Tuning grids for overlays, on validation days in the primary cell:
-- c in {0, 0.5, 1} and d in {0, 0.5, 1} for all three.
-- B2: OFI window W in {1 s, 5 s, 30 s}. 27 candidates.
-- B2b: decay tau in {1 s, 5 s, 30 s}. 27 candidates.
-- B3: fitted beta, no extra parameter. 9 candidates.
+- p in {5%, 10%, 25%, 50%} of decision steps, K in {1 tick, 5 ticks, pull the side}, and
+  the magnitude rule off or on: 24 combinations, the same for every signal and setting.
+- B2: OFI window W in {1 s, 5 s, 30 s}. 72 candidates.
+- B2b: decay tau in {1 s, 5 s, 30 s}. 72 candidates.
+- B3: fitted beta, no extra parameter. 24 candidates.
 
 B3 gets fewer candidates than its rivals, which makes a B3 win harder, not easier.
 Selection: maximise the mean daily break-even fee over validation days; ties go to the
-smaller c + d, then the shorter window or decay. Selected settings: [TBD M4].
+smaller p, then the smaller K (1 tick, 5 ticks, pull), then the magnitude rule off, then
+the shorter window or decay. Every candidate has p above 0, so none equals B1; whether
+an overlay helps at all is H3 and H4 (section 7). Selected settings: [TBD M4].
 
 ## 5. Signals
 
@@ -191,6 +213,14 @@ normalisers keep the signal on the same scale when volume levels differ between 
 and 2026. Constants K, from the 12 training days (docs/hawkes_fit.md): B2 7.165, 4.664
 and 3.423 for W = 1, 5 and 30 s; B2b 3.450, 2.650 and 2.142 for tau = 1, 5 and 30 s; B3
 3.878; C4 9.303 (beta times 10) and 2.197 (beta divided by 10).
+
+Thresholds for the overlay (section 4), from the 12 training days, for every signal and
+parameter of the tuning grid and for the two C4 decays: theta_u(p) is the (1 - p) quantile
+of |u| over every decision step of the quoting windows (00:30:00 to 23:59:00 UTC) of the
+training days pooled, for p in {0.05, 0.10, 0.25, 0.50}, and theta_m is the 0.90 quantile
+of m over the same steps. Like K, they are fixed numbers computed once. A test checks
+that the share of training-day steps with |u| > theta_u(p) is within 1 percentage point
+of p. Values: [TBD M4: docs/signals/train_thresholds.json].
 
 Hawkes fit: parameters mu_b, mu_s, alpha_bb, alpha_bs, alpha_sb, alpha_ss, beta, by
 maximum likelihood pooled over the 12 training days, each day an independent
@@ -265,20 +295,23 @@ absent.
 
 Run in the primary cell. Pass criteria on validation days must hold before the tag.
 
-- C1, shuffled signs: B3 with the selected settings, but the side of each market-order
-  event is randomly permuted within the day before it enters the intensity. Pass: the
-  interval for C1 minus B1 includes 0. C1 minus B3 is reported beside it as
-  descriptive.
-- C2, oracle: B1 overlay with u = sign of the mid change over the next 5 s and m = 0, c = 1.
-  The only strategy allowed to see the future. Pass: mean gain over B1 is larger than
-  3 times the MDE. If C2 fails, the harness cannot convert information into PnL, and the
-  study stops.
+- C1, shuffled signs: B3 with the selected settings and B3's thresholds, but the side of
+  each market-order event is randomly permuted within the day before it enters the
+  intensity. C1 steps back about as often as B3, on a side that carries no order-flow
+  information. Pass: the interval for C1 minus B1 includes 0. C1 minus B3 is reported
+  beside it as descriptive.
+- C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
+  5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
+  at least one tick below; no magnitude rule. The only strategy allowed to see the future.
+  Pass: the mean gain over B1 on validation days is larger than 3 times the MDE. If C2
+  fails, the harness cannot convert information into PnL, and the study stops.
 - C3, zero latency: B3 selected settings at zero latency. Reported as an upper bound.
   Flag if any non-zero-latency run of B3 beats it on the mean.
-- C4, wrong decay: B3 with beta multiplied by 10 and divided by 10, alpha rescaled so the
-  branching ratio stays at its fitted value, and K computed on training days for each
-  variant by the section 5 rule, since each is a different parameter setting. Reported. If either variant matches B3
-  within the interval, the conclusion says the fitted decay is not what drives any gain.
+- C4, wrong decay: B3 at its selected p, K and magnitude rule, with beta multiplied by 10
+  and divided by 10, alpha rescaled so the branching ratio stays at its fitted value, and
+  K, theta_u(p) and theta_m computed on training days for each variant by the section 5
+  rules, since each is a different parameter setting. Reported. If either variant matches
+  B3 within the interval, the conclusion says the fitted decay is not what drives any gain.
 
 On test days all canaries are reported in full whatever they show.
 

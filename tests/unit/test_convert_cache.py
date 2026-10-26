@@ -16,6 +16,13 @@ from toxic_flow.data.download import DiskSpaceError, load_manifest, save_manifes
 DAY = "2024-01-01"
 
 
+@pytest.fixture(autouse=True)
+def plenty_of_memory(monkeypatch):
+    """A synthetic day is a few KB, but the guard's estimate has a floor near 3 GB, so the
+    machine's free memory decided these tests. The guard's own tests below set it."""
+    monkeypatch.setattr(cv, "available_memory_bytes", lambda: 64e9)
+
+
 def raw_day(tmp_path):
     """A synthetic day laid out as data/raw/<day>/ with its manifest."""
     trades, depth = synthetic_day(tmp_path)
