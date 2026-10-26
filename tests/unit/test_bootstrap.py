@@ -50,8 +50,8 @@ def test_mde_is_2_80_s_over_root_n():
         ((0.1, 0.5), (0.05, 0.6), [1] * 7 + [-1], 0.3, 0.2, "does_not_hold"),
         ((-0.1, 0.3), (-0.2, 0.4), [1] * 8, 0.1, 0.2, "no_detectable_difference"),
         ((-0.1, 0.9), (-0.2, 1.0), [1] * 8, 0.4, 0.2, "inconclusive"),
-        ((0.01, 0.5), (-0.05, 0.6), [1] * 8, 0.3, 0.2, "inconclusive"),  # intervals disagree
-        # They disagree with |mean| below the MDE: section 11's "large" sentence would be false.
+        # The intervals disagree about 0: one row of section 11 whatever |mean| is (Q36).
+        ((0.01, 0.5), (-0.05, 0.6), [1] * 8, 0.3, 0.2, "intervals_disagree"),
         ((0.01, 0.2), (-0.01, 0.21), [1] * 8, 0.1, 0.5, "intervals_disagree"),
     ],
 )
@@ -62,3 +62,17 @@ def test_pre_committed_conclusions(boot, t, signs, mean, m, key):
 def test_selectivity_flags_a_strategy_that_trades_under_half():
     assert selectivity([100.0, 40.0, 30.0], [100.0, 100.0, 100.0])["flag"]
     assert not selectivity([90.0, 80.0, 70.0], [100.0, 100.0, 100.0])["flag"]
+
+
+def test_every_statement_is_a_section_11_row_word_for_word():
+    """The paper prints only sentences the plan committed to (section 11); the numbers are
+    the table's X, L, U and MDE."""
+    from pathlib import Path
+
+    from toxic_flow.eval.bootstrap import STATEMENTS
+
+    prereg = (Path(__file__).resolve().parents[2] / "PREREGISTRATION.md").read_text()
+    table = prereg.split("## 11.")[1].split("## 12.")[0]
+    rows = {line.split("|")[2].strip() for line in table.splitlines() if line.startswith("|")}
+    for key, text in STATEMENTS.items():
+        assert text.format(mean="X", lo="L", hi="U", mde="MDE") in rows, key

@@ -262,11 +262,31 @@ def mde_inputs(train: pl.DataFrame, val: pl.DataFrame, n_test: int = 16) -> dict
             "mde_bp": mde(s, n_test), "n_test": n_test}  # fmt: skip
 
 
+def no_print_shares(m: pl.DataFrame, labels=("B0", "B1", "B2", "B2b", "B3")) -> dict:
+    """Section 3 (Q50): each day's share of fills with no opposite print at or through our
+    price, in the primary cell, as {label: {day: share}}, plus its range over labels and
+    days and a table for the paper. Every label is kept in the dict; the range and the
+    table cover B0 to B3, the strategies H1 to H4 compare."""
+    r = _labelled(m).filter((pl.col("queue") == PRIMARY[0]) & (pl.col("latency") == PRIMARY[1]))
+    by = {lab: dict(sorted(zip(g["day"], g["no_print_fill_share"], strict=True)))
+          for (lab,), g in r.group_by("label")}  # fmt: skip
+    shown = [lab for lab in labels if lab in by]
+    days = sorted({d for lab in shown for d in by[lab]})
+    vals = [x for lab in shown for x in by[lab].values() if np.isfinite(x)]
+    rows = ["| Day | " + " | ".join(shown) + " |", "|---" * (len(shown) + 1) + "|"]
+    for d in days:
+        cells = (f"{by[lab][d]:.4f}" if d in by[lab] else "" for lab in shown)
+        rows.append(f"| {d} | " + " | ".join(cells) + " |")
+    return {"no_print_share": by, "no_print_min": min(vals), "no_print_max": max(vals),
+            "no_print_table": "\n".join(rows)}  # fmt: skip
+
+
 def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
     """Everything the paper prints, from the confirmatory results. The MDE is recomputed
     with the same s for the number of test days present (section 9)."""
     n_test = int(_labelled(m)["day"].n_unique())
     mde_bp = mde(mde_in["s_bp"], n_test)
+    no_print = no_print_shares(m)  # before the seed means, which have no such column
     m = with_seed_means(m)
     h = h1(m, mde_bp)
     c = canaries(m, mde_bp)
@@ -303,6 +323,7 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
         "selectivity_ratio": h["selectivity"]["median_notional_ratio"],
         **{f"{k.lower()}_{x}": v for k, r in ex.items() for x, v in _flat(r["bef"]).items()},
         **_canary_keys(m, c),
+        **no_print,
         "h1": h,
         "exploratory": ex,
         "canaries": c,

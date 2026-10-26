@@ -21,7 +21,8 @@ def rows(label, bef, queue="risk_averse", latency="high", fills=100, notional=1e
         {"day": d, "label": label, "strategy": label.split("_")[0], "queue": queue,
          "latency": latency, "params": params or f'{{"name": "{label}"}}', "fills": fills,
          "break_even_fee_bps": b, "traded_notional": notional,
-         "mean_markout_1s_bps": b, "mean_markout_10s_bps": b / 2, "mean_markout_60s_bps": b / 4}
+         "mean_markout_1s_bps": b, "mean_markout_10s_bps": b / 2, "mean_markout_60s_bps": b / 4,
+         "no_print_fill_share": 0.1}
         for d, b in zip(DAYS, bef, strict=True)
     ]  # fmt: skip
 
@@ -149,6 +150,23 @@ def test_summary_has_every_key_the_paper_template_needs():
     assert summary["h1_cells_same_sign"] == 8
     assert summary["rl_b3_mean_bp"] == pytest.approx(summary["rp_b3_mean_bp"])  # same rows
     assert summary["f_b3_mean_bp"] == pytest.approx(1.0 + NOISE.mean() - 0.25)  # B3 - F
+
+
+def test_no_print_shares_per_day_in_the_primary_cell_with_their_range_and_table():
+    b3 = rows("B3", [0.0] * 12)
+    for i, r in enumerate(b3):
+        r["no_print_fill_share"] = 0.01 * i
+    other_cell = rows("B3", [0.0] * 12, latency="low")
+    for r in other_cell:
+        r["no_print_fill_share"] = 0.9  # not the primary cell: not reported here
+    m = pl.DataFrame(b3 + other_cell + rows("B1", [0.0] * 12) + rows("R1_s1", [0.0] * 12))
+    out = analysis.no_print_shares(m)
+    assert out["no_print_share"]["B3"] == pytest.approx({d: 0.01 * i for i, d in enumerate(DAYS)})
+    assert set(out["no_print_share"]) == {"B3", "B1", "R1_s1"}  # every label, each day
+    assert (out["no_print_min"], out["no_print_max"]) == pytest.approx((0.0, 0.11))
+    table = out["no_print_table"].splitlines()
+    assert table[0] == "| Day | B1 | B3 |" and len(table) == 2 + 12
+    assert table[2] == f"| {DAYS[0]} | 0.1000 | 0.0000 |"
 
 
 def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():

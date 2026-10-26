@@ -115,7 +115,8 @@ def _summary():
     rows = [
         {"day": day, "label": lab, "strategy": lab, "params": "{}", "queue": q, "latency": lat,
          "fills": 100, "traded_notional": 1e6, "break_even_fee_bps": v,
-         "mean_markout_1s_bps": v, "mean_markout_10s_bps": v, "mean_markout_60s_bps": v}
+         "mean_markout_1s_bps": v, "mean_markout_10s_bps": v, "mean_markout_60s_bps": v,
+         "no_print_fill_share": 0.1}
         for q in ("risk_averse", "power3", "power2", "log") for lat in ("low", "high")
         for lab, vals in (("B1", [0.0] * 12), ("B2", [0.0] * 12), ("B2b", [0.0] * 12), ("B3", d),
                           ("C1", [0.0] * 12), ("C2", [2.0] * 12), ("F", [0.0] * 12),
@@ -165,3 +166,17 @@ def test_a_missing_page_section_stops_the_pdf_instead_of_dropping_it():
 
     with pytest.raises(KeyError, match="no section"):
         page_text("# Title\n\nLead.\n\n## What the study asks\n\nQ.\n")
+
+
+def test_every_template_section_with_a_number_is_checked_for_literal_decimals():
+    """A section holding a placeholder reports a result, so check_paper must look at it;
+    a new section left off RESULT_HEADINGS would escape the literal-decimal check."""
+    import re
+
+    from check_paper import RESULT_HEADINGS
+
+    template = (Path(__file__).resolve().parents[2] / "paper" / "template.md").read_text()
+    for section in re.split(r"^##\s+", template, flags=re.M)[1:]:
+        heading, body = section.split("\n", 1)
+        if "{{" in body:
+            assert heading.startswith(RESULT_HEADINGS), heading

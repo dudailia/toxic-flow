@@ -213,19 +213,43 @@ on the number of pulled runs as well as the rate, B3 gained {{pre_rl_b3_rl_b3_me
 Limitation: many of B3's pulls start just after one of our own orders on that side was
 filled, when pulling costs no queue place, while the matched control almost always cancels
 a resting order; so B3's gain over it may be partly that cost, or a simple rule of not
-rejoining the side just hit, rather than what the Hawkes direction knows. The control also
-spreads its runs evenly over the day where the signals' gather in busy periods. A rule with
-no signal at all, B1 that does not rejoin the side just filled for {{pre_f_hold}} s (the
-hold chosen on the training days to match B3's pull rate), came close to B3: B3 minus it
-was {{pre_f_b3_f_mean}} bp ({{pre_f_b3_f_ci}}), and it beat the run-matched control by
-{{pre_f_f_rl_b3_mean}} bp ({{pre_f_f_rl_b3_ci}}). So on these days most of B3's gain over
-random pulls is what not rejoining after a fill gives, not what the Hawkes direction adds.
-Limitation: 6 days, and the hold matches B3's pull rate on the training days, not on these.
-And B3 against B2b at the same
-pull rate: {{pre_mp_5_mean}} bp at 5% ({{pre_mp_5_ci}}), {{pre_mp_10_mean}} at 10%,
+rejoining the side just hit, rather than what the Hawkes direction knows (the next
+section tests that rule). The control also spreads its runs evenly over the day where the
+signals' gather in busy periods.
+
+B3 against B2b at the same pull rate: {{pre_mp_5_mean}} bp at 5% ({{pre_mp_5_ci}}), {{pre_mp_10_mean}} at 10%,
 {{pre_mp_25_mean}} at 25% and {{pre_mp_50_mean}} at 50%. Limitation: B3 marks in shorter
 runs and so cancels more often at the same p, so part of that deficit may be the cost of
 re-queuing rather than worse information.
+
+## Control F: not rejoining the side just filled
+
+Exploratory, with no pass rule. F was added on 2026-10-26, after the leakage audit of the
+run-length run, and before any test-day data was downloaded. It is B1 that, after each of
+our fills, does not quote that side again until {{pre_f_hold}} s after the fill's
+exchange time. It reads no signal and has no seed. The hold is the one, of eight fixed
+before F ran, whose pull share on the 12 training days came closest to B3's there
+({{pre_f_share_train_f}} against {{pre_f_share_train_b3}}).
+
+On the 6 validation days, primary cell, B3 minus F was {{pre_f_b3_f_mean}} bp a day
+(bootstrap {{pre_f_b3_f_ci}}, t {{pre_f_b3_f_t_ci}}, {{pre_f_b3_f_pos}} days above 0).
+F minus the run-matched random control RL_B3 was {{pre_f_f_rl_b3_mean}} bp
+({{pre_f_f_rl_b3_ci}}, {{pre_f_f_rl_b3_pos}} days above 0), against
+{{pre_rl_b3_rl_b3_mean}} bp for B3 minus RL_B3. So on these days most of B3's gain over
+random pulls is what the simple rule gives, and what the Hawkes direction adds on top of
+it is too small for these days to show.
+
+Limitations, each of which weakens that reading:
+- 6 days, and the same days chose B3's settings, which favours B3. An interval that
+  includes 0 on 6 days does not show that the Hawkes direction adds nothing.
+- F's pull share matches B3's on the training days, not on these: {{pre_f_share_val_f}}
+  against {{pre_f_share_val_b3}}, so here F pulled less often than B3.
+- F was built after an audit of the validation days pointed to this explanation, so these
+  days cannot test it. The test days are its first look at unseen data.
+- Primary cell only. F did not run in the other queue models or at low latency, and on the
+  test days it runs in the primary cell only.
+- Simulated fills on historical data, with the fill model's limits stated under the test
+  results.
 
 ## GLFT, the quoting model that was dropped
 
@@ -262,6 +286,7 @@ The statement above is chosen by script from these sentences, committed before t
 | H1 holds, D > 0 | The fitted Hawkes overlay added X bp of edge per unit of notional over a decay-weighted trade count, with interval [L, U], in every queue and latency cell. |
 | Intervals include 0 and abs(mean D) < MDE | No detectable difference between the Hawkes overlay and a decay-weighted trade count. The study could detect effects of MDE bp or larger. |
 | Intervals include 0 and abs(mean D) >= MDE | Inconclusive: the point estimate is large but the test set is too small to separate it from noise. |
+| The bootstrap and t intervals disagree on whether 0 is inside | Inconclusive: the two intervals disagree on whether 0 is inside. |
 | Primary intervals exclude 0 but the sign flips in some cell | Does not hold. The result depends on the queue or latency model. |
 | H1 holds, D < 0 | The Hawkes overlay did worse than a decay-weighted trade count by X bp, interval [L, U]. |
 | C1 fails on test days | The signal's gain does not depend on event signs, so it is not order-flow information. Primary result reported but not interpreted. |
@@ -286,7 +311,12 @@ in all of them. Simulated fills on historical data.](fig_cells.svg)
 
 Limitations, stated with the result: simulation only, no real fills; queue position is
 estimated, not observed; an order at the front of the queue fills in full on any trade at
-its price; funding payments are not modelled.
+its price; funding payments are not modelled. The simulator also fills a resting quote
+when the book moves through its price with no trade there, which a real venue may treat
+differently. In the primary cell such fills were {{no_print_min}} to {{no_print_max}} of
+a day's fills across B0 to B3; the share for each day:
+
+{{no_print_table}}
 
 ## Canaries on the test days
 

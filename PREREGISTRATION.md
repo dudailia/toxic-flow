@@ -65,6 +65,17 @@ our own fill on that side, when pulling costs no queue place (docs/audit_run_len
 and before any test-day data was downloaded. Its hold rule was committed before F was run
 on any day. It is exploratory and changes no pass rule.
 
+Four points of wording were settled on 2026-10-26 by Ilia Duda, before any test-day data
+was downloaded (docs/OPEN_QUESTIONS.md, Q34 to Q36 and Q50): section 3 states that fills
+include those where the book moves through our quote with no trade at our price, and that
+each day's share of them is reported; section 8 defines the selectivity check as the
+median over test days of the daily ratio; section 10 names the interval its pass rules
+use; section 11 has a row for bootstrap and t intervals that disagree about 0, which
+section 8 already called inconclusive. Sections 8 and 10 state what the analysis code
+already did. The section 11 row replaces the sentence the code printed for that case, and
+the share of such fills is newly reported. None changes a pass rule or a validation
+result.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -124,7 +135,11 @@ An excluded day is listed with its rule number. No other reason excludes a day.
   hftbacktest 2.4.4 (docs/ENGINE.md), so it cannot run the study. Limitation, stated next
   to results: an order at the front of the queue fills in full on any trade at its price,
   whatever the trade size, so fills made by prints smaller than our order are counted in
-  full.
+  full. Fills also include cases where the book moves through our quote with no trade at
+  our price: hftbacktest fills a resting order when the opposite side of the book reaches
+  its price. A real venue may treat some of these differently. Each day's share of such
+  fills, those with no opposite print at or through our price at the fill's exchange
+  time, is reported for every strategy.
 - Order size: smallest size meeting the minimum quantity and minimum notional for that
   date in configs/venue.yaml. Inventory cap Q = 10 order sizes.
 - Decision step: every 100 ms of simulated time. Quotes are post-only limit orders,
@@ -338,8 +353,8 @@ Exploratory, same statistic, reported with intervals and labelled exploratory:
 - H1 holds if and only if (a) both intervals exclude 0 in the primary cell and (b) the point
   estimate has the same sign in all 8 queue and latency cells.
 - Descriptive: the number of test days with D_i > 0, and a per-day plot of D_i.
-- Selectivity check: ratio of B3 to B2b traded notional on the median test day. If it is
-  below 0.5, the conclusion states that B3 traded less than half as much, and any effect
+- Selectivity check: the median over test days of the daily ratio of B3 to B2b traded
+  notional. If it is below 0.5, the conclusion states that B3 traded less than half as much, and any effect
   is labelled as selectivity rather than better pricing.
 - Markout intervals use the same day-level bootstrap, with fills grouped by day.
 
@@ -367,6 +382,8 @@ absent.
 ## 10. Canaries
 
 Run in the primary cell. Pass criteria on validation days must hold before the tag.
+Every interval in the pass rules below (C1, C4) is the paired day-level bootstrap of
+section 8: the 95% percentile interval from 10,000 resamples of days, seed 1729.
 
 - C1, shuffled signs: B3 with the selected settings and B3's thresholds, but the side of
   each market-order event is randomly permuted within the day before it enters the
@@ -426,6 +443,7 @@ On test days all canaries are reported in full whatever they show.
 | H1 holds, D > 0                                             | The fitted Hawkes overlay added X bp of edge per unit of notional over a decay-weighted trade count, with interval [L, U], in every queue and latency cell. |
 | Intervals include 0 and abs(mean D) < MDE                   | No detectable difference between the Hawkes overlay and a decay-weighted trade count. The study could detect effects of MDE bp or larger. |
 | Intervals include 0 and abs(mean D) >= MDE                  | Inconclusive: the point estimate is large but the test set is too small to separate it from noise. |
+| The bootstrap and t intervals disagree on whether 0 is inside | Inconclusive: the two intervals disagree on whether 0 is inside. |
 | Primary intervals exclude 0 but the sign flips in some cell | Does not hold. The result depends on the queue or latency model. |
 | H1 holds, D < 0                                             | The Hawkes overlay did worse than a decay-weighted trade count by X bp, interval [L, U]. |
 | C1 fails on test days                                       | The signal's gain does not depend on event signs, so it is not order-flow information. Primary result reported but not interpreted. |

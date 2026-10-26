@@ -210,6 +210,14 @@ def validation(out: dict) -> None:
         for x in run("v2_fill_hold_val").filter(pl.col("strategy") == "F")["params"]
     }
     (out["pre_f_hold"],) = (f"{h:g}" for h in hold)
+    # F's pull share against B3's: matched on the training days by the rule, not on these.
+    train_f = run("v2_fill_hold_train").filter(pl.col("label") == f"F_h{out['pre_f_hold']}")
+    train_b3 = primary(run("v2_mde_train")).filter(pl.col("label") == "B3")
+    val = primary(run("v2_fill_hold_val"))
+    for key, rows in (("train_f", train_f), ("train_b3", train_b3),
+                      ("val_f", val.filter(pl.col("label") == "F")),
+                      ("val_b3", val.filter(pl.col("label") == "B3"))):  # fmt: skip
+        out[f"pre_f_share_{key}"] = num(float(rows["toxic_share"].mean()))
 
 
 def matched_p(out: dict) -> None:
