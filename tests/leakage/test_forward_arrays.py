@@ -1,6 +1,5 @@
 """AC3.6: the oracle canary C2 under tests/canary/ is the only code that builds a
-forward-looking array; no strategy or signal file names one. Pending: to move into
-tests/leakage/ (protected) by Ilia."""
+forward-looking array; no strategy or signal file names one."""
 
 import re
 from pathlib import Path

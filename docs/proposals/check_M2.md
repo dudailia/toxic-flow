@@ -12,7 +12,7 @@ SPEC.md M2.
 | AC2.3 | runs the slow fee-equivalence test (about 35 s) | passes |
 | AC2.4 | for B1 on every train day and latency, the risk-averse model has no more fills than any other queue model | needs the 12 train days; the smoke day shows it |
 | AC2.5 | configs/selected.yaml names B0 h and B1 gamma and window_s, and they maximise the mean daily break-even fee over train days in the primary cell (risk-averse, high latency) among the runs present | not written; it needs all 12 train days |
-| AC2.6 | tests/leakage/test_layering.py has the layering test | written in tests/pending_leakage/; Ilia moves it |
+| AC2.6 | tests/leakage/test_layering.py has the layering test | in tests/leakage/ (moved 2026-10-26, approved by Ilia) |
 
 Choices to confirm:
 - AC2.4 counts a tie as passing ("no more fills than"). Decided by Ilia on 2026-10-24

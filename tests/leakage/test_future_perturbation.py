@@ -1,5 +1,5 @@
 """AC3.1: replacing every event after t with random events leaves each signal unchanged at
-every decision time up to t. Pending: to move into tests/leakage/ (protected) by Ilia."""
+every decision time up to t."""
 
 import numpy as np
 import pytest

@@ -1,6 +1,5 @@
 """AC2.6: no import path from toxic_flow.strategies or toxic_flow.signals into toxic_flow.eval.
-Markouts and other forward-looking code live only in eval. Pending: to move into
-tests/leakage/ (protected) by Ilia."""
+Markouts and other forward-looking code live only in eval."""
 
 import ast
 from pathlib import Path

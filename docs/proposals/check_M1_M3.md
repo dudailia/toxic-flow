@@ -17,7 +17,7 @@ Revised 2026-10-26 (see docs/TAG_CHECKLIST.md): AC1.3 reads only the excluded-da
 | AC1.4 | the two collapse unit tests exist (make check runs them) | yes |
 | AC1.5 | data/events/DATE.parquet for all 18 days, exact schema | 1 of 18 days |
 | AC1.6 | bytes recorded for all 36 files in the manifest | 2 of 36 |
-| AC3.1 | perturbation tests for EWMA, Hawkes and OFI in tests/leakage/ | written in tests/pending_leakage/; Ilia moves them |
+| AC3.1 | perturbation tests for EWMA, Hawkes and OFI in tests/leakage/ | in tests/leakage/ (moved 2026-10-26, approved by Ilia) |
 | AC3.2 | online-equals-offline test exists with rtol 1e-9 | yes |
 | AC3.3 | the slow recovery test passes (runs it, about 5 s) | yes |
 | AC3.4 | docs/hawkes_fit.json from the 12 training days has branching_ratio below 1 | needs the training days |
