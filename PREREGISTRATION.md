@@ -42,6 +42,18 @@ B0 and B1 have no parameters. Choosing a design after seeing validation results 
 degree of freedom of the researcher; it is disclosed here, and the test days stay unseen
 until the tag.
 
+The C1 pass rule was revised on 2026-10-26 by Ilia Duda, after seeing C1 fail against B1
+on the validation days and before any test-day data was downloaded. As first written for
+v2, C1 passed if the interval for C1 minus B1 included 0. On the validation days C1 lost
+to B1 by 0.0090 bp a day (bootstrap [-0.0126, -0.0055], 0 of 6 days above 0;
+docs/M4_v2_draft.md), so it failed. The leakage audit found no leak. It found that a
+pulled quote rejoins at the back of the queue, so pulling costs queue position even when
+the pull carries no information, and B1 never pulls; C1 minus B1 therefore mixes the cost
+of pulling with any information in the signs. The revised rule judges C1 against R1, B1
+with random pulls at C1's realised pull rate (section 10). The original C1 minus B1
+result stays in the report beside the revised one. Revising a pass rule after seeing it
+fail is a degree of freedom of the researcher, disclosed here.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -297,9 +309,15 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
 
 - C1, shuffled signs: B3 with the selected settings and B3's thresholds, but the side of
   each market-order event is randomly permuted within the day before it enters the
-  intensity. C1 steps back about as often as B3, on a side that carries no order-flow
-  information. Pass: the interval for C1 minus B1 includes 0. C1 minus B3 is reported
-  beside it as descriptive.
+  intensity (seed 1729), so C1 steps back on a side that carries no order-flow
+  information. Shuffling breaks the runs of same-side orders, so C1 marks a side toxic on
+  fewer steps than B3. Its control is R1: B1 that, at each decision step independently,
+  marks a side toxic with probability r and steps that side back by B3's K, the side
+  chosen at random with equal chance, where r is C1's realised share of quoting steps
+  with a side marked toxic on that day. R1 reads no market data. It runs with 3 seeds,
+  and R1's value on a day is the mean over the seeds. Pass: the interval for C1 minus R1
+  includes 0 (revised 2026-10-26, Design history). C1 minus B1, the rule first written,
+  and C1 minus B3 are reported beside it as descriptive.
 - C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
   5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
   at least one tick below; no magnitude rule. The only strategy allowed to see the future.

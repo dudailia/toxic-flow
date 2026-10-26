@@ -221,7 +221,9 @@ Acceptance:
 - AC4.1 configs/selected.yaml has B2, B2b and B3 settings with the validation table.
 - AC4.2 canary C2 beats B1 by more than 3 times the MDE on validation days. If not, stop:
   the harness cannot turn information into PnL, so a null result would mean nothing.
-- AC4.3 canary C1 confidence interval against B1 includes 0 on validation days.
+- AC4.3 canary C1 confidence interval against R1 (B1 with random pulls at C1's realised
+  rate, 3 seeds) includes 0 on validation days. Revised 2026-10-26 from "against B1"
+  (Q53, PREREGISTRATION.md Design history); C1 against B1 is still reported.
 - AC4.4 PREREGISTRATION.md contains no [TBD] and passes the writing lint.
 - AC4.5 Ilia has passed /viva M4.
 
