@@ -24,6 +24,8 @@ Choices to confirm:
   label column of their own (the strategy label, such as C4_x10), which the earlier
   version would have overwritten.
 
+Revised 2026-10-26 (see docs/TAG_CHECKLIST.md): AC2.3 now fails when the slow test is skipped, as it is while 2024-01-01 is not converted.
+
 ## Proposed code
 
 ```python
@@ -84,7 +86,9 @@ def m2(r: Results) -> None:
         text=True,
     )
     last = (proc.stdout + proc.stderr).strip().splitlines()
-    r.add("AC2.3 fee equivalence (slow) passes", proc.returncode == 0, last[-1] if last else "")
+    # The test skips when 2024-01-01 is not converted; a skip proves nothing (2026-10-26).
+    ran = proc.returncode == 0 and "1 passed" in (last[-1] if last else "")
+    r.add("AC2.3 fee equivalence (slow) passes", ran, last[-1] if last else "")
 
     bad = []
     if runs is not None:

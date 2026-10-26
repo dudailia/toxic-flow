@@ -5,6 +5,8 @@ paste in. Each check maps to one acceptance criterion in SPEC.md. To apply: add
 `import polars as pl` next to `import yaml`, paste the two functions above `MILESTONES`,
 and set `MILESTONES = {"M0": m0, "M1": m1, "M3": m3}`.
 
+Revised 2026-10-26 (see docs/TAG_CHECKLIST.md): AC1.3 reads only the excluded-day list, not the closing list of assessed days; AC3.4 reads the fit from docs/signals/train_constants.json; AC3.5 looks for the heading the fit report has, "## Time-rescaling diagnostics".
+
 ## What each check needs
 
 | AC | Check | Built now? |
@@ -60,7 +62,10 @@ def m1(r: Results) -> None:
             if rules:
                 flagged[d] = rules
     listed = read("docs/data_quality/EXCLUSIONS.md")
-    listed_days = set(re.findall(r"\b(20\d\d-\d\d-\d\d)\b", listed))
+    # The closing "Days assessed so far" line names every assessed day; only the lines
+    # above it list excluded days.
+    excluded_part = listed.split("Days assessed")[0]
+    listed_days = set(re.findall(r"\b(20\d\d-\d\d-\d\d)\b", excluded_part))
     ok = all(
         d in listed_days and all(f"rule {n}" in listed for n in rules)
         for d, rules in flagged.items()
@@ -119,13 +124,13 @@ def m3(r: Results) -> None:
     )
     last = (proc.stdout + proc.stderr).strip().splitlines()
     r.add("AC3.3 parameter recovery (slow) passes", proc.returncode == 0, last[-1] if last else "")
-    fit_text = read("docs/hawkes_fit.json")
-    br = json.loads(fit_text).get("branching_ratio") if fit_text else None
+    fit_text = read("docs/signals/train_constants.json")
+    br = json.loads(fit_text)["hawkes"].get("branching_ratio") if fit_text else None
     r.add("AC3.4 fitted branching ratio below 1", br is not None and br < 1, f"{br}")
     doc = read("docs/hawkes_fit.md")
     r.add(
         "AC3.5 docs/hawkes_fit.md has residuals and KS",
-        "## Time-rescaling residuals" in doc and "KS" in doc,
+        "## Time-rescaling diagnostics" in doc and "KS" in doc,
     )
     canary = ROOT / "tests" / "canary"
     forward = re.compile(r"\bfuture_mid\b|\bforward_\w+")
