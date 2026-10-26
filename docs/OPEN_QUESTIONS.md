@@ -3,60 +3,34 @@
 Triage of 2026-10-26. Each question is quoted in short from docs/SESSION_REPORT.md, where
 the full text and its context are. "Frozen" means the answer changes something the tag
 prereg-v1 freezes: PREREGISTRATION.md, or code that the test-day runs use. Recommended
-answers are Claude's; Ilia decides each open one.
+answers are Claude's; Ilia decides each open one. Updated the same day with Ilia's
+decisions on Q34, Q35, Q36 and Q50, and with Q37 and Q40 applied as recommended because
+they change no frozen text.
 
-## Still open, for Ilia, ordered by what they affect
+## Still open, for Ilia
 
-1. Q36, section 11 (frozen, a pre-committed sentence). Section 8 says a result is
-   inconclusive when the bootstrap and t intervals disagree about 0, but section 11 has
-   no row for that case when |mean| is below the MDE, and its "inconclusive" row says
-   "the point estimate is large", which is then false. The code prints: "Inconclusive:
-   the bootstrap and t intervals disagree on whether 0 is inside, and the point estimate
-   is below the minimum detectable effect." Recommended: add that row to the section 11
-   table before the tag, word for word as the code prints it, so the paper never states a
-   sentence the plan did not commit to.
-2. Q34, section 10 (frozen, pass rules). C1's pass ("the interval for C1 minus R1
-   includes 0") and C4's match use the bootstrap interval only; section 10 does not say
-   which interval. Recommended: keep the bootstrap interval and say so in section 10. It
-   is the narrower one at 16 days (section 8), so it is the harder test for both: C1
-   passes only if even the narrow interval includes 0, and C4 claims "the fitted decay is
-   not what drives any gain" only if even the narrow interval includes B3. Requiring both
-   intervals would make both canaries easier to pass.
-3. Q35, section 8 (frozen, the selectivity flag). "Ratio of B3 to B2b traded notional on
-   the median test day" can be read as the median of daily ratios (what the code does,
-   eval/bootstrap.selectivity) or a ratio of medians. Recommended: the median over test
-   days of each day's ratio, written into section 8 in those words. It keeps the day as
-   the unit, as every other statistic does.
-4. Q50, section 3 (frozen, the exchange model, as a stated limitation). In v1, 5 to 14% of
-   fills had no opposite trade at their exchange time: hftbacktest fills a resting quote
-   when the book moves through its price. Not look-ahead and not biased across days, but
-   a real venue would treat some of these differently. Not measured for v2, whose quotes
-   sit at the touch. Recommended: add one sentence to section 3 that fills include those
-   where the book moves through the quote without a print, and measure the share on the
-   v2 validation runs for the paper's limitation text. No change to the fill model, which
-   is hftbacktest's (CLAUDE.md: no custom matching engine).
-5. Q40, conversion code the test days use (frozen code). The Q13 converter fix keeps a
-   larger later snapshot whole instead of cutting it as hftbacktest's one-shot output
-   would. Every training and validation day was converted with it and its events hashes
-   are in data/manifest.json. Recommended: confirm. Undoing it now would change every
-   result so far.
-6. Q38, section 6 markouts (frozen, secondary metric). The horizon is added to the fill's
+1. Q38, section 6 markouts (frozen, secondary metric). The horizon is added to the fill's
    exchange time, but the mid is read on the local-time step grid, a feed latency (a few
    ms) behind. Already stated in eval/markouts.py. Recommended: state it in section 6 in
    one sentence and keep the code; at horizons of 1 s and more the offset is small, and
-   moving the lookup to exchange time would change every markout reported so far.
-7. Q37, paper only (not frozen). The paper prints the tag's creation time; the push time
-   on GitHub is Ilia's first DEVIATIONS.md entry. Recommended: keep the creation time,
-   which scripts/analyse.py reads from git, and leave the push time in DEVIATIONS.md,
-   where a reader checks it against GitHub. It can be decided after the tag.
+   moving the lookup to exchange time would change every markout reported so far. Not
+   applied: it changes frozen text, and Ilia's instruction of 2026-10-26 was to apply only
+   recommendations that change none.
 
 ## Closed
 
-Closed because they record a fact, were decided, or concern the v1 design that v2
-replaced (Design history). None needs an answer before the tag.
+Closed because Ilia decided them, they were applied as recommended, they record a fact,
+or they concern the v1 design that v2 replaced (Design history). None needs an answer
+before the tag.
 
 | Q | Question, short | Why closed |
 |---|---|---|
+| Q34 | which interval the section 10 pass rules use | Decided by Ilia 2026-10-26: the 95% percentile bootstrap, 10,000 resamples, seed 1729; written into section 10. The code already did this. |
+| Q35 | selectivity: median of daily ratios or ratio of medians | Decided by Ilia 2026-10-26: the median over test days of the daily ratio of B3 to B2b traded notional; written into section 8. The code already did this (eval/bootstrap.selectivity). |
+| Q36 | section 11 had no row for intervals that disagree about 0 | Decided by Ilia 2026-10-26: the row "The bootstrap and t intervals disagree on whether 0 is inside", statement "Inconclusive: the two intervals disagree on whether 0 is inside." Written into section 11; eval/bootstrap.conclusion prints it whatever the size of the mean, and a test checks that every statement is a section 11 row word for word. |
+| Q37 | the paper prints the tag's creation time, not its push time | Applied as recommended (no frozen text): scripts/analyse.py keeps reading the creation time from git, and the push time stays Ilia's first DEVIATIONS.md entry. |
+| Q40 | the Q13 converter fix keeps a larger later snapshot whole | Applied as recommended (no frozen text): confirmed as is. Every training and validation day was converted with it, and its events hashes are in data/manifest.json; undoing it would change every result so far. |
+| Q50 | fills where the book moves through the quote with no print | Decided by Ilia 2026-10-26: section 3 states it, and each day's share is reported. Measured per cell as no_print_fill_share (eval/metrics.no_print_share: no opposite print at or through our price at the fill's exchange time, prices compared in ticks); the test-day summary has the share for every strategy and day in the primary cell, and the paper a table for B0 to B3. No change to the fill model, which is hftbacktest's. |
 | Q32 | configs/selected.yaml format | In use: configs/selected.yaml holds the v2 settings Ilia approved on 2026-10-26. |
 | Q33 | confirmatory grid as one config with per-strategy cells; B2b in the validation canary run | Built that way (engine/configs.v2_confirmatory, v2_canaries); the two planned test-day runs confirmed by Ilia (SPEC AC5.3, 2026-10-26). |
 | Q39 | disk and memory options | Superseded: Ilia set the 3 GB floor and chose an external SSD for data/raw (docs/ssd_move.md). |
