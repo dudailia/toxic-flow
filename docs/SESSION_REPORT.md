@@ -1103,3 +1103,26 @@ day's conversion for some minutes and then allowed it.
 Tests: `make check` 357 passed. `make check-full` 383 passed and 3 skipped; the skipped
 tests need 2024-01-01 converted on disk (the fee-equivalence test among them), which it
 is not now.
+
+## Continued, 2026-10-26: audit, M5 builders, 2024-01-01, AC2.5, paper, README
+
+- Leakage audit of results/c274b2def28e: no leak, every number reproduced. Its run-length
+  finding is now printed next to the exploratory random-pull and matched-p tables
+  (docs/M4_v2_draft.md), with cancels and notional at matched p.
+- M5 under v2: engine/configs.v2_confirmatory and v2_confirmatory_controls, written by
+  scripts/make_v2_configs.py confirmatory and controls; the summary guard wants both
+  planned runs and checks each control's rate. SPEC AC5.3 and the M5 check proposal
+  updated to two planned runs.
+- 2024-01-01 converted through the guarded path; `make check-full` 390 passed, 0 skipped.
+- docs/proposals/AC2_5_v2.md: SPEC text and a check for AC2.5 under v2; dry run passes.
+- Section 11 statements and the paper print four decimals (MDE 0.0231 bp).
+- Paper: paper/template.md in the iliaduda.com layout; pre-test numbers from
+  paper/pre_test.py (161 keys from committed results); test-day sections hold only
+  summary placeholders and the section 11 sentences. `make paper-draft` builds the page
+  and the one-page PDF (summary_draft.pdf) with test-day placeholders open.
+- README rewritten for v2. docs/TAG_CHECKLIST.md updated.
+
+Judgment calls: the PDF reprints chosen paragraphs of the built page rather than a
+separate summary text, so the two cannot drift apart; the pre-test numbers are
+placeholders too, so no number in the paper is typed by hand; summary keys for the test
+day were added (C1 against R1, C2, H2 to H4, random pulls, the cell count).
