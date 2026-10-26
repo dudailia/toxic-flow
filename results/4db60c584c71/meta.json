@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_train.yaml",
+  "config_hash": "4db60c584c71",
+  "commit": "954c0c852773e3dc3dbaf9eb2e93f757c0996fac",
+  "started_at": "2026-10-26T01:39:09+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_train",
+  "finished_at": "2026-10-26T03:35:04+00:00"
+}
