@@ -1,7 +1,8 @@
 # M4 v2: overlay tuning, canaries and MDE (draft for Ilia's review)
 
-Draft for Ilia's review. Nothing here is written into PREREGISTRATION.md or
-configs/selected.yaml yet. All numbers come from the runs named below, through
+Draft for Ilia's review. After C1 passed the revised rule, the selection was copied into
+configs/selected.yaml and the [TBD] items of PREREGISTRATION.md were filled from the runs
+named here (2026-10-26). All numbers come from the runs named below, through
 scripts/m4_v2.py. Training and validation days only; no test day was loaded.
 
 Reading (written by hand from the tables below):

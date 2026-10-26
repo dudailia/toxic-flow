@@ -1,8 +1,7 @@
 # PREREGISTRATION: toxic-flow v1
 
 Status: DRAFT. Frozen by the annotated git tag `prereg-v1`, which Ilia Duda creates and
-pushes to the public GitHub remote after every [TBD] below is resolved. After the tag this
-file does not change. Deviations go in DEVIATIONS.md, and both the original and the
+pushes to the public GitHub remote. After the tag this file does not change. Deviations go in DEVIATIONS.md, and both the original and the
 changed analysis are reported.
 
 ## Design history
@@ -108,7 +107,12 @@ An excluded day is listed with its rule number. No other reason excludes a day.
 - Engine: hftbacktest 2.4.4, pinned in uv.lock. Replay-based, so our orders do not move
   the market. Order size is the minimum the venue allows, which keeps that assumption
   close to true.
-- Exchange model: [TBD M0: partial-fill or no-partial-fill, with reason].
+- Exchange model: no partial fills (`no_partial_fill_exchange()`, the hftbacktest
+  default). The partial-fill model stops with an internal error on 2024-01-01 in
+  hftbacktest 2.4.4 (docs/ENGINE.md), so it cannot run the study. Limitation, stated next
+  to results: an order at the front of the queue fills in full on any trade at its price,
+  whatever the trade size, so fills made by prints smaller than our order are counted in
+  full.
 - Order size: smallest size meeting the minimum quantity and minimum notional for that
   date in configs/venue.yaml. Inventory cap Q = 10 order sizes.
 - Decision step: every 100 ms of simulated time. Quotes are post-only limit orders,
@@ -123,7 +127,8 @@ An excluded day is listed with its rule number. No other reason excludes a day.
 - Mid: (best bid + best ask) / 2 from the simulator's book.
 - Queue models, all reported: risk-averse (position advances only on trades; the
   pessimistic reference), probabilistic with power function n = 3, power n = 2, and
-  log function. Exact API names: [TBD M0]. The fill-count ordering on training days is
+  log function. Exact API names in hftbacktest 2.4.4: `risk_adverse_queue_model()`,
+  `power_prob_queue_model(3.0)`, `power_prob_queue_model(2.0)` and `log_prob_queue_model()`. The fill-count ordering on training days is
   reported.
 - Latency, both reported: low sets order entry and response latency from the day's
   observed feed latency (local timestamp minus exchange timestamp), sampled once per
@@ -186,7 +191,9 @@ B3 gets fewer candidates than its rivals, which makes a B3 win harder, not easie
 Selection: maximise the mean daily break-even fee over validation days; ties go to the
 smaller p, then the smaller K (1 tick, 5 ticks, pull), then the magnitude rule off, then
 the shorter window or decay. Every candidate has p above 0, so none equals B1; whether
-an overlay helps at all is H3 and H4 (section 7). Selected settings: [TBD M4].
+an overlay helps at all is H3 and H4 (section 7). Selected settings (configs/selected.yaml, from runs 0bd4181a312a and 9e93e4415b6b,
+docs/M4_v2_draft.md): B2 with W = 5 s at p = 25%; B2b with tau = 5 s at p = 25%; B3 at
+p = 5%. All three pull the toxic side and have the magnitude rule off.
 
 ## 5. Signals
 
@@ -232,7 +239,26 @@ of |u| over every decision step of the quoting windows (00:30:00 to 23:59:00 UTC
 training days pooled, for p in {0.05, 0.10, 0.25, 0.50}, and theta_m is the 0.90 quantile
 of m over the same steps. Like K, they are fixed numbers computed once. A test checks
 that the share of training-day steps with |u| > theta_u(p) is within 1 percentage point
-of p. Values: [TBD M4: docs/signals/train_thresholds.json].
+of p. Values, rounded to 4 decimals here; the runs use the full values in
+docs/signals/train_thresholds.json (SHA-256 c9fa1ce13f94a49e7a1fc2e8381c32aee5efaf80c4efa24f9f5a94eacc88f5dd),
+which every run config copies:
+
+| Signal setting | theta_u at p 5% | 10% | 25% | 50% | theta_m |
+|---|---|---|---|---|---|
+| B2_ofi_1s | 0.9764 | 0.9107 | 0.5848 | 0.1768 | 0.2477 |
+| B2_ofi_5s | 0.9749 | 0.9282 | 0.7320 | 0.3722 | 0.3190 |
+| B2_ofi_30s | 0.9732 | 0.9339 | 0.7875 | 0.5082 | 0.3632 |
+| B2b_ewma_1s | 0.8562 | 0.7561 | 0.5614 | 0.3415 | 0.2401 |
+| B2b_ewma_5s | 0.6463 | 0.5597 | 0.4045 | 0.2398 | 0.2482 |
+| B2b_ewma_30s | 0.4801 | 0.3958 | 0.2718 | 0.1569 | 0.2542 |
+| B3_hawkes | 0.5693 | 0.5142 | 0.3901 | 0.1851 | 0.2184 |
+| C4_x10 | 0.6897 | 0.6014 | 0.0933 | 0.0232 | 0.0992 |
+| C4_x0.1 | 0.3932 | 0.3308 | 0.2325 | 0.1367 | 0.2308 |
+
+Pooled over the training days, every setting's share of steps with |u| above theta_u(p)
+is p to within 0.0001, and the share with m above theta_m is 10%, except C4 at beta x 10
+at p = 50%: 46.0%, because its intensity returns to the baseline between events and |u|
+ties there. B3 is selected at p = 5%, so that tie affects no run of the study.
 
 Hawkes fit: parameters mu_b, mu_s, alpha_bb, alpha_bs, alpha_sb, alpha_ss, beta, by
 maximum likelihood pooled over the 12 training days, each day an independent
@@ -256,7 +282,12 @@ For strategy s on day i, over the quoting window:
 - Break-even maker fee, primary: BEF_si = 10,000 * G_si / N_si, in basis points. It is the
   maker fee at which the day's net PnL would be zero.
 - Net PnL at fee f: G_si - f * N_si / 10,000, for f in {standard maker fee for that date,
-  0, [TBD M0: a published rebate tier with source, or a labelled hypothetical]}.
+  0, -0.1 bp}. -0.1 bp is the Tier 1 maker fee of Binance's USD-M Futures Liquidity
+  Provider Program on USDT pairs, published for 2025-03-03 onward and open to accounts
+  with at least 100M USD of 30-day futures volume (docs/DATA_RECON.md; source:
+  https://www.binance.com/en/support/announcement/detail/cde392fe431a4045a951d40d7498abbc).
+  It applies to the test days. For training and validation days before 2025-03-03 it is
+  a hypothetical rate.
 - Markouts: for each fill, 10,000 * side * (mid(t_fill + h) - p_fill) / p_fill, side = +1
   for a buy, h in {1 s, 10 s, 60 s}. Negative means adverse selection.
 - Inventory variance: variance of q sampled each second, in order-size units.
@@ -271,6 +302,12 @@ Exploratory, same statistic, reported with intervals and labelled exploratory:
 - H2: B3 against B2 (Hawkes against OFI).
 - H3: B3 against B1 (does the overlay help at all).
 - H4: B2b against B1 (does the cheap signal help at all).
+- B3 against R_B3 and B2b against R_B2b: each selected overlay against B1 with random
+  pulls at that overlay's own realised pull rate on each day (section 10), 3 seeds, the
+  control's day value being the mean over seeds. These separate what the signal chooses
+  from what pulling at that rate costs by itself. The random pulls start more runs of a
+  pulled side than the signals do, so these comparisons overstate the signal's part;
+  that is stated with them.
 - Markout differences for the same pairs at each horizon.
 
 ## 8. Analysis
@@ -297,7 +334,9 @@ s is the larger of two estimates of the standard deviation of D_i with the selec
 settings: one on the 6 validation days and one on the 12 training days. Taking the
 larger is deliberate; 6 days give a noisy estimate.
 
-s = [TBD M4] bp. MDE = [TBD M4] bp.
+With the selected settings: s = 0.0329 bp on the 12 training days (run 58c46cc49981)
+and 0.0313 bp on the 6 validation days (run 5d27bc8ae820), so s = 0.0329 bp and
+MDE = 0.70 s = 0.0231 bp (docs/M4_v2_draft.md). C2's threshold, 3 x MDE, is 0.0692 bp.
 
 If excluded test days reduce n, the MDE is recomputed with the same s and reported.
 An effect smaller than the MDE is described as one this study could not detect, never as
@@ -318,6 +357,10 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
   and R1's value on a day is the mean over the seeds. Pass: the interval for C1 minus R1
   includes 0 (revised 2026-10-26, Design history). C1 minus B1, the rule first written,
   and C1 minus B3 are reported beside it as descriptive.
+- R_B3 and R_B2b, exploratory: R1's rule at B3's and at B2b's realised pull rate on each
+  day, 3 seeds each, in the primary cell. B3 minus R_B3 and B2b minus R_B2b are reported
+  as exploratory comparisons (section 7), with no pass rule. On test days each R runs
+  after the strategy whose rate it takes, since the rate is that run's realised share.
 - C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
   5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
   at least one tick below; no magnitude rule. The only strategy allowed to see the future.
