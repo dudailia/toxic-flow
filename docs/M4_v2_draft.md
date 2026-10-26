@@ -9,17 +9,33 @@ Reading (written by hand from the tables below):
   far above 3 x MDE (0.069 bp). The harness turns information into PnL on this base.
   C2's own mean BEF is +1.16 bp, below the 2 bp standard maker fee.
 - AC4.3 fails narrowly: C1 - B1 = -0.009 bp (bootstrap [-0.013, -0.006], 0 of 6 days
-  above 0), so the interval excludes 0. C1 is worse than B1, not better, and C1 - B3 is
-  -0.013 bp, so the event signs do carry what B3 uses. The generated sentence at the end
-  ("the signal's gain does not depend on event signs") is v1 wording written for a C1
-  that beats B1, and does not describe this result. C1 also marks a side toxic on 1.3%
-  of steps against B3's 4.1% with the same threshold: shuffling the signs changes the
-  distribution of |u|. The pass rule, as written, still fails.
+  above 0), so the interval excludes 0. C1 is worse than B1, not better, which is not
+  the pattern a leak would give. The leakage audit found no leak and a likely mechanism:
+  shuffling removes the runs of same-side market orders (63 to 65% of next orders share
+  the last one's side), so |u| is rarely extreme and C1 marks a side toxic on 1.3% of
+  steps against B3's 4.1% with the same threshold; and fills on a side within 5 s after
+  a pull mark out worse (-0.917 against -0.900 bp at 10 s), as a cancelled quote rejoins
+  at the back of the queue. So pulling has a cost even without information, and with
+  day-to-day spread this small the interval moves off 0. Section 10's sentence "C1 steps
+  back about as often as B3" does not hold under v2 (Q53). C1 - B3 (-0.013 bp) does not
+  show that the signs carry what B3 uses, since C1 pulls a third as often and B3 - B1
+  itself includes 0. The generated sentence at the end ("the signal's gain does not
+  depend on event signs") is v1 wording written for a C1 that beats B1 and does not
+  describe this result. The test that would separate the two readings, not run: B1 with
+  random pulls on 1.3% and 4.1% of steps, and C1 with three more seeds.
+- C4: the slower wrong decay (beta x 0.1) beat B3, +0.0086 bp (bootstrap [0.0021,
+  0.0154], 5 of 6 days), with B3's p and K chosen on these same days; the faster one
+  (x 10) did worse. The generated text says only "differed".
+- C3: on the mean, zero latency is above high latency (-0.9365 against -0.9385 bp), but
+  per day the high-latency run is above its zero-latency twin on 2 of 6 days
+  (2025-03-01, 2025-06-01). Zero latency removes order latency only; the signal runs on
+  local timestamps either way.
 - Effects are small: the selected overlays move the mean daily BEF by 0.004 (B3) and
   0.010 bp (B2b) against B1, and H1's statistic on validation days is -0.005 bp, against
   an MDE of 0.023 bp on 16 days.
-- A failed canary and a canary far above its base trigger the leakage-auditor (CLAUDE.md);
-  its report is in docs/SESSION_REPORT.md.
+- A failed canary triggers the leakage-auditor (CLAUDE.md). It found no leak: C2's look-ahead
+  stays in tests/canary/, the loop reads the series only at points at or before now, the
+  thresholds come from training days only, and the accounting reconciles with the engine.
 
 ## B0 and B1 on the training days, all 8 cells (section 4, v2)
 

@@ -1029,7 +1029,28 @@ Decisions taken without asking (least change, for Ilia to check):
 - The conversion unit tests went through the real memory check and failed at 2.7 GB free;
   they now set the free memory themselves (the guard's own tests still test it).
 
+4. M4 v2 on the 6 validation days, primary cell (docs/M4_v2_draft.md): tuning in
+   results/0bd4181a312a and 9e93e4415b6b (two halves of the days, 504 cells each), choice
+   in docs/M4_v2_selected.yaml (B2 OFI 5 s and B2b tau 5 s at p 25%, B3 at p 5%, all
+   pull, magnitude off); canaries in results/5d27bc8ae820; s from results/58c46cc49981 and
+   the canary run: s = 0.033 bp, MDE = 0.023 bp. C2 beats B1 by 2.10 bp (AC4.2 passes).
+   C1 - B1 = -0.009 bp, interval excludes 0 (AC4.3 fails narrowly). The leakage-auditor
+   found no leak; its findings are in the draft's reading. Nothing written into
+   PREREGISTRATION.md or configs/selected.yaml.
+
 Open questions, new:
+- Q53: under v2, C1 pulls about a third as often as B3 with the same threshold
+  (shuffling removes same-side runs), and pulling costs about 0.01 bp on its own (a
+  cancelled quote rejoins at the back of the queue), so C1 - B1 excludes 0 with no
+  information involved. Section 10's "C1 steps back about as often as B3" is false, and
+  eval/analysis.py attaches the section 11 "not interpreted" text to any C1 failure in
+  either direction. Options for Ilia and chat: a placebo that pulls at random at B3's
+  rate, C1 with its own threshold at B3's p, or a one-sided rule. Any change now comes
+  after seeing this result and must say so. Not run: B1 with random pulls at 1.3% and
+  4.1%, and C1 with three more seeds.
+- Q54: C4 at beta x 0.1 beat B3 on the validation days (+0.0086 bp, 5 of 6 days), and
+  per day B3 at high latency beat its zero-latency twin on 2 of 6 days. Stated in the
+  draft; no rule changed.
 - Q52: C4 at beta x 10 marks 46.0% of training-day steps at p = 50%, not 50%: its intensity
   is back at baseline between events, so |u| ties at the baseline value. It matters only
   if B3's selected p is 50%. Kept and stated, with the test pinning it.
