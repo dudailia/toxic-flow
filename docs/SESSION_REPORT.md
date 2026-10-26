@@ -999,6 +999,11 @@ Ilia and chat chose to redesign as v2 and to write the change down openly. Done 
    still pass), the v2 C2 oracle in tests/canary/c2_oracle.py, signals/thresholds.py and
    scripts/fit_thresholds.py, engine dispatch for entries with design v2, the v2 tie order
    in eval/select.py, and config builders. Thresholds: docs/signals/train_thresholds.json.
+3. B0 and B1 v2 on the 12 training days in all 8 cells: results/4db60c584c71 (192 cells).
+   About 59,000 to 79,000 fills a day and a mean daily BEF of -0.80 to -0.94 bp in every
+   cell; v2 B1 in the primary cell reproduces the exploratory touch base T0 of the
+   diagnosis exactly (58,978 fills a day, -0.933 bp), a check that the new loop quotes as
+   the old touch mode did. Tables in docs/M4_v2_draft.md.
 5. docs/exploratory/glft.md from the committed v1 runs (scripts/glft_report.py).
 
 Decisions taken without asking (least change, for Ilia to check):
@@ -1015,6 +1020,12 @@ Decisions taken without asking (least change, for Ilia to check):
 - The tuning grid runs as two configs on disjoint halves of the validation days, side by
   side; conversions take a file lock so two runs never convert at once (the memory guard
   and the one-conversion rule are unchanged).
+- Memory: other applications held most of the 16 GB (swap near 8 GB), so the guard
+  refused the first conversion for about 25 minutes. To run two configs side by side, a
+  scratchpad script paused the other run's process (SIGSTOP) while one run converted a
+  day or had just been refused, and resumed it after (SIGCONT). The guard itself is
+  unchanged and still decides every conversion; pausing changes no result, because
+  hftbacktest runs on data time (only the wall_seconds diagnostic grows).
 - The conversion unit tests went through the real memory check and failed at 2.7 GB free;
   they now set the free memory themselves (the guard's own tests still test it).
 
