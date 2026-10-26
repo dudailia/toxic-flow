@@ -39,7 +39,7 @@ def test_build_fills_every_placeholder(tmp_path):
     t, s = write(tmp_path)
     out = build(t, s, tmp_path / "paper.md")
     text = out.read_text()
-    assert "{{" not in text and "16 days" in text and "0.12 bp" in text
+    assert "{{" not in text and "16 days" in text and "0.1230 bp" in text
 
 
 def test_build_fails_on_a_key_missing_from_the_summary(tmp_path):

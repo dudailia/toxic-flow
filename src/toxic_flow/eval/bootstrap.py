@@ -83,7 +83,8 @@ def conclusion(boot_ci, t_ci, mean: float, cell_signs, mde_bp: float) -> dict:
         key = "no_detectable_difference" if abs(mean) < mde_bp else "inconclusive"
     lo, hi = boot_ci
     text = STATEMENTS[key].format(
-        mean=f"{abs(mean):.2f}", lo=f"{lo:.2f}", hi=f"{hi:.2f}", mde=f"{mde_bp:.2f}"
+        # Four decimals: the MDE is a few hundredths of a bp, which two would round away.
+        mean=f"{abs(mean):.4f}", lo=f"{lo:.4f}", hi=f"{hi:.4f}", mde=f"{mde_bp:.4f}"
     )
     return {"key": key, "statement": text}
 

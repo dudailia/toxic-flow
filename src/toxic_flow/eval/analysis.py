@@ -193,7 +193,7 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
         c = compare(m, "C2", "B1")
         out["C2"] = {**c, "threshold_bp": 3 * mde_bp, "pass": c["mean"] > 3 * mde_bp}
         text.append(
-            f"C2, the oracle, beat B1 by {c['mean']:.2f} bp, more than 3 times the MDE."
+            f"C2, the oracle, beat B1 by {c['mean']:.4f} bp, more than 3 times the MDE."
             if out["C2"]["pass"]
             else "C2, the oracle, did not beat B1 by 3 times the MDE: the harness cannot convert "
             "information into PnL, and the study stops."
@@ -266,7 +266,7 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
         # Section 11: when C1 fails, the primary result is reported but not interpreted.
         lo, hi = p["bootstrap_ci"]
         h["statement"] = (
-            f"Mean difference {p['mean']:.2f} bp, interval [{lo:.2f}, {hi:.2f}]. The signal's "
+            f"Mean difference {p['mean']:.4f} bp, interval [{lo:.4f}, {hi:.4f}]. The signal's "
             "gain does not depend on event signs, so it is not order-flow information. "
             "Primary result reported but not interpreted."
         )
