@@ -267,7 +267,9 @@ pulls at their own rates: B3 {{rp_b3_mean_bp}} bp ({{rp_b3_ci_low_bp}} to
 {{rp_b2b_ci_high_bp}}), with the run-length limitation stated above. Against random pulls
 matched on the number of pulled runs as well: B3 {{rl_b3_mean_bp}} bp ({{rl_b3_ci_low_bp}}
 to {{rl_b3_ci_high_bp}}), B2b {{rl_b2b_mean_bp}} bp ({{rl_b2b_ci_low_bp}} to
-{{rl_b2b_ci_high_bp}}).
+{{rl_b2b_ci_high_bp}}). Against F, B1 that does not rejoin the side just filled for a hold chosen
+on training days to match B3's pull rate: B3 {{f_b3_mean_bp}} bp ({{f_b3_ci_low_bp}} to
+{{f_b3_ci_high_bp}}).
 
 ![Fig. 1. B3 minus B2b in break-even fee on each test day in the primary cell, with the
 mean and both intervals. Simulated fills on historical data.](fig_daily_d.svg)
