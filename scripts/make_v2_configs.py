@@ -5,6 +5,9 @@
   uv run python scripts/make_v2_configs.py tune       overlay grid on validation days
   uv run python scripts/make_v2_configs.py canaries   needs docs/M4_v2_selected.yaml
   uv run python scripts/make_v2_configs.py mde        needs docs/M4_v2_selected.yaml
+  uv run python scripts/make_v2_configs.py random results/<v2_canaries_val>
+      random-pull controls; the rates are the realised toxic shares of C1, B3 and B2b in
+      that run, primary cell, per day
 
 tune writes two configs over disjoint halves of the validation days (v2_tune_val_a and
 _b), so they can run side by side; the selection reads both. An existing config is never
@@ -15,6 +18,7 @@ import json
 import sys
 from pathlib import Path
 
+import polars as pl
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,6 +40,19 @@ def write(cfg: dict) -> None:
     print(out, len(cfg["strategies"]), "strategies")
 
 
+def canary_rates(run: Path) -> dict:
+    """{C1, B3, B2b: {day: toxic share}} from a committed v2_canaries_val run."""
+    meta = json.loads((run / "meta.json").read_text())
+    if meta["config"] != "configs/runs/v2_canaries_val.yaml":
+        raise SystemExit(f"{run} is not v2_canaries_val")
+    m = pl.read_parquet(run / "metrics.parquet").filter(
+        (pl.col("queue") == configs.PRIMARY[0]) & (pl.col("latency") == configs.PRIMARY[1])
+    )
+    return {lab: {d: float(x) for d, x in m.filter(pl.col("label") == lab)
+                  .select("day", "toxic_share").iter_rows()}
+            for lab in ("C1", "B3", "B2b")}  # fmt: skip
+
+
 def main(kind: str) -> None:
     if kind == "train":
         write(configs.v2_training(kept("train")))
@@ -53,6 +70,9 @@ def main(kind: str) -> None:
         write(configs.v2_canaries(const, th, selected, kept("val")))
     elif kind == "mde":
         write(configs.v2_mde_train(const, th, selected, kept("train")))
+    elif kind == "random":
+        write(configs.v2_random_pulls(const, th, selected, canary_rates(Path(sys.argv[2])),
+                                      kept("val")))  # fmt: skip
     else:
         raise SystemExit(f"unknown kind {kind}")
 

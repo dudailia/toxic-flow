@@ -28,3 +28,37 @@ def test_c1_permutes_sides_within_the_day_with_a_fixed_seed():
     side = np.array([0] * 70 + [1] * 30)
     a, b = shuffled_sides(side, seed=1729), shuffled_sides(side, seed=1729)
     assert np.array_equal(a, b) and a.sum() == 30 and not np.array_equal(a, side)
+
+
+def test_r_pulls_a_random_side_at_the_given_rate_with_a_fixed_seed():
+    from toxic_flow.engine.run import random_pulls
+
+    start, end, step = 10**12, 10**12 + 3600 * 10**9, 100_000_000
+    ts, u, m = random_pulls("2025-01-01", start, end, step, 0.05, seed=1)
+    assert ts[0] < start <= ts[1] and ts[-1] >= end - step and np.all(np.diff(ts) == step)
+    assert set(np.unique(u)) <= {-1.0, 0.0, 1.0} and not m.any()
+    assert abs((u != 0).mean() - 0.05) < 0.003
+    assert abs((u == 1).sum() / (u != 0).sum() - 0.5) < 0.03
+    again = random_pulls("2025-01-01", start, end, step, 0.05, seed=1)[1]
+    other_seed = random_pulls("2025-01-01", start, end, step, 0.05, seed=2)[1]
+    other_day = random_pulls("2025-02-01", start, end, step, 0.05, seed=1)[1]
+    assert np.array_equal(u, again)
+    assert not np.array_equal(u, other_seed) and not np.array_equal(u, other_day)
+
+
+def test_r_runs_as_b1_pulling_on_its_series_at_the_days_rate():
+    from toxic_flow.engine.run import _touch_args, random_pulls, utc_ns
+    from toxic_flow.strategies.signal_input import EXTERNAL
+    from toxic_flow.strategies.touch import PULL
+
+    cfg = {"quote_start": "00:30:00", "quote_end": "23:59:00", "step_ns": 100_000_000}
+    s = {"name": "R", "design": "v2", "seed": 2, "k_ticks": "pull",
+         "pull_rate": {"2025-01-01": 0.01, "2025-02-01": 0.3}}  # fmt: skip
+    args = _touch_args(s, "2025-02-01", cfg)
+    skew, mode, ts, u = args[0], args[1], args[4], args[12]
+    theta_u, k_ticks, theta_m = args[14], args[15], args[16]
+    want = random_pulls("2025-02-01", utc_ns("2025-02-01", "00:30:00"),
+                        utc_ns("2025-02-01", "23:59:00"), 100_000_000, 0.3, 2)  # fmt: skip
+    assert skew and mode == EXTERNAL and np.array_equal(ts, want[0])
+    assert np.array_equal(u, want[1])
+    assert (theta_u, k_ticks, theta_m) == (0.5, PULL, np.inf)

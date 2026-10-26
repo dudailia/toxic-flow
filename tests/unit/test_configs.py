@@ -154,3 +154,26 @@ def test_v2_training_runs_b0_and_b1_in_all_8_cells():
     cfg = configs.v2_training(["2024-01-01"])
     assert len(grid.expand(cfg)) == 16
     assert {s["name"] for s in cfg["strategies"]} == {"B0", "B1"}
+
+
+def test_v2_random_pulls_have_three_seeds_per_control_at_the_given_rates():
+    from toxic_flow.engine import configs
+
+    const, th = _v2_inputs()
+    sel = {"B2b": {"p": 0.25, "k_ticks": "pull", "magnitude": False, "tau_s": 5.0},
+           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
+    days = ["2025-01-01", "2025-02-01"]
+    rates = {"C1": {d: 0.01 for d in days}, "B3": {d: 0.04 for d in days},
+             "B2b": {d: 0.25 for d in days}}  # fmt: skip
+    cfg = configs.v2_random_pulls(const, th, sel, rates, days)
+    s = {x.get("label", x["name"]): x for x in cfg["strategies"]}
+    assert set(s) == {"B1", "C1", "B3", "B2b"} | {
+        f"{r}_s{k}" for r in ("R1", "R_B3", "R_B2b") for k in (1, 2, 3)
+    }
+    assert s["R1_s2"]["pull_rate"] == rates["C1"] and s["R_B2b_s3"]["pull_rate"] == rates["B2b"]
+    assert {x["seed"] for x in cfg["strategies"] if x["name"] == "R"} == {1, 2, 3}
+    assert all(x["k_ticks"] == "pull" for x in cfg["strategies"] if x["name"] == "R")
+    assert s["C1"]["theta_u"] == s["B3"]["theta_u"] and s["C1"]["seed"] == 1729
+    assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
+    with pytest.raises(ValueError, match="cover"):
+        configs.v2_random_pulls(const, th, sel, rates | {"C1": {days[0]: 0.01}}, days)

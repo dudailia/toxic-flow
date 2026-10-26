@@ -12,7 +12,8 @@ the mirror for asks), and the inventory cap removes a side. theta_u and theta_m 
 training-day quantiles of section 5, carried in the run config. B0 and B1 run with both
 thresholds at infinity, so the overlay never acts. C2 (the oracle) is B1 with u from a
 series built in tests/canary/: +1 when the mid 5 s ahead is at least one tick higher, -1
-when at least one tick lower, else 0; theta_u = 0.5 and k_ticks = PULL.
+when at least one tick lower, else 0; theta_u = 0.5 and k_ticks = PULL. R (random pulls,
+C1's control) is B1 with u from a random series that reads no market data, the same way.
 """
 
 import numpy as np

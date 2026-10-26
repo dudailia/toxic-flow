@@ -98,3 +98,11 @@ def test_a_window_from_the_first_step_is_the_whole_day():
     full = day_metrics(f, st, mark_mid=101.0, order_qty=1.0, fee_levels_bps={})
     for k in ("fills", "gross_pnl", "traded_notional", "break_even_fee_bps"):
         assert w[k] == pytest.approx(full[k])
+
+
+def test_toxic_episodes_count_runs_of_one_side():
+    from toxic_flow.eval.metrics import toxic_episodes
+
+    assert toxic_episodes(np.array([0, 1, 1, 0, -1, 1, 1, 0, 0, -1], np.int8)) == 4
+    assert toxic_episodes(np.array([1, 1, 1], np.int8)) == 1
+    assert toxic_episodes(np.zeros(5, np.int8)) == 0 and toxic_episodes(np.zeros(0)) == 0

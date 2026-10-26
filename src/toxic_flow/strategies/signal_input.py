@@ -4,8 +4,9 @@ the v2 touch loop (strategies.touch), so both compute u and m the same way
 
 Inputs are precomputed streams consumed only once their local time is at or before now:
 market-order events for EWMA and HAWKES, best-level OFI contributions for OFI. EXTERNAL
-takes u and m from a series (time, u, m), again only from points at or before now; only
-the oracle canary C2 uses it, and it builds that series in tests/canary/ (SPEC.md AC3.6).
+takes u and m from a series (time, u, m), again only from points at or before now; the
+oracle canary C2 uses it with a series built in tests/canary/ (SPEC.md AC3.6), and the
+random-pull control R with a series that reads no market data (engine.run.random_pulls).
 The normalisers (Ring) are updated at every 100 ms step from the start of the data, warm-up
 included, so they are full when quoting starts.
 """

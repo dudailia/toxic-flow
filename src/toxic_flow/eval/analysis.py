@@ -6,6 +6,8 @@ label must have one parameter set per cell; the analysis compares settings, it d
 choose them. Output: plain dicts, and summary() for results/summary.json and the paper.
 """
 
+import re
+
 import numpy as np
 import polars as pl
 
@@ -128,21 +130,59 @@ def _contains_zero(ci) -> bool | None:
     return bool(ci[0] <= 0 <= ci[1])
 
 
+SEED_LABEL = re.compile(r"^(R.*)_s\d+$")
+
+
+def with_seed_means(m: pl.DataFrame) -> pl.DataFrame:
+    """Adds, for each random-pull control run with several seeds (labels such as R1_s1,
+    R1_s2, R1_s3), one row per day and cell under the bare label (R1) holding the mean over
+    seeds of each metric compared. The control's day value is that mean, so the seeds
+    average out the random draw before the day-level bootstrap."""
+    m = _labelled(m)
+    seeded = m.with_columns(base=pl.col("label").str.extract(SEED_LABEL.pattern, 1)).filter(
+        pl.col("base").is_not_null()
+    )
+    if seeded.is_empty():
+        return m
+    cols = [c for c in (BEF, "fills", "gross_pnl", "traded_notional", "toxic_share",
+                        "toxic_episodes", *(f"mean_markout_{h}s_bps" for h in HORIZONS_S))
+            if c in m.columns]  # fmt: skip
+    means = seeded.group_by("base", "day", "queue", "latency").agg(
+        pl.col(cols).mean(), seeds=pl.col("label").sort().str.join(",")
+    )
+    means = means.with_columns(
+        label=pl.col("base"), strategy=pl.lit("R"),
+        params=pl.concat_str(pl.lit('{"seeds": "'), pl.col("seeds"), pl.lit('"}')),
+    ).drop("base", "seeds")  # fmt: skip
+    return pl.concat([m, means], how="diagonal_relaxed")
+
+
 def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
     """Section 10, in the primary cell. Pass rules use the bootstrap interval, the primary
     interval of section 8; the t interval is reported beside it."""
     out, text = {}, []
-    if _has(m, "C1"):
+    m = with_seed_means(m)
+    if _has(m, "C1") and _has(m, "R1"):
+        # Q53 (decided 2026-10-26, after C1 failed against B1 on validation days): pulling
+        # a side costs its queue place even without information, so C1 is judged against
+        # R1, B1 pulling a random side at C1's realised rate. C1 - B1, the rule first
+        # written, is reported beside it.
+        c = compare(m, "C1", "R1")
+        out["C1"] = {**c, "rule": "C1 - R1", "pass": _contains_zero(c["bootstrap_ci"])}
+        out["C1"]["vs_B1"] = {**compare(m, "C1", "B1"), "label": "rule first written"}
+    elif _has(m, "C1"):
         c = compare(m, "C1", "B1")
-        out["C1"] = {**c, "pass": _contains_zero(c["bootstrap_ci"])}
+        out["C1"] = {**c, "rule": "C1 - B1", "pass": _contains_zero(c["bootstrap_ci"])}
+    if "C1" in out:
         if _has(m, "B3"):
-            # Q28: the pass rule is C1 against B1 (section 10); C1 against B3 isolates the
-            # sign information and is reported beside it, as descriptive.
+            # Q28: C1 against B3 isolates the sign information and is reported beside the
+            # pass rule, as descriptive.
             out["C1"]["vs_B3"] = {**compare(m, "C1", "B3"), "label": "descriptive"}
         if out["C1"]["pass"] is None:
             text.append("C1, shuffled signs: no interval, so no verdict.")
         elif out["C1"]["pass"]:
-            text.append("C1, shuffled signs, did not differ detectably from B1.")
+            ref = out["C1"]["rule"].split(" - ")[1]
+            text.append(f"C1, shuffled signs, did not differ detectably from {ref}.")
         else:
             text.append(
                 "The signal's gain does not depend on event signs, so it is not order-flow "

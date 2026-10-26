@@ -151,6 +151,21 @@ def shuffled_sides(side: np.ndarray, seed: int = 1729) -> np.ndarray:
     return np.random.default_rng(seed).permutation(side)
 
 
+def random_pulls(
+    day: str, start_ns: int, end_ns: int, step_ns: int, rate: float, seed: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """R, random pulls (C1's control, PREREGISTRATION.md section 10): a series (time, u, m)
+    on the 100 ms step grid where each step independently marks a side toxic with
+    probability rate, the ask or the bid with equal chance. It reads no market data, so it
+    carries no information; it measures what pulling at that rate costs by itself. The
+    grid starts one step early so the first quoting step has a point at or before it."""
+    ts = np.arange(start_ns - step_ns, end_ns + step_ns, step_ns, dtype=np.int64)
+    rng = np.random.default_rng([seed, int(day.replace("-", ""))])
+    pull = rng.random(len(ts)) < rate
+    side = np.where(rng.random(len(ts)) < 0.5, 1.0, -1.0)
+    return ts, np.where(pull, side, 0.0), np.zeros(len(ts))
+
+
 def _signal_inputs(s: dict, day: str) -> tuple:
     """Signal mode and input streams for B2, B2b, B3 and the canaries built on B3: C1 (B3
     on shuffled sides) and C4 (B3 with the decay rescaled). Returns (mode, sig_ts,
@@ -235,6 +250,17 @@ def _touch_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
         mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
         return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
                 ofi_window, mu, alpha, beta, u, m, 0.5, PULL, off, np.zeros((0, 3)))  # fmt: skip
+    if s["name"] == "R":
+        # The rate is the realised pull share of the strategy R controls for (C1, B3 or
+        # B2b) on this day, from a committed run; the config carries it per day.
+        start, end = utc_ns(day, cfg["quote_start"]), utc_ns(day, cfg["quote_end"])
+        ts, u, m = random_pulls(
+            day, start, end, int(cfg["step_ns"]), float(s["pull_rate"][day]), int(s["seed"])
+        )
+        mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
+        k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
+        return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
+                ofi_window, mu, alpha, beta, u, m, 0.5, k_ticks, off, np.zeros((0, 3)))  # fmt: skip
     mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _signal_inputs(s, day)
     k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
     theta_m = float(s["theta_m"]) if s["magnitude"] else off

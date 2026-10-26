@@ -249,3 +249,30 @@ def test_c3_without_fills_at_zero_latency_has_no_verdict():
     )  # fmt: skip
     out = analysis.canaries(m, mde_bp=0.1)
     assert out["C3"]["flag"] is None and "no verdict" in out["statement"]
+
+
+def test_r1_is_the_mean_over_its_seeds_per_day():
+    m = pl.DataFrame(rows("R1_s1", [-1.0] * 12) + rows("R1_s2", [-2.0] * 12)
+                     + rows("R1_s3", list(NOISE)) + rows("B1", [0.0] * 12))  # fmt: skip
+    r1 = analysis.compare(analysis.with_seed_means(m), "R1", "B1")
+    assert r1["per_day"] == pytest.approx(dict(zip(DAYS, (-3.0 + NOISE) / 3, strict=True)))
+
+
+def test_c1_is_judged_against_r1_when_r1_ran_and_against_b1_is_still_reported():
+    # Q53: C1 pulls at a lower rate than B3 and pulling costs queue place by itself, so
+    # the pass rule is C1 - R1; C1 - B1, the rule first written, stays in the output.
+    m = pl.DataFrame(
+        rows("B1", [0.0] * 12) + rows("C1", list(-1.0 + NOISE))
+        + rows("R1_s1", list(-1.0 + NOISE[::-1])) + rows("R1_s2", [-1.0] * 12)
+        + rows("R1_s3", list(-1.0 - NOISE[::-1]))
+    )  # fmt: skip
+    c1 = analysis.canaries(m, mde_bp=1.0)["C1"]
+    assert c1["rule"] == "C1 - R1" and c1["pass"] is True
+    assert c1["mean"] == pytest.approx(NOISE.mean())
+    assert c1["vs_B1"]["label"] == "rule first written"
+    assert c1["vs_B1"]["bootstrap_ci"][1] < 0  # C1 lost to B1, as on the validation days
+    worse = m.with_columns(
+        pl.when(pl.col("label") == "C1").then(pl.col("break_even_fee_bps") - 1.0)
+        .otherwise(pl.col("break_even_fee_bps")).alias("break_even_fee_bps")
+    )  # fmt: skip
+    assert analysis.canaries(worse, mde_bp=1.0)["C1"]["pass"] is False

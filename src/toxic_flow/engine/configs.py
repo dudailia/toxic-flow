@@ -272,3 +272,36 @@ def v2_mde_train(constants: dict, thresholds: dict, selected: dict, days) -> dic
     _check_thresholds(thresholds)
     s = [_v2_selected(n, constants, thresholds, selected) for n in ("B2b", "B3")]
     return _config("v2_mde_train", days, s, [PRIMARY[0]], [PRIMARY[1]])
+
+
+# Random-pull controls (Q53, decided 2026-10-26; PREREGISTRATION.md section 10): B1 that
+# pulls a random side at another strategy's realised pull rate on each day. R1 is C1's
+# control (the C1 pass rule); R_B3 and R_B2b are exploratory. Three seeds each.
+R_SEEDS = (1, 2, 3)
+
+
+def _random_pulls(of: str, rates: dict, label: str) -> list[dict]:
+    return [{"name": "R", "design": "v2", "label": f"{label}_s{seed}", "rate_of": of,
+             "k_ticks": "pull", "seed": seed, "pull_rate": rates}
+            for seed in R_SEEDS]  # fmt: skip
+
+
+def v2_random_pulls(constants: dict, thresholds: dict, selected: dict, rates: dict, days) -> dict:
+    """v2 M4 on validation days, primary cell: R1 (C1's rate) and the exploratory R_B3 and
+    R_B2b (B3's and B2b's rates), with B1, C1, B3 and B2b at the selected settings in the
+    same run, so each comparison is within one run. rates maps C1, B3 and B2b to {day:
+    realised toxic share} from the canary run. K is pull for every R, as for C1, B3 and B2b
+    at the selected settings."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    for name in ("B2b", "B3"):
+        if selected[name]["k_ticks"] != "pull":
+            raise ValueError(f"{name} does not pull at its selected setting")
+    if any(sorted(r) != sorted(days) for r in rates.values()):
+        raise ValueError("rates do not cover exactly the run's days")
+    sel = lambda n, **e: _v2_selected(n, constants, thresholds, selected, **e)  # noqa: E731
+    s = [{"name": "B1", "design": "v2"}, sel("C1", seed=1729), sel("B3"), sel("B2b")]
+    s += _random_pulls("C1", rates["C1"], "R1")
+    s += _random_pulls("B3", rates["B3"], "R_B3")
+    s += _random_pulls("B2b", rates["B2b"], "R_B2b")
+    return _config("v2_random_pulls_val", days, s, [PRIMARY[0]], [PRIMARY[1]])

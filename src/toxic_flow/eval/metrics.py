@@ -75,6 +75,15 @@ def window_metrics(fills, steps, mark_mid, from_ns: int) -> dict:
     }
 
 
+def toxic_episodes(toxic) -> int:
+    """Number of maximal runs of consecutive steps marked toxic on the same side."""
+    t = np.asarray(toxic)
+    if not len(t):
+        return 0
+    starts = (t != 0) & np.concatenate([[True], t[1:] != t[:-1]])
+    return int(starts.sum())
+
+
 def quote_metrics(fills, steps) -> dict:
     """Diagnostics of how a strategy quotes (M4 diagnosis, exploratory; not section 6):
     cancels per quoting hour, median seconds from an order's request to its fill, share of
@@ -109,5 +118,8 @@ def quote_metrics(fills, steps) -> dict:
         "median_ask_dist_ticks": med(ask_d),
         # v2: share of quoting steps where the overlay marked a side toxic (section 4's p).
         "toxic_share": float((steps["toxic"] != 0).mean()) if len(steps) else float("nan"),
+        # Runs of consecutive steps with the same toxic side: pulling a side costs its
+        # queue place once per run, so two strategies with one share can differ here.
+        "toxic_episodes": toxic_episodes(steps["toxic"]),
         "hourly_quotes": hourly,
     }
