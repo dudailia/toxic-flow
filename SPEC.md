@@ -250,8 +250,9 @@ Acceptance:
 - AC5.2 exclusion rules applied by script before any strategy result on that day exists.
 - AC5.3 one results directory for the confirmatory grid and one for its random-pull
   controls, which run after it at its realised pull rates (PREREGISTRATION.md section 10,
-  revised 2026-10-26). Any rerun has a DEVIATIONS.md entry naming the bug and the fixing
-  commit, and both results stay in the report.
+  revised 2026-10-26; the two planned runs confirmed by Ilia on 2026-10-26). Any rerun
+  has a DEVIATIONS.md entry naming the bug and the fixing commit, and both results stay in
+  the report.
 - AC5.4 leakage-auditor report on the test results saved to docs/audit_M5.md.
 
 Viva topics: read the primary result aloud with its CI and MDE; explain one day where
@@ -261,9 +262,11 @@ B3 lost to B2b using its fills and markouts.
 
 Acceptance:
 - AC6.1 the paper page matches the format of the other iliaduda.com project papers.
-  Every result number is a {{key}} placeholder filled from results/summary.json; a
+  Every result number is filled by a script from a committed results file: a {{key}}
+  placeholder filled from results/summary.json (test days) or paper/pre_test.json
+  (training and validation days, written by paper/pre_test.py from committed runs). A
   script fails if a placeholder is unresolved or a result section contains a literal
-  decimal number.
+  decimal number. Revised by Ilia on 2026-10-26; was "filled from results/summary.json".
 - AC6.2 one-page PDF summary built from the same summary.json.
 - AC6.3 section "What I would do with L3 data and real fills".
 - AC6.4 README reproduces the study with make data, make run, make paper.
