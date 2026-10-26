@@ -1,4 +1,5 @@
-"""The test-day lock refuses a test date until prereg-v1 is on the local repo and on origin.
+"""The test-day lock refuses a test date until prereg-v1 is an annotated tag on the local
+repo and on the origin named in configs/repo.yaml, with the same hash on both.
 
 Each test builds a throwaway repo with a bare repo as its origin, so no test touches the
 project's own tags or remote.
@@ -32,6 +33,8 @@ def repo(tmp_path):
     git(work, "commit", "-q", "-m", "init")
     git(work, "remote", "add", "origin", str(remote))
     git(work, "push", "-q", "origin", "HEAD")
+    (work / "configs").mkdir()
+    (work / "configs" / "repo.yaml").write_text(f"origin: {remote}\n")
     return work
 
 
@@ -92,3 +95,42 @@ def test_other_spellings_of_a_test_date_refused(repo, day):
 def test_date_outside_every_split_refused(repo, day):
     with pytest.raises(SplitLockError):
         assert_allowed(day, repo=repo)
+
+
+def test_lightweight_tag_refuses_test_day(repo):
+    git(repo, "tag", "prereg-v1")  # no -a: points at the commit, no tag object, no date
+    git(repo, "push", "-q", "origin", "prereg-v1")
+    assert not tag_published(repo)
+    with pytest.raises(SplitLockError):
+        assert_allowed(TEST_DAY, repo=repo)
+
+
+def test_origin_other_than_the_configured_repo_refuses(repo, tmp_path):
+    # The tag is on a remote with the same hash, but not the one configs/repo.yaml names.
+    other = tmp_path / "other.git"
+    git(tmp_path, "init", "--bare", "-q", str(other))
+    tag(repo)
+    git(repo, "remote", "set-url", "origin", str(other))
+    git(repo, "push", "-q", "origin", "HEAD", "prereg-v1")
+    assert not tag_published(repo)
+    with pytest.raises(SplitLockError):
+        assert_allowed(TEST_DAY, repo=repo)
+
+
+def test_remote_tag_replaced_with_another_object_refuses(repo, tmp_path):
+    tag(repo)
+    git(repo, "push", "-q", "origin", "prereg-v1")
+    other = tmp_path / "clone"
+    git(tmp_path, "clone", "-q", str(tmp_path / "remote.git"), str(other))
+    git(other, "tag", "-f", "-a", "prereg-v1", "-m", "replaced")
+    git(other, "push", "-q", "-f", "origin", "prereg-v1")
+    assert not tag_published(repo)
+    with pytest.raises(SplitLockError):
+        assert_allowed(TEST_DAY, repo=repo)
+
+
+def test_missing_repo_config_refuses(repo):
+    tag(repo)
+    git(repo, "push", "-q", "origin", "prereg-v1")
+    (repo / "configs" / "repo.yaml").unlink()
+    assert not tag_published(repo)
