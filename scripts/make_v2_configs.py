@@ -13,6 +13,9 @@
       shares and numbers of toxic episodes in that run, primary cell, per day. It reads the
       random-pull run, not the canary run, because the canary run predates the
       toxic_episodes column; B3 and B2b in the random-pull run reproduce the canary run.
+  uv run python scripts/make_v2_configs.py holdtrain   F at every hold on training days
+  uv run python scripts/make_v2_configs.py holdval     F at the hold in configs/selected.yaml
+      with B1 and B3, validation days (the hold comes from scripts/m4_v2.py hold)
   uv run python scripts/make_v2_configs.py confirmatory   needs configs/selected.yaml
   uv run python scripts/make_v2_configs.py controls results/<confirmatory>
       M5, the two planned test-day runs (section 10): the grid on the kept test days, then
@@ -69,6 +72,9 @@ def main(kind: str) -> None:
     if kind == "train":
         write(configs.v2_training(kept("train")))
         return
+    if kind == "holdtrain":
+        write(configs.v2_fill_hold_train(kept("train")))
+        return
     const = json.loads((ROOT / "docs" / "signals" / "train_constants.json").read_text())
     th = json.loads(THRESHOLDS.read_text())
     if kind == "tune":
@@ -85,6 +91,9 @@ def main(kind: str) -> None:
     elif kind == "random":
         rates = realised_rates(Path(sys.argv[2]), "v2_canaries_val")
         write(configs.v2_random_pulls(const, th, selected, rates, kept("val")))
+    elif kind == "holdval":
+        approved = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+        write(configs.v2_fill_hold_val(const, th, approved, kept("val")))
     elif kind == "runlength":
         run = Path(sys.argv[2])
         rates = realised_rates(run, "v2_random_pulls_val")

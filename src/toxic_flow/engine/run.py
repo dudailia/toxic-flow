@@ -271,17 +271,21 @@ def _touch_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
     as in v1."""
     off = np.inf
     no_ext = (np.zeros(0), np.zeros(0))
-    if s["name"] in ("B0", "B1"):
+    if s["name"] in ("B0", "B1", "F"):
+        # F (fill-hold control, exploratory): B1 that withholds a side for hold_s after
+        # each of our fills on it (strategies.touch.run_touch).
+        hold_ns = int(round(float(s["hold_s"]) * 1e9)) if s["name"] == "F" else 0
         mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
-        return (s["name"] == "B1", mode, 1.0, NORM_STEPS, sig_ts, sig_side, cum, tau,
-                ofi_window, mu, alpha, beta, *no_ext, off, 0, off, np.zeros((0, 3)))  # fmt: skip
+        return (s["name"] != "B0", mode, 1.0, NORM_STEPS, sig_ts, sig_side, cum, tau,
+                ofi_window, mu, alpha, beta, *no_ext, off, 0, off, np.zeros((0, 3)),
+                hold_ns)  # fmt: skip
     if s["name"] == "C2":
         if oracle is None:
             raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
         ts, u, m = oracle(day, cfg, design="v2")
         mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
         return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
-                ofi_window, mu, alpha, beta, u, m, 0.5, PULL, off, np.zeros((0, 3)))  # fmt: skip
+                ofi_window, mu, alpha, beta, u, m, 0.5, PULL, off, np.zeros((0, 3)), 0)  # fmt: skip
     if s["name"] in ("R", "RL"):
         # The rate (and for RL the number of pulled runs) is the realised value of the
         # strategy the control is for (C1, B3 or B2b) on this day, from a committed run;
@@ -296,13 +300,13 @@ def _touch_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
         mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
         k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
         return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
-                ofi_window, mu, alpha, beta, u, m, 0.5, k_ticks, off, np.zeros((0, 3)))  # fmt: skip
+                ofi_window, mu, alpha, beta, u, m, 0.5, k_ticks, off, np.zeros((0, 3)), 0)  # fmt: skip
     mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _signal_inputs(s, day)
     k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
     theta_m = float(s["theta_m"]) if s["magnitude"] else off
     return (True, mode, float(s["K"]), NORM_STEPS, sig_ts, sig_side, cum, tau, ofi_window,
             mu, alpha, beta, *no_ext, float(s["theta_u"]), k_ticks, theta_m,
-            np.zeros((0, 3)))  # fmt: skip
+            np.zeros((0, 3)), 0)  # fmt: skip
 
 
 def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=0.0):

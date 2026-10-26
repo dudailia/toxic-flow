@@ -111,3 +111,13 @@ def test_rl_runs_as_b1_pulling_on_its_series():
     assert args[0] and args[1] == EXTERNAL and np.array_equal(args[4], want[0])
     assert np.array_equal(args[12], want[1])
     assert (args[14], args[15], args[16]) == (0.5, 5, np.inf)
+
+
+def test_f_holds_a_side_in_the_loop_arguments():
+    from toxic_flow.engine.run import _touch_args
+
+    cfg = {"quote_start": "00:30:00", "quote_end": "23:59:00", "step_ns": 100_000_000}
+    f = _touch_args({"name": "F", "design": "v2", "hold_s": 0.125}, "2025-01-01", cfg)
+    b1 = _touch_args({"name": "B1", "design": "v2"}, "2025-01-01", cfg)
+    assert f[0] is True and f[-1] == 125_000_000 and b1[-1] == 0
+    assert all(np.array_equal(x, y) for x, y in zip(f[:-1], b1[:-1], strict=True))

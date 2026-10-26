@@ -137,7 +137,7 @@ def test_summary_has_every_key_the_paper_template_needs():
         grid("B1", [0.0] * 12) + grid("B2", [0.5] * 12) + grid("B2b", [0.0] * 12)
         + grid("B3", list(1.0 + NOISE)) + rows("C1", list(NOISE)) + rows("C2", [5.0] * 12)
         + rows("B3", [0.2] * 12, latency="zero") + rows("C4_x10", [0.0] * 12)
-        + rows("C4_x0.1", [0.0] * 12) + controls
+        + rows("C4_x0.1", [0.0] * 12) + controls + rows("F", [0.25] * 12)
     )  # fmt: skip
     mde = {"s_bp": 1.0, "mde_bp": 0.7, "n_test": 16}
     meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "2026-11-01T00:00:00+00:00",
@@ -148,6 +148,7 @@ def test_summary_has_every_key_the_paper_template_needs():
     assert summary["c1_r1_mean_bp"] == pytest.approx(NOISE.mean() - 2 * NOISE.mean())
     assert summary["h1_cells_same_sign"] == 8
     assert summary["rl_b3_mean_bp"] == pytest.approx(summary["rp_b3_mean_bp"])  # same rows
+    assert summary["f_b3_mean_bp"] == pytest.approx(1.0 + NOISE.mean() - 0.25)  # B3 - F
 
 
 def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():

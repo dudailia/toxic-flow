@@ -320,9 +320,10 @@ def _canary_keys(m: pl.DataFrame, c: dict) -> dict:
     if "C2" in c:
         out["c2_b1_mean_bp"] = c["C2"]["mean"]
     # Exploratory (sections 7 and 10): each overlay against random pulls at its own rate.
-    # rp_ against R (rate only), rl_ against RL (rate and number of pulled runs).
+    # rp_ against R (rate only), rl_ against RL (rate and number of pulled runs), f_
+    # against F (no rejoining the side just filled, at B3's training-day pull rate).
     for a, r, key in (("B3", "R_B3", "rp"), ("B2b", "R_B2b", "rp"),
-                      ("B3", "RL_B3", "rl"), ("B2b", "RL_B2b", "rl")):  # fmt: skip
+                      ("B3", "RL_B3", "rl"), ("B2b", "RL_B2b", "rl"), ("B3", "F", "f")):  # fmt: skip
         if _has(m, a) and _has(m, r):
             out |= {f"{key}_{a.lower()}_{x}": v for x, v in _flat(compare(m, a, r)).items()}
     return out

@@ -36,7 +36,7 @@ def day(tmp_path_factory):
     return tmp / "day.npz", ev_ts, ev_side, ofi_ts, np.concatenate([[0.0], np.cumsum(e)]), e
 
 
-def run(day, mode, skew, theta_u, k_ticks, theta_m):
+def run(day, mode, skew, theta_u, k_ticks, theta_m, hold_ns=0, with_fills=False):
     from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
 
     path, ev_ts, ev_side, ofi_ts, cum, _ = day
@@ -56,10 +56,12 @@ def run(day, mode, skew, theta_u, k_ticks, theta_m):
     run_touch(
         hbt, 0.001, 100.0, 10, t0 + 2 * 10**9, t0 + 6 * 10**9, 100_000_000, steps, fills, out,
         skew, mode, K, N, sig_ts, sig_side, cum, TAU, W_NS, MU, ALPHA, BETA,
-        np.zeros(0), np.zeros(0), theta_u, k_ticks, theta_m, diag,
+        np.zeros(0), np.zeros(0), theta_u, k_ticks, theta_m, diag, hold_ns,
     )  # fmt: skip
     hbt.close()
     n = int(np.count_nonzero(diag[:, 0]))
+    if with_fills:
+        return diag[:n], steps[: int(out[0])], out, fills[: int(out[12])]
     return diag[:n], steps[: int(out[0])], out
 
 
@@ -137,7 +139,7 @@ def test_c2_pulls_the_side_the_series_marks(day):
         hbt, 0.001, 100.0, 10, t0 + 2 * 10**9, t0 + 6 * 10**9, 100_000_000, steps,
         np.zeros(500, FILL_DTYPE), out, True, EXTERNAL, 1.0, N, ts, np.zeros(len(ts), np.int64),
         np.zeros(1), 1.0, 1, MU, ALPHA, BETA, u, np.zeros(len(ts)), 0.5, PULL, np.inf,
-        np.zeros((0, 3)),
+        np.zeros((0, 3)), 0,
     )  # fmt: skip
     hbt.close()
     steps = steps[: int(out[0])]
@@ -147,3 +149,38 @@ def test_c2_pulls_the_side_the_series_marks(day):
     assert np.all(np.isnan(steps["bid_tick"][ok & (u_now == -1.0)]))
     assert np.all(steps["toxic"][ok] == u_now[ok])
     assert np.isfinite(steps["bid_tick"][ok & (u_now == 0.0)]).any()
+
+
+def test_f_withholds_the_side_just_filled_until_the_hold_ends(day):
+    """F: B1 that does not quote a side from the step that sees our fill on it until the
+    fill's exchange time plus the hold. The order latency is 1 ms each way, so a fill is
+    seen at the first step at least 1 ms after its exchange time."""
+    hold = 350_000_000
+    _, steps, out, fills = run(day, NONE, True, np.inf, PULL, np.inf, hold, with_fills=True)
+    assert len(fills) >= 1, "the synthetic day must fill F at least once"
+
+    def held(side):
+        f = fills["exch_ts"][fills["side"] == side]
+        ts = steps["ts"][:, None]
+        return ((f + 1_000_000 <= ts) & (ts < f + hold)).any(axis=1)
+
+    hb, ha = held(1), held(-1)
+    ok = np.isfinite(steps["mid"])
+    assert (ok & (hb | ha)).sum() >= 2  # a 350 ms hold covers several 100 ms steps
+    q = np.round(steps["position"] / out[5])
+    assert np.all(np.isnan(steps["bid_tick"][ok & hb]))
+    assert np.all(np.isnan(steps["ask_tick"][ok & ha]))
+    free_bid = ok & ~hb & (q < 10)
+    assert np.array_equal(steps["bid_tick"][free_bid], (steps["best_bid_tick"] - q)[free_bid])
+    free_ask = ok & ~ha & (q > -10)  # includes the steps after the hold ends: quoted again
+    assert np.array_equal(steps["ask_tick"][free_ask], (steps["best_ask_tick"] - q)[free_ask])
+    want = np.where(hb & ha, 0, np.where(hb, -1, np.where(ha, 1, 0)))
+    one = ok & ~(hb & ha)
+    assert np.array_equal(steps["toxic"][one], want[one])
+    assert np.all(steps["toxic"][ok & hb & ha] != 0)
+
+
+def test_b1_is_f_with_no_hold(day):
+    _, b1, _ = run(day, NONE, True, np.inf, PULL, np.inf)
+    _, f0, _ = run(day, NONE, True, np.inf, PULL, np.inf, 0)
+    assert np.array_equal(b1, f0) and np.all(b1["toxic"] == 0)

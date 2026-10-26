@@ -360,6 +360,43 @@ def v2_run_length(constants: dict, thresholds: dict, selected: dict, rates: dict
                    [PRIMARY[0]], [PRIMARY[1]])  # fmt: skip
 
 
+# Fill-hold control F (exploratory, Ilia 2026-10-26, after the run-length audit; sections 7
+# and 10): B1 that does not rejoin a side for hold_s after each of our fills on it. The
+# audit found many of B3's pulls start right after our own fill, when pulling costs no
+# queue place; F is that simple rule with no signal. hold_s is chosen on training days so
+# F's share of pulled steps matches B3's there.
+F_HOLDS_S = (0.05, 0.075, 0.1, 0.125, 0.15, 0.2, 0.3, 0.5)
+
+
+def _fill_hold(hold_s: float, label: str = "F") -> dict:
+    return {"name": "F", "design": "v2", "label": label, "hold_s": float(hold_s)}
+
+
+def v2_fill_hold_train(days) -> dict:
+    """v2 M4 on training days, primary cell: F at every hold in F_HOLDS_S, for the choice
+    of hold_s (choose_hold)."""
+    s = [_fill_hold(h, f"F_h{h:g}") for h in F_HOLDS_S]
+    return _config("v2_fill_hold_train", days, s, [PRIMARY[0]], [PRIMARY[1]])
+
+
+def choose_hold(shares: dict, target: float) -> float:
+    """The hold whose mean training-day share of pulled steps is closest to target, B3's
+    there; a tie goes to the shorter hold. shares maps each hold in F_HOLDS_S to it."""
+    if sorted(shares) != sorted(F_HOLDS_S):
+        raise ValueError(f"shares for {sorted(shares)}, not {list(F_HOLDS_S)}")
+    return min(sorted(shares), key=lambda h: abs(shares[h] - target))
+
+
+def v2_fill_hold_val(constants: dict, thresholds: dict, selected: dict, days) -> dict:
+    """v2 M4 on validation days, primary cell, exploratory: F at the chosen hold, with B1
+    and B3 at the selected settings in the same run."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    s = [{"name": "B1", "design": "v2"}, _v2_selected("B3", constants, thresholds, selected),
+         _fill_hold(selected["F"]["hold_s"])]  # fmt: skip
+    return _config("v2_fill_hold_val", days, s, [PRIMARY[0]], [PRIMARY[1]])
+
+
 def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> dict:
     """v2 M5, first of the two planned test-day runs: B0 to B3 in all 8 cells; C1, C2 and
     C4 in the primary cell; C3 (B3 at zero latency) in the risk-averse model. Its realised
@@ -378,7 +415,9 @@ def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> 
 
 def v2_confirmatory_controls(selected: dict, rates: dict, episodes: dict, days) -> dict:
     """v2 M5, second planned test-day run: R1, R_B3 and R_B2b in the primary cell at the
-    realised toxic shares of C1, B3 and B2b in the first run, day by day, and RL_B3 and
-    RL_B2b at B3's and B2b's shares and numbers of pulled runs."""
+    realised toxic shares of C1, B3 and B2b in the first run, day by day; RL_B3 and RL_B2b
+    at B3's and B2b's shares and numbers of pulled runs; and F at the hold chosen on
+    training days (configs/selected.yaml), which does not depend on the first run."""
     s = _controls(selected, rates, days) + _run_length_controls(selected, rates, episodes, days)
+    s.append(_fill_hold(selected["F"]["hold_s"]))
     return _config("confirmatory_controls", days, s, [PRIMARY[0]], [PRIMARY[1]])

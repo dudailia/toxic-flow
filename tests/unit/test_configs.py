@@ -204,13 +204,16 @@ def test_v2_confirmatory_controls_take_the_first_runs_rates():
              "B2b": dict.fromkeys(days, 0.25)}  # fmt: skip
     runs = {"B3": dict.fromkeys(days, 4000), "B2b": dict.fromkeys(days, 8000)}
     sel = {"B2b": {"p": 0.25, "k_ticks": 5, "magnitude": False, "tau_s": 5.0},
-           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
+           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}, "F": {"hold_s": 0.1}}  # fmt: skip
     cfg = configs.v2_confirmatory_controls(sel, rates, runs, days)
-    k = {s["label"][:-3]: s["k_ticks"] for s in cfg["strategies"]}
+    k = {s["label"][:-3]: s["k_ticks"] for s in cfg["strategies"] if s["name"] != "F"}
     # each control at its strategy's K
     assert k == {"R1": "pull", "R_B3": "pull", "R_B2b": 5, "RL_B3": "pull", "RL_B2b": 5}
-    assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 15
-    assert {s["rate_of"] for s in cfg["strategies"]} == {"C1", "B3", "B2b"}
+    assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 16
+    assert [s for s in cfg["strategies"] if s["name"] == "F"] == [
+        {"name": "F", "design": "v2", "label": "F", "hold_s": 0.1}
+    ]
+    assert {s["rate_of"] for s in cfg["strategies"] if s["name"] != "F"} == {"C1", "B3", "B2b"}
     rl = {s["label"]: s for s in cfg["strategies"] if s["name"] == "RL"}
     assert rl["RL_B2b_s2"]["episodes"] == runs["B2b"] and rl["RL_B3_s1"]["pull_rate"] == rates["B3"]
     assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
@@ -244,3 +247,32 @@ def test_v2_run_length_has_rl_for_b3_and_b2b_with_their_bases():
     assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
     with pytest.raises(ValueError, match="cover"):
         configs.v2_run_length(const, th, sel, rates, runs | {"B3": {days[0]: 4000}}, days)
+
+
+def test_f_runs_every_hold_on_training_days_and_the_rule_picks_the_closest_share():
+    from toxic_flow.engine import configs
+
+    days = ["2024-01-01", "2024-02-01"]
+    cfg = configs.v2_fill_hold_train(days)
+    holds = [s["hold_s"] for s in cfg["strategies"]]
+    assert holds == list(configs.F_HOLDS_S) and cfg["name"] == "v2_fill_hold_train"
+    assert {s["label"] for s in cfg["strategies"]} == {f"F_h{h:g}" for h in configs.F_HOLDS_S}
+    assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
+    shares = {h: 0.5 * h for h in configs.F_HOLDS_S}  # share grows with the hold
+    assert configs.choose_hold(shares, 0.05) == 0.1
+    assert configs.choose_hold(shares, 0.0) == 0.05
+    tie = dict(shares) | {0.075: 0.25, 0.1: 0.75}  # exact in binary, so a true tie
+    assert configs.choose_hold(tie, 0.5) == 0.075  # a tie goes to the shorter hold
+    with pytest.raises(ValueError, match="shares for"):
+        configs.choose_hold({0.1: 0.05}, 0.05)
+
+
+def test_f_on_validation_days_runs_with_b1_and_b3():
+    from toxic_flow.engine import configs
+
+    const, th = _v2_inputs()
+    sel = {"B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}, "F": {"hold_s": 0.125}}
+    cfg = configs.v2_fill_hold_val(const, th, sel, ["2025-01-01"])
+    s = {x.get("label", x["name"]): x for x in cfg["strategies"]}
+    assert set(s) == {"B1", "B3", "F"} and s["F"]["hold_s"] == 0.125
+    assert cfg["name"] == "v2_fill_hold_val"

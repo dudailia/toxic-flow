@@ -14,9 +14,12 @@ thresholds at infinity, so the overlay never acts. C2 (the oracle) is B1 with u 
 series built in tests/canary/: +1 when the mid 5 s ahead is at least one tick higher, -1
 when at least one tick lower, else 0; theta_u = 0.5 and k_ticks = PULL. R (random pulls,
 C1's control) is B1 with u from a random series that reads no market data, the same way.
+F (the fill-hold control, exploratory) is B1 that does not quote a side until hold_ns after
+the exchange time of our last fill on it, counted from the step that first sees the fill.
 """
 
 import numpy as np
+from hftbacktest import BUY
 from numba import njit
 
 from toxic_flow.signals.normalise import Ring
@@ -62,15 +65,18 @@ def run_touch(
     hbt, lot_size, min_notional, max_lots, quote_start_ns, quote_end_ns, step_ns,
     steps, fills, out,
     skew, mode, K, norm_steps, sig_ts, sig_side, sig_cum, tau_s, ofi_window_ns,
-    mu, alpha, beta, ext_u, ext_m, theta_u, k_ticks, theta_m, diag,
+    mu, alpha, beta, ext_u, ext_m, theta_u, k_ticks, theta_m, diag, hold_ns,
 ):  # fmt: skip
     """Quote from quote_start_ns until quote_end_ns, then cancel everything and mark. out as
     in strategies.b0_fixed.run_b0. The signal is computed at every step from the start of
-    the data, warm-up included; diag receives (time, u, m) per step while it has room."""
+    the data, warm-up included; diag receives (time, u, m) per step while it has room.
+    hold_ns > 0 is F: after a fill, its side is withheld until its exchange time plus
+    hold_ns, and marked toxic on those steps; 0 for every other strategy."""
     order_qty, next_id, n_steps, n_fills, n_diag = 0.0, 1, 0, 0, 0
     a_ring, ofi_ring = Ring(norm_steps), Ring(norm_steps)
     state, lam = np.zeros(4), np.empty(2)
     pos = np.zeros(3, np.int64)
+    bid_until, ask_until = 0, 0  # F only
     while True:
         if hbt.elapse(step_ns) != 0:
             break
@@ -89,7 +95,17 @@ def run_touch(
         if now < quote_start_ns:
             continue  # warm-up: signal and normalisers only, no orders
 
+        n_seen = n_fills
         n_fills = record_fills(hbt, fills, n_fills)
+        if hold_ns > 0:
+            # The fill report carries its exchange time, so the hold is causal: it starts
+            # acting at this step, the first that knows of the fill.
+            for i in range(n_seen, n_fills):
+                until = fills[i].exch_ts + hold_ns
+                if fills[i].side == BUY:
+                    bid_until = max(bid_until, until)
+                else:
+                    ask_until = max(ask_until, until)
         hbt.clear_inactive_orders(0)
         dp = hbt.depth(0)
         bb, ba = dp.best_bid_tick, dp.best_ask_tick
@@ -104,6 +120,15 @@ def run_touch(
             bid_t, ask_t, qb, qa, toxic = touch_quote(
                 bb, ba, q, skew, u, m, theta_u, k_ticks, theta_m
             )
+            if hold_ns > 0:
+                hold_bid, hold_ask = now < bid_until, now < ask_until
+                qb, qa = qb and not hold_bid, qa and not hold_ask
+                # Both held: record the side whose hold ends later, which does not depend on
+                # the order hftbacktest lists the fills in.
+                if hold_bid and hold_ask:
+                    toxic = 1 if ask_until >= bid_until else -1
+                else:
+                    toxic = -1 if hold_bid else (1 if hold_ask else 0)
             want_bid, want_ask = sides_allowed(position, order_qty, max_lots)
             want_bid, want_ask = want_bid and qb, want_ask and qa
             bid_rec = bid_t if want_bid else np.nan
