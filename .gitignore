@@ -1,4 +1,6 @@
-data/raw/
+# No trailing slash: it also ignores data/raw as a symlink to an external disk
+# (docs/ssd_move.md), which data/raw/ does not.
+data/raw
 # Converted days are a cache of the hashed raw files, evicted after use; each day's events
 # hash is in data/manifest.json and its inferred tick and lot in docs/data_quality/.
 data/converted/
