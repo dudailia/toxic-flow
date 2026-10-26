@@ -9,6 +9,12 @@
       --tune results/<a> results/<b> --canaries results/<v2_canaries_val> --mde results/<v2_mde_train>
       Writes docs/M4_v2_draft.md: B0 and B1 on the training days in all 8 cells, the tuning
       tables, the MDE (section 9) and the canaries (section 10).
+  uv run python scripts/m4_v2.py random --random results/<v2_random_pulls_val> \
+      --canaries results/<v2_canaries_val> --tune results/<a> results/<b>
+      Writes the section "Random-pull controls" at the end of docs/M4_v2_draft.md (replacing
+      it if present): C1 against R1 (the section 10 rule as revised on 2026-10-26), and the
+      exploratory comparisons: B3 and B2b against random pulls at their own rates, and B3
+      against B2b at each matched p from the tuning runs.
 """
 
 import argparse
@@ -22,6 +28,7 @@ import yaml
 from toxic_flow.data.exclusions import excluded_days
 from toxic_flow.data.split_lock import load_splits
 from toxic_flow.eval import analysis
+from toxic_flow.eval.analysis import BEF
 from toxic_flow.eval.select import PRIMARY, candidate_table, select
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -222,6 +229,107 @@ def cmd_report(train_b: Path, tune: list[Path], canaries: Path, mde_run: Path) -
     print(out)
 
 
+RANDOM_HEAD = (
+    "## Random-pull controls (section 10, C1 rule revised 2026-10-26; exploratory comparisons)"
+)
+REPRO = ("B1", "C1", "B3", "B2b")
+
+
+def reproduced(m: pl.DataFrame, mc: pl.DataFrame) -> str:
+    """Whether the random-pull run's B1, C1, B3 and B2b equal the canary run's, day by day."""
+    cols = ["day", "label", "fills", "break_even_fee_bps"]
+    a = m.filter(pl.col("label").is_in(REPRO)).select(cols)
+    b = mc.filter(pl.col("label").is_in(REPRO) & (pl.col("latency") == PRIMARY[1])).select(cols)
+    j = a.join(b, on=["day", "label"], suffix="_c")
+    same = j.height == a.height == 4 * len(kept("val")) and (j["fills"] == j["fills_c"]).all()
+    diff = float((j["break_even_fee_bps"] - j["break_even_fee_bps_c"]).abs().max())
+    return (f"identical fills on every day, largest BEF difference {diff:.1e} bp" if same
+            else f"NOT reproduced: {j.height} of {a.height} rows matched, largest BEF difference {diff:.1e} bp")  # fmt: skip
+
+
+def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
+    """B3 against B2b at each p, both at B2b's selected decay and the selected K and
+    magnitude rule (the same for both), from the tuning runs. Exploratory."""
+    k, mg, tau = selected["B3"]["k_ticks"], selected["B3"]["magnitude"], selected["B2b"]["tau_s"]
+    if (selected["B2b"]["k_ticks"], selected["B2b"]["magnitude"]) != (k, mg):
+        raise SystemExit("B3 and B2b differ in K or the magnitude rule; matched p is not defined")
+    prim = mt.filter((pl.col("queue") == PRIMARY[0]) & (pl.col("latency") == PRIMARY[1]))
+    L = [f"Tuning runs, primary cell; K {k}, magnitude rule {'on' if mg else 'off'}, B2b at tau {tau:g} s.", "",
+         "| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share |",
+         "|---|---|---|---|---|---|---|---|---|"]  # fmt: skip
+    for p in (0.05, 0.10, 0.25, 0.50):
+        rows = []
+        for name, extra in (("B3", {}), ("B2b", {"tau_s": tau})):
+            want = {"p": p, "k_ticks": k, "magnitude": mg, **extra}
+            r = prim.filter(pl.col("strategy") == name).filter(
+                pl.col("params").map_elements(
+                    lambda s, w=want: all(json.loads(s).get(a) == v for a, v in w.items()),
+                    return_dtype=pl.Boolean,
+                )
+            )
+            if r["params"].n_unique() != 1:
+                raise SystemExit(f"{name} at p {p}: {r['params'].n_unique()} settings")
+            rows.append(r.with_columns(label=pl.lit(name)))
+        both = pl.concat(rows, how="diagonal_relaxed")
+        c = analysis.compare(both, "B3", "B2b")
+        g = {n: both.filter(pl.col("label") == n) for n in ("B3", "B2b")}
+        L.append(f"| {p:g} | {fmt(c['mean'])} | {ci(c['bootstrap_ci'])} | {ci(c['t_ci'])} | {c['n_positive']} | "
+                 f"{fmt(g['B3'][BEF].mean())} | {fmt(g['B2b'][BEF].mean())} | "
+                 f"{fmt(g['B3']['toxic_share'].mean(), 3)} | {fmt(g['B2b']['toxic_share'].mean(), 3)} |")  # fmt: skip
+    return L
+
+
+def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
+    mr, (meta,) = load([random], ["v2_random_pulls_val"], "val")
+    mc, _ = load([canaries], ["v2_canaries_val"], "val")
+    mt, metas_t = tune_runs(tune)
+    selected = yaml.safe_load(SELECTED.read_text())
+    m = analysis.with_seed_means(mr)
+    can = analysis.canaries(m, mde_bp=float("nan"))
+    c1 = can["C1"]
+    hours = 23 + 59 / 60 - 0.5  # quoting window, 00:30 to 23:59 UTC
+    L = [RANDOM_HEAD, "",
+         f"Run {meta['config_hash']} ({meta['config']}, commit {meta['commit'][:7]}), primary cell, "
+         f"{len(kept('val'))} validation days. R is B1 that marks a side toxic at each 100 ms step with",
+         "probability r and pulls it, the side chosen at random; r on each day is the realised toxic",
+         f"share of C1 (R1), B3 (R_B3) or B2b (R_B2b) in run {canaries.name}. Three seeds each; the bare",
+         "label (R1) is the mean over the seeds of each day's value. B1, C1, B3 and B2b run again in",
+         f"this run so each comparison is within one run; against run {canaries.name}: {reproduced(mr, mc)}.", "",
+         "| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |",
+         "|---|---|---|---|---|---|"]  # fmt: skip
+    order = ["B1", "C1", "R1", "R1_s1", "R1_s2", "R1_s3", "B3", "R_B3", "R_B3_s1", "R_B3_s2",
+             "R_B3_s3", "B2b", "R_B2b", "R_B2b_s1", "R_B2b_s2", "R_B2b_s3"]  # fmt: skip
+    for lab in order:
+        g = m.filter(pl.col("label") == lab)
+        L.append(f"| {lab} | {g['fills'].mean():.0f} | {fmt(g[BEF].mean())} | {fmt(g['mean_markout_1s_bps'].mean())} | "
+                 f"{fmt(g['toxic_share'].mean(), 4)} | {g['toxic_episodes'].mean() / hours:.0f} |")  # fmt: skip
+    verdict = {True: "passes", False: "fails", None: "no verdict"}[c1["pass"]]
+    L += ["", "### C1 against R1 (the section 10 pass rule since 2026-10-26)", "", *CMP_HEAD,
+          cmp_row("C1 - R1 (pass: interval includes 0)", c1),
+          cmp_row("C1 - B1 (the rule first written, reported)", c1["vs_B1"]),
+          cmp_row("C1 - B3 (descriptive)", c1["vs_B3"]),
+          *(cmp_row(f"C1 - R1_s{k} (one seed)", analysis.compare(m, "C1", f"R1_s{k}")) for k in (1, 2, 3)),
+          cmp_row("R1 - B1 (the cost of random pulls at C1's rate)", analysis.compare(m, "R1", "B1")),
+          "", f"- AC4.3 as revised, the C1 interval against R1 includes 0: {verdict}.",
+          f"- Statement from eval/analysis.canaries on this run: {can['statement']}",
+          "", "### Exploratory: the selected overlays against random pulls at their own rates", "",
+          "Exploratory, not a test of section 7 or 10. Reported in the paper as exploratory.", "",
+          *CMP_HEAD,
+          cmp_row("B3 - R_B3", analysis.compare(m, "B3", "R_B3")),
+          cmp_row("B2b - R_B2b", analysis.compare(m, "B2b", "R_B2b")),
+          cmp_row("R_B3 - B1", analysis.compare(m, "R_B3", "B1")),
+          cmp_row("R_B2b - B1", analysis.compare(m, "R_B2b", "B1")),
+          "", "### Exploratory: B3 against B2b at matched p", "",
+          "Runs " + ", ".join(x["config_hash"] for x in metas_t) + ". Exploratory; the selected B3 is p 0.05",
+          "and the selected B2b p 0.25, so H1's pair compares different pull rates.", "",
+          *matched_p(mt, selected)]  # fmt: skip
+    out = ROOT / "docs" / "M4_v2_draft.md"
+    text = out.read_text()
+    keep = text.split("\n" + RANDOM_HEAD)[0].rstrip("\n")
+    out.write_text(keep + "\n\n" + "\n".join(L) + "\n")
+    print(out, "C1 vs R1:", verdict, fmt(c1["mean"]), ci(c1["bootstrap_ci"]))
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -232,9 +340,15 @@ def main() -> None:
     r.add_argument("--tune", type=Path, nargs=2, required=True)
     r.add_argument("--canaries", type=Path, required=True)
     r.add_argument("--mde", type=Path, required=True)
+    q = sub.add_parser("random")
+    q.add_argument("--random", type=Path, required=True)
+    q.add_argument("--canaries", type=Path, required=True)
+    q.add_argument("--tune", type=Path, nargs=2, required=True)
     a = p.parse_args()
     if a.cmd == "select":
         cmd_select(a.tune)
+    elif a.cmd == "random":
+        cmd_random(a.random, a.canaries, a.tune)
     else:
         cmd_report(a.train_b, a.tune, a.canaries, a.mde)
 
