@@ -469,3 +469,25 @@ and the pull costs no queue place, while RL's almost always cancel a resting ord
 B3 - RL_B3 does not separate what the Hawkes direction knows from a simple rule such as
 not rejoining the side just hit, and part of it may be RL's extra cancels.
 The bootstrap interval of B2b - RL_B2b includes 0. 6 validation days.
+
+## Fill-hold control F (exploratory, sections 7 and 10, added 2026-10-26)
+
+Exploratory, not a test of section 7 or 10. F is B1 that does not quote a side from the
+step that sees our fill on it until the fill's exchange time plus the hold h, and counts
+those steps as pulled. h is the value below whose mean share of pulled steps over the
+12 training days, primary cell, is closest to B3's there (0.0499, run 58c46cc49981); a tie goes to the shorter hold.
+
+Run 83bb2b991997 (configs/runs/v2_fill_hold_train.yaml, commit 3d72b5c), training days:
+
+| Hold s | Toxic share | Toxic episodes an hour | Fills a day | Mean daily BEF bp |
+|---|---|---|---|---|
+| 0.05 | 0.0193 | 694 | 54064 | -0.9365 |
+| 0.075 | 0.0351 | 1264 | 51327 | -0.9409 |
+| 0.1 (chosen) | 0.0493 | 1774 | 49004 | -0.9412 |
+| 0.125 | 0.0598 | 1950 | 47623 | -0.9451 |
+| 0.15 | 0.0708 | 1930 | 46304 | -0.9466 |
+| 0.2 | 0.0936 | 1829 | 43727 | -0.9481 |
+| 0.3 | 0.1308 | 1686 | 40264 | -0.9546 |
+| 0.5 | 0.1922 | 1495 | 35653 | -0.9618 |
+
+Chosen h = 0.1 s. configs/selected.yaml F: {'hold_s': 0.1} (matches).

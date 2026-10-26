@@ -1,0 +1,61 @@
+# Written by scripts/make_v2_configs.py (v2).
+name: v2_fill_hold_train
+label: v2_fill_hold_train
+days:
+- '2024-06-01'
+- '2024-12-01'
+- '2024-07-01'
+- '2024-01-01'
+- '2024-02-01'
+- '2024-09-01'
+- '2024-11-01'
+- '2024-10-01'
+- '2024-03-01'
+- '2024-04-01'
+- '2024-08-01'
+- '2024-05-01'
+strategies:
+- name: F
+  design: v2
+  label: F_h0.05
+  hold_s: 0.05
+- name: F
+  design: v2
+  label: F_h0.075
+  hold_s: 0.075
+- name: F
+  design: v2
+  label: F_h0.1
+  hold_s: 0.1
+- name: F
+  design: v2
+  label: F_h0.125
+  hold_s: 0.125
+- name: F
+  design: v2
+  label: F_h0.15
+  hold_s: 0.15
+- name: F
+  design: v2
+  label: F_h0.2
+  hold_s: 0.2
+- name: F
+  design: v2
+  label: F_h0.3
+  hold_s: 0.3
+- name: F
+  design: v2
+  label: F_h0.5
+  hold_s: 0.5
+queue_models:
+- risk_averse
+latencies:
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1

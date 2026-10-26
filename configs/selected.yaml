@@ -26,3 +26,10 @@ B3:
   k_ticks: pull
   magnitude: false
   p: 0.05
+# F, the fill-hold control (exploratory, PREREGISTRATION.md section 10, added 2026-10-26):
+# the hold chosen by the section 10 rule on the training days, primary cell, run
+# 83bb2b991997 (configs/runs/v2_fill_hold_train.yaml): F's mean share of pulled steps
+# 0.0493 against B3's 0.0499 (run 58c46cc49981). scripts/m4_v2.py fillhold; checked by
+# tests/unit/test_prereg.py.
+F:
+  hold_s: 0.1

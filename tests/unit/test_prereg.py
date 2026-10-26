@@ -41,3 +41,19 @@ def test_the_summary_guard_reads_the_frozen_s_and_it_is_the_measured_one():
     pre = json.loads((ROOT / "paper" / "pre_test.json").read_text())
     assert frozen_s() == float(pre["pre_s"])
     assert f"MDE = 0.70 s = {pre['pre_mde']} bp." in TEXT
+
+
+def test_f_hold_is_the_training_day_rule_on_the_committed_run():
+    import polars as pl
+
+    from toxic_flow.engine.configs import F_HOLDS_S, choose_hold, frozen_hold
+
+    sel = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+    grid = pl.read_parquet(ROOT / "results" / "83bb2b991997" / "metrics.parquet")
+    b3 = pl.read_parquet(ROOT / "results" / "58c46cc49981" / "metrics.parquet")
+    target = b3.filter(pl.col("label") == "B3")["toxic_share"].mean()
+    shares = {
+        h: grid.filter(pl.col("label") == f"F_h{h:g}")["toxic_share"].mean() for h in F_HOLDS_S
+    }
+    assert frozen_hold(sel) == choose_hold(shares, target) == 0.1
+    assert f"h = {frozen_hold(sel):g} s" in TEXT

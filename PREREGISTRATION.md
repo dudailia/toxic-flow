@@ -402,6 +402,8 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
   selected settings there (run 58c46cc49981); a tie goes to the shorter hold. F reads no
   signal and has no seed. B3 minus F is reported as an exploratory comparison (section 7),
   with no pass rule. On test days F runs in the second planned run, at the h chosen here.
+  On the training days the rule gives h = 0.1 s: F's mean share 0.0493 against B3's 0.0499
+  (run 83bb2b991997; docs/M4_v2_draft.md).
 - C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
   5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
   at least one tick below; no magnitude rule. The only strategy allowed to see the future.

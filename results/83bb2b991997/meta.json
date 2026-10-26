@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_fill_hold_train.yaml",
+  "config_hash": "83bb2b991997",
+  "commit": "3d72b5caed015da98e12865065279c0d0d3c6aa2",
+  "started_at": "2026-10-26T19:49:31+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_fill_hold_train",
+  "finished_at": "2026-10-26T21:14:06+00:00"
+}
