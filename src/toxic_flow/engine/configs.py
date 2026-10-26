@@ -282,7 +282,7 @@ R_SEEDS = (1, 2, 3)
 
 def _random_pulls(of: str, rates: dict, label: str) -> list[dict]:
     return [{"name": "R", "design": "v2", "label": f"{label}_s{seed}", "rate_of": of,
-             "k_ticks": "pull", "seed": seed, "pull_rate": rates}
+             "k_ticks": "pull", "seed": seed, "pull_rate": dict(rates)}
             for seed in R_SEEDS]  # fmt: skip
 
 
