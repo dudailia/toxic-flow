@@ -1054,3 +1054,52 @@ Open questions, new:
 - Q52: C4 at beta x 10 marks 46.0% of training-day steps at p = 50%, not 50%: its intensity
   is back at baseline between events, so |u| ties at the baseline value. It matters only
   if B3's selected p is 50%. Kept and stated, with the test pinning it.
+
+# Block of 2026-10-26: Q52 to Q54 decided, C1 against R1, filled pre-registration
+
+Decisions from Ilia and chat, applied: Q53, C1 is judged against R1 (B1 with random pulls
+at C1's realised rate on each validation day, same K, random side, 3 seeds), disclosed in
+the Design history with the original C1 - B1 result kept; Q52 noted (B3 is at p = 5%);
+Q54 accepted as stated.
+
+1. R1 built and run. engine.run.random_pulls makes the random series (no market data
+   read), run_touch takes it like the C2 series, eval/analysis.py averages the seeds per
+   day and judges C1 against R1 when R1 is present. Run results/c274b2def28e (78 cells,
+   validation days, primary cell), which also reran B1, C1, B3 and B2b: identical to the
+   canary run 5d27bc8ae820. C1 - R1 = +0.0009 bp, bootstrap [-0.0023, 0.0038]: passes.
+   R1 - B1 = -0.0099 bp, about C1's gap to B1. C1 - B1 stays reported (-0.0090 bp, fails).
+2. Exploratory (docs/M4_v2_draft.md): B3 - R_B3 = +0.028 bp and B2b - R_B2b = +0.062 bp,
+   6 of 6 days each, overstated because the random controls start more runs of a pulled
+   side (1,452 against 1,094 an hour for B3, 8,017 against 338 for B2b). At matched p,
+   B3 - B2b is -0.001 bp at 5% and -0.027 to -0.078 bp at 10% to 50%.
+3. configs/selected.yaml now holds the v2 settings of docs/M4_v2_selected.yaml (the v1
+   file is in git history). PREREGISTRATION.md has no [TBD]: exchange model, queue API
+   names, thresholds table, selected settings, third fee level, s = 0.0329 bp and
+   MDE = 0.0231 bp; R_B3 and R_B2b added to sections 7 and 10 as exploratory.
+   tests/unit/test_prereg.py checks AC4.4 and that the filled numbers match their files.
+4. docs/TAG_CHECKLIST.md: what Ilia does before the tag. Dry runs of the proposed
+   checks: M1 12 of 12, M2 8 of 11, M3 10 of 11, M4 (new v2 proposal) 4 of 4.
+
+Judgment calls to check:
+- R pulls are independent per step. C1's own pulls last 1.05 steps on average, so R1
+  matches C1 in run length too (438 and 459 runs an hour). For B3 and B2b it does not,
+  which the exploratory comparisons state; a control matched on run length was not run.
+- R1's day value is the mean over its 3 seeds of the daily BEF, then the usual day-level
+  bootstrap. C1 itself is one permutation (seed 1729), as before.
+- The R rate is the realised toxic_share of the committed canary run, carried per day in
+  the config. On test days that means R runs after the run whose rate it takes; the
+  pre-registration says so, and M5 code for it is not written (TAG_CHECKLIST.md).
+- Three [TBD] items were Ilia's open decisions (Q2, Q3, Q6). They are filled with the
+  text of docs/proposals/prereg_m0_tbds.md, which matches what every run already does;
+  the exchange-model text drops that proposal's partial-fill shares, which were measured
+  on v1 strategies.
+- The proposed M1/M3 and M2 checks were corrected after a dry run (stale paths, and
+  AC2.3 passing on a skipped test). They are proposals; check_milestone.py is unchanged.
+
+No protected path was edited, no test-day URL was requested, no tag was touched, nothing
+was downloaded. The disk watchdog ran for the whole run; the memory guard held the last
+day's conversion for some minutes and then allowed it.
+
+Tests: `make check` 357 passed. `make check-full` 383 passed and 3 skipped; the skipped
+tests need 2024-01-01 converted on disk (the fee-equivalence test among them), which it
+is not now.
