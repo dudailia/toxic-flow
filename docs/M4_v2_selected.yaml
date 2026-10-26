@@ -1,0 +1,17 @@
+# v2 overlay choice by the section 4 rule (scripts/m4_v2.py select), for Ilia's review.
+# Not configs/selected.yaml; make_v2_configs.py reads it for the canary and s runs.
+draft: v2 M4 from runs 0bd4181a312a, 9e93e4415b6b, not approved
+B2:
+  k_ticks: pull
+  magnitude: false
+  ofi_window_s: 5.0
+  p: 0.25
+B2b:
+  k_ticks: pull
+  magnitude: false
+  p: 0.25
+  tau_s: 5.0
+B3:
+  k_ticks: pull
+  magnitude: false
+  p: 0.05
