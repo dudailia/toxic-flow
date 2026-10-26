@@ -102,3 +102,55 @@ def test_the_chosen_b0_and_b1_run_in_all_8_cells():
     assert [s["name"] for s in cfg["strategies"]] == ["B0", "B1"]
     assert cfg["strategies"][0]["h"] == 2 and cfg["strategies"][1]["gamma"] == 0.1
     assert len(expand(cfg)) == 2 * 8
+
+
+def _v2_inputs():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    const = json.loads((root / "docs" / "signals" / "train_constants.json").read_text())
+    th = json.loads((root / "docs" / "signals" / "train_thresholds.json").read_text())
+    return const, th
+
+
+def test_v2_tuning_grid_has_24_settings_per_signal_setting_with_their_thresholds():
+    from toxic_flow.engine import configs
+
+    const, th = _v2_inputs()
+    cfg = configs.v2_tuning(const, th, ["2025-01-01"])
+    names = [s["name"] for s in cfg["strategies"]]
+    assert (names.count("B2"), names.count("B2b"), names.count("B3")) == (72, 72, 24)
+    for s in cfg["strategies"]:
+        key = configs._signal_key(s["name"], s)
+        assert s["design"] == "v2" and s["K"] == const["K"][key]
+        assert s["theta_u"] == th["signals"][key]["theta_u"][f"{s['p']:g}"]
+        assert s["theta_m"] == th["signals"][key]["theta_m"]
+    assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
+
+
+def test_v2_canaries_use_b3_settings_c1_with_b3_thresholds_c4_with_its_own():
+    from toxic_flow.engine import configs
+
+    const, th = _v2_inputs()
+    sel = {"B2b": {"p": 0.1, "k_ticks": 5, "magnitude": False, "tau_s": 1.0},
+           "B3": {"p": 0.25, "k_ticks": "pull", "magnitude": True}}  # fmt: skip
+    s = {x.get("label", x["name"]) + str(x.get("cells", "")): x
+         for x in configs.v2_canaries(const, th, sel, ["2025-01-01"])["strategies"]}  # fmt: skip
+    b3, c1 = s["B3"], s["C1"]
+    assert c1["theta_u"] == b3["theta_u"] == th["signals"]["B3_hawkes"]["theta_u"]["0.25"]
+    assert (c1["p"], c1["k_ticks"], c1["magnitude"]) == (0.25, "pull", True)
+    for f in ("10", "0.1"):
+        c4 = s[f"C4_x{f}"]
+        assert c4["theta_u"] == th["signals"][f"C4_x{f}"]["theta_u"]["0.25"]
+        assert c4["K"] == const["K"][f"C4_x{f}"] and c4["k_ticks"] == "pull"
+    assert s["C2"] == {"name": "C2", "design": "v2"}
+    assert s["B3[['risk_averse', 'zero']]"]["theta_u"] == b3["theta_u"]
+
+
+def test_v2_training_runs_b0_and_b1_in_all_8_cells():
+    from toxic_flow.engine import configs, grid
+
+    cfg = configs.v2_training(["2024-01-01"])
+    assert len(grid.expand(cfg)) == 16
+    assert {s["name"] for s in cfg["strategies"]} == {"B0", "B1"}

@@ -119,3 +119,24 @@ def test_an_eligible_b1_candidate_with_a_day_without_fills_is_left_to_ilia():
     assert eligible(t).all()
     with pytest.raises(ValueError, match="without fills"):
         select(t, "B1")
+
+
+def test_v2_ties_go_to_smaller_p_then_k_then_magnitude_off_then_shorter_window():
+    import json
+
+    import polars as pl
+
+    from toxic_flow.eval.select import select
+
+    def cand(p, k, mag, w):
+        return json.dumps(
+            {"design": "v2", "p": p, "k_ticks": k, "magnitude": mag, "ofi_window_s": w}
+        )
+
+    rows = [cand(0.1, 1, False, 1.0), cand(0.05, "pull", True, 30.0), cand(0.05, 5, False, 30.0),
+            cand(0.05, 5, True, 1.0), cand(0.05, 5, False, 5.0)]  # fmt: skip
+    table = pl.DataFrame({"params": rows, "mean_bef_bps": [-0.5] * 5, "n_days": [6] * 5,
+                          "zero_fill_days": [0] * 5, "median_fills": [1000.0] * 5})  # fmt: skip
+    pick = select(table, "B2")
+    assert pick["tied"] == 5
+    assert pick["params"] == json.loads(cand(0.05, 5, False, 5.0))

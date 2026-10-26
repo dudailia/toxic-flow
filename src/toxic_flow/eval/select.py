@@ -1,9 +1,10 @@
 """Parameter selection by the pre-registered rule (PREREGISTRATION.md section 4).
 
 B0 and B1 on training days, overlays on validation days, both in the primary cell: the
-candidate with the highest mean daily break-even fee wins. Overlay ties go to the smaller
-c + d, then the shorter OFI window or EWMA decay. This module ranks and reports; it never
-writes configs/selected.yaml, which needs Ilia's approval (SPEC.md AC2.5 and AC4.1).
+candidate with the highest mean daily break-even fee wins. v1 overlay ties go to the smaller
+c + d, then the shorter OFI window or EWMA decay; v2 ties as in K_ORDER below. This module
+ranks and reports; it never writes configs/selected.yaml, which needs Ilia's approval
+(SPEC.md AC2.5 and AC4.1).
 Where section 4 gives no rule, it raises instead of inventing one.
 """
 
@@ -53,8 +54,16 @@ def candidate_table(
     return t
 
 
+# v2 tie order of section 4: the smaller p, then K (1 tick, 5 ticks, pull), then the
+# magnitude rule off, then the shorter window or decay.
+K_ORDER = {1: 0, 5: 1, "pull": 2}
+
+
 def _tie_key(params: dict) -> tuple:
-    return (params["c"] + params["d"], next((params[k] for k in SIGNAL_SCALE if k in params), 0.0))
+    scale = next((params[k] for k in SIGNAL_SCALE if k in params), 0.0)
+    if params.get("design") == "v2":
+        return (params["p"], K_ORDER[params["k_ticks"]], params["magnitude"], scale)
+    return (params["c"] + params["d"], scale)
 
 
 def select(table: pl.DataFrame, strategy: str) -> dict:
