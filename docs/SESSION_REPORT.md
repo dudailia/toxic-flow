@@ -981,3 +981,44 @@ the 11 GB watchdog, then 3 GB on Ilia's answer, with the converter floor set by
 TOXIC_FLOW_MIN_FREE_GB for those runs only; diag_train was superseded before it ran by
 diag_train_touch so the training days converted once; the touch base skews one tick per
 order size of inventory.
+
+# v2 block (2026-10-25, decision of Ilia and chat)
+
+Ilia and chat chose to redesign as v2 and to write the change down openly. Done in order:
+
+1. PREREGISTRATION.md (not frozen): a "Design history" section before section 1 gives
+   why v1 failed C2 (from docs/M4_diagnosis.md) and states that v2 was chosen on
+   2026-10-25 after seeing training and validation diagnostics, before any test-day data.
+   Sections 4, 5 and 10 rewritten for v2; the section 2 table cell for training days and
+   the SPEC.md M4 build list follow. Committed (962451d) before any v2 code or run. The
+   B0/B1 "Chosen values: [TBD M2]" line went with the old section 4, because v2 B0 and B1
+   have no parameters; no other [TBD] was filled, and the new thresholds line is
+   [TBD M4].
+2. Built with tests: strategies/touch.py (B0, B1 and the step-back overlay),
+   strategies/signal_input.py (the per-step signal, shared with the v1 loop, whose tests
+   still pass), the v2 C2 oracle in tests/canary/c2_oracle.py, signals/thresholds.py and
+   scripts/fit_thresholds.py, engine dispatch for entries with design v2, the v2 tie order
+   in eval/select.py, and config builders. Thresholds: docs/signals/train_thresholds.json.
+5. docs/exploratory/glft.md from the committed v1 runs (scripts/glft_report.py).
+
+Decisions taken without asking (least change, for Ilia to check):
+- Rules not spelled out in the request: |u| strictly above theta_u marks a side toxic;
+  the magnitude rule's extra tick adds to the toxic side's step; the step is applied to
+  the B1 quote, then the cross rule and the cap; C2 v2 counts the 5 s mid change in half
+  ticks and acts at two or more (one tick); C1 keeps B3's thresholds; C4 gets its own K,
+  theta_u and theta_m; ties go to the smaller p, then K (1, 5, pull), then magnitude off,
+  then the shorter window or decay.
+- Thresholds are pooled over the 12 training days. Per day the realised share varies a
+  lot, most for the EWMA counts (at p = 5%, from 0.6% to 31% of a day's steps), because
+  trade-count levels differ between days; the share on the validation days is measured in
+  every run (toxic_share).
+- The tuning grid runs as two configs on disjoint halves of the validation days, side by
+  side; conversions take a file lock so two runs never convert at once (the memory guard
+  and the one-conversion rule are unchanged).
+- The conversion unit tests went through the real memory check and failed at 2.7 GB free;
+  they now set the free memory themselves (the guard's own tests still test it).
+
+Open questions, new:
+- Q52: C4 at beta x 10 marks 46.0% of training-day steps at p = 50%, not 50%: its intensity
+  is back at baseline between events, so |u| ties at the baseline value. It matters only
+  if B3's selected p is 50%. Kept and stated, with the test pinning it.
