@@ -131,7 +131,7 @@ def test_summary_has_every_key_the_paper_template_needs():
     # Keys starting with pre_ come from paper/pre_test.json (training and validation days).
     needed = {k for k in re.findall(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", template)
               if not k.startswith("pre_")}  # fmt: skip
-    controls = [r for lab in ("R1", "R_B3", "R_B2b") for k in (1, 2, 3)
+    controls = [r for lab in ("R1", "R_B3", "R_B2b", "RL_B3", "RL_B2b") for k in (1, 2, 3)
                 for r in rows(f"{lab}_s{k}", list(NOISE * k))]  # fmt: skip
     m = pl.DataFrame(
         grid("B1", [0.0] * 12) + grid("B2", [0.5] * 12) + grid("B2b", [0.0] * 12)
@@ -147,6 +147,7 @@ def test_summary_has_every_key_the_paper_template_needs():
     assert summary["n_test_days"] == 12
     assert summary["c1_r1_mean_bp"] == pytest.approx(NOISE.mean() - 2 * NOISE.mean())
     assert summary["h1_cells_same_sign"] == 8
+    assert summary["rl_b3_mean_bp"] == pytest.approx(summary["rp_b3_mean_bp"])  # same rows
 
 
 def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():
@@ -330,3 +331,33 @@ def test_seed_means_are_added_once_however_often_they_are_asked_for():
     m = pl.DataFrame(r1(list(NOISE)) + rows("B1", [0.0] * 12))
     once = analysis.with_seed_means(m)
     assert analysis.with_seed_means(once).height == once.height == m.height + 12
+
+
+def test_the_guard_wants_each_run_length_control_at_its_strategys_pulled_runs():
+    test_days = DAYS[:2]
+    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"},
+            {"label": "c", "config": "configs/runs/confirmatory_controls.yaml"}]  # fmt: skip
+    b3 = pl.DataFrame(rows("B3", [0.0] * 12)).filter(pl.col("day").is_in(test_days))
+    b3 = b3.with_columns(toxic_share=pl.Series([0.04, 0.05]), toxic_episodes=pl.Series([900, 1100]))
+    rate = {test_days[0]: 0.04, test_days[1]: 0.05}
+
+    def rl(runs):
+        params = json.dumps({"name": "RL", "rate_of": "B3", "seed": 1, "pull_rate": rate,
+                             "episodes": runs})  # fmt: skip
+        r = pl.DataFrame(rows("RL_B3_s1", [0.0] * 12, params=params))
+        return r.filter(pl.col("day").is_in(test_days))
+
+    ok = pl.concat([b3, rl({test_days[0]: 900, test_days[1]: 1100})], how="diagonal_relaxed")
+    assert analysis.confirmatory_problem(meta, ok, test_days) is None
+    off = pl.concat([b3, rl({test_days[0]: 900, test_days[1]: 1000})], how="diagonal_relaxed")
+    assert "pulled runs" in analysis.confirmatory_problem(meta, off, test_days)
+
+
+def test_seed_means_keep_the_controls_own_strategy_name():
+    seeds = [
+        r for lab in ("R_B3", "RL_B3") for k in (1, 2, 3) for r in rows(f"{lab}_s{k}", [0.0] * 12)
+    ]
+    means = analysis.with_seed_means(pl.DataFrame(seeds))
+    names = dict(means.filter(pl.col("label").is_in(["R_B3", "RL_B3"]))
+                 .select("label", "strategy").unique().iter_rows())  # fmt: skip
+    assert names == {"R_B3": "R", "RL_B3": "RL"}

@@ -136,7 +136,7 @@ SEED_LABEL = re.compile(r"^(R.*)_s\d+$")
 
 def with_seed_means(m: pl.DataFrame) -> pl.DataFrame:
     """Adds, for each random-pull control run with several seeds (labels such as R1_s1,
-    R1_s2, R1_s3), one row per day and cell under the bare label (R1) holding the mean over
+    R1_s2, R1_s3, or RL_B3_s1 for the run-length control), one row per day and cell under the bare label (R1) holding the mean over
     seeds of each metric compared. The control's day value is that mean, so the seeds
     average out the random draw before the day-level bootstrap."""
     m = _labelled(m)
@@ -151,10 +151,11 @@ def with_seed_means(m: pl.DataFrame) -> pl.DataFrame:
                         "toxic_episodes", *(f"mean_markout_{h}s_bps" for h in HORIZONS_S))
             if c in m.columns]  # fmt: skip
     means = seeded.group_by("base", "day", "queue", "latency").agg(
-        pl.col(cols).mean(), seeds=pl.col("label").sort().str.join(",")
-    )
+        pl.col(cols).mean(), seeds=pl.col("label").sort().str.join(","),
+        strategy=pl.col("strategy").first(),
+    )  # fmt: skip
     means = means.with_columns(
-        label=pl.col("base"), strategy=pl.lit("R"),
+        label=pl.col("base"),
         params=pl.concat_str(pl.lit('{"seeds": "'), pl.col("seeds"), pl.lit('"}')),
     ).drop("base", "seeds")  # fmt: skip
     return pl.concat([m, means], how="diagonal_relaxed")
@@ -319,9 +320,11 @@ def _canary_keys(m: pl.DataFrame, c: dict) -> dict:
     if "C2" in c:
         out["c2_b1_mean_bp"] = c["C2"]["mean"]
     # Exploratory (sections 7 and 10): each overlay against random pulls at its own rate.
-    for a, r in (("B3", "R_B3"), ("B2b", "R_B2b")):
+    # rp_ against R (rate only), rl_ against RL (rate and number of pulled runs).
+    for a, r, key in (("B3", "R_B3", "rp"), ("B2b", "R_B2b", "rp"),
+                      ("B3", "RL_B3", "rl"), ("B2b", "RL_B2b", "rl")):  # fmt: skip
         if _has(m, a) and _has(m, r):
-            out |= {f"rp_{a.lower()}_{x}": v for x, v in _flat(compare(m, a, r)).items()}
+            out |= {f"{key}_{a.lower()}_{x}": v for x, v in _flat(compare(m, a, r)).items()}
     return out
 
 
@@ -340,7 +343,7 @@ def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str
     random-pull controls, configs/runs/confirmatory_controls.yaml (section 10). None is
     smoke, every label has every non-excluded test day in every cell it runs in, and every
     control pulls at the realised toxic share of the strategy it controls for, on each day,
-    in the first run. The caller checks s, the config hashes and the commits against the
+    in the first run (an RL control also at its number of toxic episodes). The caller checks s, the config hashes and the commits against the
     tag."""
     for meta in metas:
         if meta.get("label") == "smoke":
@@ -358,9 +361,11 @@ def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str
     for (label, q, lat), g in m.group_by(["label", "queue", "latency"]):
         if set(g["day"]) != want:
             return f"{label} in {q}/{lat} lacks {sorted(want - set(g['day']))}"
-    for r in m.filter(pl.col("strategy") == "R").iter_rows(named=True):
+    for r in m.filter(pl.col("strategy").is_in(["R", "RL"])).iter_rows(named=True):
         p = json.loads(r["params"])
         done = _rows(m, p["rate_of"], *PRIMARY).filter(pl.col("day") == r["day"])
         if done.height != 1 or abs(done["toxic_share"][0] - p["pull_rate"][r["day"]]) > 1e-12:
             return f"{r['label']} on {r['day']} does not pull at {p['rate_of']}'s realised rate"
+        if r["strategy"] == "RL" and done["toxic_episodes"][0] != p["episodes"][r["day"]]:
+            return f"{r['label']} on {r['day']} is not matched to {p['rate_of']}'s pulled runs"
     return None

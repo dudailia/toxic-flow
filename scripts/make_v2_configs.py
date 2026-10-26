@@ -8,10 +8,14 @@
   uv run python scripts/make_v2_configs.py random results/<v2_canaries_val>
       random-pull controls; the rates are the realised toxic shares of C1, B3 and B2b in
       that run, primary cell, per day
+  uv run python scripts/make_v2_configs.py runlength results/<v2_canaries_val>
+      run-length controls RL_B3 and RL_B2b (exploratory): B3's and B2b's realised toxic
+      shares and numbers of toxic episodes in that run, primary cell, per day
   uv run python scripts/make_v2_configs.py confirmatory   needs configs/selected.yaml
   uv run python scripts/make_v2_configs.py controls results/<confirmatory>
       M5, the two planned test-day runs (section 10): the grid on the kept test days, then
-      the random-pull controls at that run's realised toxic shares. Only after prereg-v1
+      the random-pull controls at that run's realised toxic shares (and, for RL, numbers
+      of toxic episodes). Only after prereg-v1
       and the exclusion step (SPEC.md AC5.2), since the kept test days need both.
 
 tune writes two configs over disjoint halves of the validation days (v2_tune_val_a and
@@ -45,17 +49,17 @@ def write(cfg: dict) -> None:
     print(out, len(cfg["strategies"]), "strategies")
 
 
-def realised_rates(run: Path, config: str) -> dict:
-    """{C1, B3, B2b: {day: toxic share}} in the primary cell of a committed run of
-    configs/runs/<config>.yaml."""
+def realised_rates(run: Path, config: str, column: str = "toxic_share") -> dict:
+    """{C1, B3, B2b: {day: value of column}} in the primary cell of a committed run of
+    configs/runs/<config>.yaml: the toxic share, or the number of toxic episodes."""
     meta = json.loads((run / "meta.json").read_text())
     if meta["config"] != f"configs/runs/{config}.yaml":
         raise SystemExit(f"{run} is not {config}")
     m = pl.read_parquet(run / "metrics.parquet").filter(
         (pl.col("queue") == configs.PRIMARY[0]) & (pl.col("latency") == configs.PRIMARY[1])
     )
-    return {lab: {d: float(x) for d, x in m.filter(pl.col("label") == lab)
-                  .select("day", "toxic_share").iter_rows()}
+    return {lab: {d: x for d, x in m.filter(pl.col("label") == lab)
+                  .select("day", column).iter_rows()}
             for lab in ("C1", "B3", "B2b")}  # fmt: skip
 
 
@@ -79,13 +83,22 @@ def main(kind: str) -> None:
     elif kind == "random":
         rates = realised_rates(Path(sys.argv[2]), "v2_canaries_val")
         write(configs.v2_random_pulls(const, th, selected, rates, kept("val")))
+    elif kind == "runlength":
+        run = Path(sys.argv[2])
+        rates = realised_rates(run, "v2_canaries_val")
+        runs = realised_rates(run, "v2_canaries_val", "toxic_episodes")
+        episodes = {k: runs[k] for k in ("B3", "B2b")}
+        write(configs.v2_run_length(const, th, selected, rates, episodes, kept("val")))
     elif kind in ("confirmatory", "controls"):
         approved = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
         if kind == "confirmatory":
             write(configs.v2_confirmatory(const, th, approved, kept("test")))
         else:
-            rates = realised_rates(Path(sys.argv[2]), "confirmatory")
-            write(configs.v2_confirmatory_controls(approved, rates, kept("test")))
+            run = Path(sys.argv[2])
+            rates = realised_rates(run, "confirmatory")
+            runs = realised_rates(run, "confirmatory", "toxic_episodes")
+            episodes = {k: runs[k] for k in ("B3", "B2b")}
+            write(configs.v2_confirmatory_controls(approved, rates, episodes, kept("test")))
     else:
         raise SystemExit(f"unknown kind {kind}")
 

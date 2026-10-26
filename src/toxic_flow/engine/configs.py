@@ -327,6 +327,39 @@ def _controls(selected: dict, rates: dict, days) -> list[dict]:
             *_random_pulls("B2b", rates["B2b"], "R_B2b", k2)]  # fmt: skip
 
 
+# Run-length controls (exploratory, Ilia 2026-10-26; sections 7 and 10): R pulls each
+# step independently, so it starts many more pulled runs than B3 or B2b, and each run gives
+# up the queue place. RL matches each day's number of runs as well as the rate.
+def _run_length_controls(selected: dict, rates: dict, episodes: dict, days) -> list[dict]:
+    """RL_B3 and RL_B2b with three seeds each, at B3's and B2b's per-day pull rates and
+    numbers of pulled runs, each stepping back by its strategy's K."""
+    if sorted(episodes) != ["B2b", "B3"]:
+        raise ValueError(f"pulled runs for {sorted(episodes)}, not B3 and B2b")
+    for name in ("B2b", "B3"):
+        if sorted(rates[name]) != sorted(days) or sorted(episodes[name]) != sorted(days):
+            raise ValueError(f"{name}: rates or pulled runs do not cover exactly the run's days")
+        if selected[name]["magnitude"]:
+            raise ValueError(f"{name} uses the magnitude rule, which RL does not have")
+    return [{"name": "RL", "design": "v2", "label": f"RL_{of}_s{seed}", "rate_of": of,
+             "k_ticks": selected[of]["k_ticks"], "seed": seed, "pull_rate": dict(rates[of]),
+             "episodes": {d: int(n) for d, n in episodes[of].items()}}
+            for of in ("B3", "B2b") for seed in R_SEEDS]  # fmt: skip
+
+
+def v2_run_length(constants: dict, thresholds: dict, selected: dict, rates: dict,
+                  episodes: dict, days) -> dict:  # fmt: skip
+    """v2 M4 on validation days, primary cell, exploratory: RL_B3 and RL_B2b with B1, B3
+    and B2b at the selected settings in the same run. rates and episodes map B3 and B2b to
+    {day: realised toxic share} and {day: toxic episodes} from the canary run."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    sel = lambda n: _v2_selected(n, constants, thresholds, selected)  # noqa: E731
+    s = [{"name": "B1", "design": "v2"}, sel("B3"), sel("B2b")]
+    return _config("v2_run_length_val", days,
+                   s + _run_length_controls(selected, rates, episodes, days),
+                   [PRIMARY[0]], [PRIMARY[1]])  # fmt: skip
+
+
 def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> dict:
     """v2 M5, first of the two planned test-day runs: B0 to B3 in all 8 cells; C1, C2 and
     C4 in the primary cell; C3 (B3 at zero latency) in the risk-averse model. Its realised
@@ -343,8 +376,9 @@ def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> 
     return _config("confirmatory", days, s, ALL_QUEUES, ["low", "high"])
 
 
-def v2_confirmatory_controls(selected: dict, rates: dict, days) -> dict:
+def v2_confirmatory_controls(selected: dict, rates: dict, episodes: dict, days) -> dict:
     """v2 M5, second planned test-day run: R1, R_B3 and R_B2b in the primary cell at the
-    realised toxic shares of C1, B3 and B2b in the first run, day by day."""
-    return _config("confirmatory_controls", days, _controls(selected, rates, days),
-                   [PRIMARY[0]], [PRIMARY[1]])  # fmt: skip
+    realised toxic shares of C1, B3 and B2b in the first run, day by day, and RL_B3 and
+    RL_B2b at B3's and B2b's shares and numbers of pulled runs."""
+    s = _controls(selected, rates, days) + _run_length_controls(selected, rates, episodes, days)
+    return _config("confirmatory_controls", days, s, [PRIMARY[0]], [PRIMARY[1]])

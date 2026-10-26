@@ -202,17 +202,45 @@ def test_v2_confirmatory_controls_take_the_first_runs_rates():
     days = ["2025-07-01", "2025-08-01"]
     rates = {"C1": dict.fromkeys(days, 0.01), "B3": dict.fromkeys(days, 0.04),
              "B2b": dict.fromkeys(days, 0.25)}  # fmt: skip
+    runs = {"B3": dict.fromkeys(days, 4000), "B2b": dict.fromkeys(days, 8000)}
     sel = {"B2b": {"p": 0.25, "k_ticks": 5, "magnitude": False, "tau_s": 5.0},
            "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
-    cfg = configs.v2_confirmatory_controls(sel, rates, days)
+    cfg = configs.v2_confirmatory_controls(sel, rates, runs, days)
     k = {s["label"][:-3]: s["k_ticks"] for s in cfg["strategies"]}
-    assert k == {"R1": "pull", "R_B3": "pull", "R_B2b": 5}  # each control at its strategy's K
-    assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 9
+    # each control at its strategy's K
+    assert k == {"R1": "pull", "R_B3": "pull", "R_B2b": 5, "RL_B3": "pull", "RL_B2b": 5}
+    assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 15
     assert {s["rate_of"] for s in cfg["strategies"]} == {"C1", "B3", "B2b"}
+    rl = {s["label"]: s for s in cfg["strategies"] if s["name"] == "RL"}
+    assert rl["RL_B2b_s2"]["episodes"] == runs["B2b"] and rl["RL_B3_s1"]["pull_rate"] == rates["B3"]
     assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
     with pytest.raises(ValueError, match="not C1, B3 and B2b"):
-        configs.v2_confirmatory_controls(sel, {"C1": rates["C1"]}, days)
+        configs.v2_confirmatory_controls(sel, {"C1": rates["C1"]}, runs, days)
+    with pytest.raises(ValueError, match="not B3 and B2b"):
+        configs.v2_confirmatory_controls(sel, rates, {"B3": runs["B3"]}, days)
     with pytest.raises(ValueError, match="magnitude"):
         configs.v2_confirmatory_controls(
-            sel | {"B3": {**sel["B3"], "magnitude": True}}, rates, days
+            sel | {"B3": {**sel["B3"], "magnitude": True}}, rates, runs, days
         )
+
+
+def test_v2_run_length_has_rl_for_b3_and_b2b_with_their_bases():
+    from toxic_flow.engine import configs
+
+    const, th = _v2_inputs()
+    sel = {"B2b": {"p": 0.25, "k_ticks": "pull", "magnitude": False, "tau_s": 5.0},
+           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
+    days = ["2025-01-01", "2025-02-01"]
+    rates = {"C1": dict.fromkeys(days, 0.01), "B3": dict.fromkeys(days, 0.04),
+             "B2b": dict.fromkeys(days, 0.25)}  # fmt: skip
+    runs = {"B3": dict.fromkeys(days, 4000), "B2b": dict.fromkeys(days, 8000)}
+    cfg = configs.v2_run_length(const, th, sel, rates, runs, days)
+    s = {x.get("label", x["name"]): x for x in cfg["strategies"]}
+    assert cfg["name"] == "v2_run_length_val"
+    assert set(s) == {"B1", "B3", "B2b"} | {
+        f"RL_{r}_s{k}" for r in ("B3", "B2b") for k in (1, 2, 3)
+    }
+    assert s["RL_B3_s3"]["episodes"] == runs["B3"] and s["RL_B3_s3"]["seed"] == 3
+    assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
+    with pytest.raises(ValueError, match="cover"):
+        configs.v2_run_length(const, th, sel, rates, runs | {"B3": {days[0]: 4000}}, days)

@@ -166,6 +166,38 @@ def random_pulls(
     return ts, np.where(pull, side, 0.0), np.zeros(len(ts))
 
 
+def run_length_pulls(
+    day: str, start_ns: int, end_ns: int, step_ns: int, rate: float, episodes: int, seed: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """RL, random pulls matched on run length as well as rate (exploratory, section 10):
+    a two-state chain on random_pulls' grid. A pulled run lasts a geometric number of steps
+    with mean L = rate * steps / episodes, and the gap between runs a geometric number with
+    mean L (1 - rate) / rate, so in expectation a share rate of the steps is pulled in
+    episodes runs, as in the strategy RL controls for on that day. R starts a new run at
+    almost every pulled step, which costs the queue place each time; RL does not. Each run
+    pulls one side, the ask or the bid with equal chance, and it reads no market data."""
+    ts = np.arange(start_ns - step_ns, end_ns + step_ns, step_ns, dtype=np.int64)
+    u = np.zeros(len(ts))
+    if rate == 0 or episodes == 0:
+        return ts, u, np.zeros(len(ts))
+    if not 0 < rate < 0.5:
+        raise ValueError(f"rate {rate} outside (0, 0.5)")
+    # The strategy has at least one pulled step per run; L can fall just under 1 only
+    # because this grid has a point or two more than the strategy's quoting steps.
+    run = max(rate * len(ts) / episodes, 1.0)
+    gap = run * (1 - rate) / rate  # at least 1, since run >= 1 and rate < 0.5
+    rng = np.random.default_rng([seed, int(day.replace("-", ""))])
+    pulled = rng.random() < rate  # the chain starts in its stationary state
+    i = 0
+    while i < len(ts):
+        n = int(rng.geometric(1 / run if pulled else 1 / gap))
+        if pulled:
+            u[i : i + n] = 1.0 if rng.random() < 0.5 else -1.0
+        i += n
+        pulled = not pulled
+    return ts, u, np.zeros(len(ts))
+
+
 def _signal_inputs(s: dict, day: str) -> tuple:
     """Signal mode and input streams for B2, B2b, B3 and the canaries built on B3: C1 (B3
     on shuffled sides) and C4 (B3 with the decay rescaled). Returns (mode, sig_ts,
@@ -250,13 +282,17 @@ def _touch_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
         mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
         return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
                 ofi_window, mu, alpha, beta, u, m, 0.5, PULL, off, np.zeros((0, 3)))  # fmt: skip
-    if s["name"] == "R":
-        # The rate is the realised pull share of the strategy R controls for (C1, B3 or
-        # B2b) on this day, from a committed run; the config carries it per day.
+    if s["name"] in ("R", "RL"):
+        # The rate (and for RL the number of pulled runs) is the realised value of the
+        # strategy the control is for (C1, B3 or B2b) on this day, from a committed run;
+        # the config carries it per day.
         start, end = utc_ns(day, cfg["quote_start"]), utc_ns(day, cfg["quote_end"])
-        ts, u, m = random_pulls(
-            day, start, end, int(cfg["step_ns"]), float(s["pull_rate"][day]), int(s["seed"])
-        )
+        rate, step, seed = float(s["pull_rate"][day]), int(cfg["step_ns"]), int(s["seed"])
+        if s["name"] == "R":
+            ts, u, m = random_pulls(day, start, end, step, rate, seed)
+        else:
+            n = int(s["episodes"][day])
+            ts, u, m = run_length_pulls(day, start, end, step, rate, n, seed)
         mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
         k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
         return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,

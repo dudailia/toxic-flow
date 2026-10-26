@@ -53,6 +53,12 @@ with random pulls at C1's realised pull rate (section 10). The original C1 minus
 result stays in the report beside the revised one. Revising a pass rule after seeing it
 fail is a degree of freedom of the researcher, disclosed here.
 
+The run-length controls RL_B3 and RL_B2b (sections 7 and 10) were added on 2026-10-26 by
+Ilia Duda, after seeing B3 and B2b beat R_B3 and R_B2b on the validation days, and after
+the leakage audit found that R starts more pulled runs than the signals do (1.3 times as
+many as B3 and 23.7 times as many as B2b; docs/M4_v2_draft.md), and before any test-day
+data was downloaded. They are exploratory and change no pass rule.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -308,6 +314,9 @@ Exploratory, same statistic, reported with intervals and labelled exploratory:
   from what pulling at that rate costs by itself. The random pulls start more runs of a
   pulled side than the signals do, so these comparisons overstate the signal's part;
   that is stated with them.
+- B3 against RL_B3 and B2b against RL_B2b: the same, against controls matched on the
+  number of pulled runs on each day as well as the rate (section 10), 3 seeds, the
+  control's day value being the mean over seeds. Added 2026-10-26 (Design history).
 - Markout differences for the same pairs at each horizon.
 
 ## 8. Analysis
@@ -366,6 +375,17 @@ Run in the primary cell. Pass criteria on validation days must hold before the t
   day, 3 seeds each, in the primary cell. B3 minus R_B3 and B2b minus R_B2b are reported
   as exploratory comparisons (section 7), with no pass rule. On test days each R runs
   after the strategy whose rate it takes, since the rate is that run's realised share.
+- RL_B3 and RL_B2b, exploratory (added 2026-10-26, Design history): B1 that pulls in
+  runs, matched to B3's and to B2b's realised pull rate r and realised number of pulled
+  runs e (runs of consecutive steps with the same side marked toxic) on each day. On the
+  100 ms step grid of N steps, a two-state chain: a pulled run lasts a geometric number
+  of steps with mean L = r N / e, and the gap between runs a geometric number of steps
+  with mean L (1 - r) / r, so the expected share of pulled steps is r and the expected
+  number of runs e. Each run marks one side toxic, chosen at random with equal chance, and
+  steps it back by the strategy's K. RL reads no market data. 3 seeds each, in the primary
+  cell; the day value is the mean over seeds. B3 minus RL_B3 and B2b minus RL_B2b are
+  reported as exploratory comparisons (section 7), with no pass rule. On test days they
+  run in the second planned run with R, at the first run's realised r and e.
 - C2, oracle: B1 with the toxic side set by the future. The ask is not quoted while the mid
   5 s ahead is at least one tick above the mid now, and the bid is not quoted while it is
   at least one tick below; no magnitude rule. The only strategy allowed to see the future.
