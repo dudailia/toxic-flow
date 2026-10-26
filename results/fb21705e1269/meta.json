@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/v2_fill_hold_val.yaml",
+  "config_hash": "fb21705e1269",
+  "commit": "214b2258ad022c541a6d14688277d84bf4bbb900",
+  "started_at": "2026-10-26T21:15:55+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "v2_fill_hold_val",
+  "finished_at": "2026-10-26T21:41:11+00:00"
+}

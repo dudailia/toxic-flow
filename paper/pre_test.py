@@ -37,6 +37,8 @@ RUNS = {
     "v2_mde_train": "58c46cc49981",
     "v2_random_pulls_val": "c274b2def28e",
     "v2_run_length_val": "7ac2bbe74a19",
+    "v2_fill_hold_train": "83bb2b991997",
+    "v2_fill_hold_val": "fb21705e1269",
     "canaries_val_draft": "9eaa1b3d693c",  # v1 canaries (GLFT base)
     "diag_train_touch": "a582f2864e78",  # v1 B1 and the touch base, training days
     "diag_val": "4de702fe5d20",  # v1 B1 on validation days
@@ -198,6 +200,16 @@ def validation(out: dict) -> None:
     rl = analysis.with_seed_means(run("v2_run_length_val"))
     for a, b in (("B3", "RL_B3"), ("B2b", "RL_B2b")):
         put_compare(out, f"pre_rl_{a}_{b}".lower(), analysis.compare(rl, a, b))
+    # F: no rejoining the side just filled, hold chosen on training days (exploratory).
+    f = pl.concat([run("v2_fill_hold_val"), rl.filter(pl.col("strategy") == "RL")],
+                  how="diagonal_relaxed")  # fmt: skip
+    for a, b in (("B3", "F"), ("F", "RL_B3")):
+        put_compare(out, f"pre_f_{a}_{b}".lower(), analysis.compare(f, a, b))
+    hold = {
+        json.loads(x)["hold_s"]
+        for x in run("v2_fill_hold_val").filter(pl.col("strategy") == "F")["params"]
+    }
+    (out["pre_f_hold"],) = (f"{h:g}" for h in hold)
 
 
 def matched_p(out: dict) -> None:

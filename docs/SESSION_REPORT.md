@@ -1155,3 +1155,23 @@ validation-day result.
 
 No test-day URL was requested, no tag was touched, nothing was downloaded, no raw file was
 deleted. The disk watchdog ran during the run.
+
+## Continued, 2026-10-26 evening: F, /code-review, open questions
+
+- F, the fill-hold control (Ilia's decision): B1 that does not rejoin the side just filled
+  until the fill's exchange time plus h. Built in strategies.touch.run_touch (hold_ns),
+  with loop tests on the synthetic day. The hold rule was in code and then in
+  PREREGISTRATION.md before its result was seen. Training grid 83bb2b991997: h = 0.1 s.
+  Validation fb21705e1269: B3 - F +0.0021 bp [-0.0037, 0.0091]; F - RL_B3 +0.0209 bp
+  [0.0112, 0.0329]. F is in the second planned test-day run.
+- Judgment call: the hold counts from the fill's exchange time, which the fill report
+  carries, not in whole steps, because one 100 ms step per fill already gives B1 a 7%
+  pull share against B3's 5% on the training days, so a step-count hold could not match.
+- /code-review: 10 findings, docs/reviews/code_review_2026-10-26.md. Fixed with tests the
+  ones that could change a conclusion (F's hold frozen and guarded, computed text, verify
+  script); configs/repo.yaml protection proposed (docs/proposals/protect_repo_yaml.md).
+- docs/OPEN_QUESTIONS.md: Q32 to Q51, 13 closed, 7 open with recommendations.
+- The training run waited on the memory guard several times while another session on
+  the machine used memory; it then ran without a refusal ending it.
+
+No test-day URL was requested, no tag was touched, nothing was downloaded.

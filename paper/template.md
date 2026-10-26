@@ -214,7 +214,14 @@ Limitation: many of B3's pulls start just after one of our own orders on that si
 filled, when pulling costs no queue place, while the matched control almost always cancels
 a resting order; so B3's gain over it may be partly that cost, or a simple rule of not
 rejoining the side just hit, rather than what the Hawkes direction knows. The control also
-spreads its runs evenly over the day where the signals' gather in busy periods. And B3 against B2b at the same
+spreads its runs evenly over the day where the signals' gather in busy periods. A rule with
+no signal at all, B1 that does not rejoin the side just filled for {{pre_f_hold}} s (the
+hold chosen on the training days to match B3's pull rate), came close to B3: B3 minus it
+was {{pre_f_b3_f_mean}} bp ({{pre_f_b3_f_ci}}), and it beat the run-matched control by
+{{pre_f_f_rl_b3_mean}} bp ({{pre_f_f_rl_b3_ci}}). So on these days most of B3's gain over
+random pulls is what not rejoining after a fill gives, not what the Hawkes direction adds.
+Limitation: 6 days, and the hold matches B3's pull rate on the training days, not on these.
+And B3 against B2b at the same
 pull rate: {{pre_mp_5_mean}} bp at 5% ({{pre_mp_5_ci}}), {{pre_mp_10_mean}} at 10%,
 {{pre_mp_25_mean}} at 25% and {{pre_mp_50_mean}} at 50%. Limitation: B3 marks in shorter
 runs and so cancels more often at the same p, so part of that deficit may be the cost of

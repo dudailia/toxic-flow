@@ -53,6 +53,17 @@ Reading (written by hand from the tables below):
 - Effects are small: the selected overlays move the mean daily BEF by 0.004 (B3) and
   0.010 bp (B2b) against B1, and H1's statistic on validation days is -0.005 bp, against
   an MDE of 0.023 bp on 16 days.
+- Run-length and fill-hold controls (added 2026-10-26, exploratory; sections below). Against
+  random pulls matched on the number of pulled runs, B3 gains +0.0230 bp (bootstrap
+  [0.0179, 0.0298], 6 of 6 days) and B2b +0.0165 ([-0.0084, 0.0423], 4 of 6). F, B1 that
+  does not rejoin the side just filled for 0.1 s (the hold chosen on training days to
+  match B3's pull rate), comes within +0.0021 bp of B3 (B3 - F, bootstrap [-0.0037,
+  0.0091], 2 of 6 days) and beats the run-matched control by +0.0209 bp ([0.0112,
+  0.0329], 6 of 6). So on these days most of B3's gain over random pulls is what not
+  rejoining after our own fill gives, which the audit of the run-length run suspected
+  (docs/audit_run_length.md), not what the Hawkes direction adds. Six days; F's hold
+  matches B3's pull rate on the training days (0.0493 against 0.0499), not on these
+  (0.0334 against 0.0413).
 - A failed canary triggers the leakage-auditor (CLAUDE.md). It found no leak: C2's look-ahead
   stays in tests/canary/, the loop reads the series only at points at or before now, the
   thresholds come from training days only, and the accounting reconciles with the engine.
@@ -491,3 +502,24 @@ Run 83bb2b991997 (configs/runs/v2_fill_hold_train.yaml, commit 3d72b5c), trainin
 | 0.5 | 0.1922 | 1495 | 35653 | -0.9618 |
 
 Chosen h = 0.1 s. configs/selected.yaml F: {'hold_s': 0.1} (matches).
+
+Run fb21705e1269 (configs/runs/v2_fill_hold_val.yaml, commit 214b225), primary cell, 6 validation days; against run 7ac2bbe74a19: identical fills on every day, largest BEF difference 0.0e+00 bp. RL_B3 is from run 7ac2bbe74a19.
+
+| Strategy | Fills a day | Mean daily BEF bp | Markout 1 s bp | Toxic share | Toxic episodes an hour |
+|---|---|---|---|---|---|
+| B1 | 39004 | -0.9429 | -0.7063 | 0.0000 | 0 |
+| B3 | 31958 | -0.9385 | -0.7015 | 0.0413 | 1094 |
+| F | 30630 | -0.9405 | -0.7032 | 0.0334 | 1202 |
+| RL_B3 | 37241 | -0.9615 | -0.7218 | 0.0414 | 1096 |
+
+| Comparison | Days | Mean bp | Bootstrap 95% | t 95% | Days > 0 | Dropped (no fills) |
+|---|---|---|---|---|---|---|
+| B3 - F | 6 | 0.0021 | [-0.0037, 0.0091] | [-0.0071, 0.0112] | 2 | none |
+| F - B1 | 6 | 0.0023 | [-0.0082, 0.0156] | [-0.0153, 0.0200] | 2 | none |
+| F - RL_B3 | 6 | 0.0209 | [0.0112, 0.0329] | [0.0057, 0.0362] | 6 | none |
+| B3 - RL_B3 (as above) | 6 | 0.0230 | [0.0179, 0.0298] | [0.0142, 0.0317] | 6 | none |
+
+Limitation, read with these rows: F matches B3's share of pulled steps on the training
+days, not on these days or in the number of pulled runs (both shown above). Every F pull
+follows one of our fills; B3's also include pulls with an order resting, which cost the
+queue place. 6 validation days.

@@ -44,10 +44,16 @@ Vivas: none is recorded. SPEC.md lists M0 to M6 as open, and there is no viva/ d
 SPEC.md requires /viva M0 to M4, run by Ilia only, before the milestones close; AC4.5
 needs /viva M4 before the tag. This is the main open item.
 
-Also before the tag, by the milestone rule in CLAUDE.md: /code-review of the code added
-on 2026-10-26 after the last review (from 3d98a41: the run-length control in
-engine/run.py and engine/configs.py, the analysis and report changes, scripts/verify_raw.py
-and the check script). The leakage-auditor ran on the run-length run (section 4,
+/code-review of the code of 2026-10-26 (43bd486 to 681b212: the run-length control,
+scripts/verify_raw.py, the check script and the fill-hold control F) found 10 issues;
+docs/reviews/code_review_2026-10-26.md lists each with its outcome. Fixed with tests: F's
+hold frozen and checked by the summary guard (2, 3), computed text in the generated
+run-length section (4), draft sections kept (5), verify_raw on Finder metadata and nested
+links (6). Logged: configs/repo.yaml is not protected, so the lock's origin check rests
+on an unprotected file (1; docs/proposals/protect_repo_yaml.md, one line for Ilia to add
+to .claude/protected-paths.txt); RL and R share a random stream across controls of
+different strategies (7; no single comparison is affected); two cleanups (9, 10). Finding
+8 needed no change. The leakage-auditor ran on the run-length run (section 4,
 docs/audit_run_length.md).
 
 ## 3. Disk for the 16 test days
@@ -60,7 +66,7 @@ Raw files may never be deleted, so all 16 test days' raw files must fit at once.
 |---|---|---|
 | Raw, 16 test days | about 9.9 (4.2 to 16.2) | estimate in docs/disk_budget.md: the 18 measured train and val days' mean, smallest and largest day, times 16; test-day sizes cannot be known before the tag |
 | Converted cache, one day at a time | at most about 1.4 | docs/disk_budget.md, largest day at the measured ratio |
-| Results of the two test-day runs | about 2.0 | estimate: about 60 cells a day (B0 to B3 in 8 cells, the canaries, 9 R and 6 RL runs) times 16 days, at the 2.1 MB a cell of results/4db60c584c71 |
+| Results of the two test-day runs | about 2.0 | estimate: about 61 cells a day (B0 to B3 in 8 cells, the canaries, 9 R, 6 RL and 1 F runs) times 16 days, at the 2.1 MB a cell of results/4db60c584c71 |
 | Floor | 3.0 | Ilia's rule |
 | Total | about 16.3 (10.6 to 22.6) | |
 
@@ -92,10 +98,22 @@ Decided on 2026-10-26:
   fill on that side, when pulling costs no queue place, while RL almost always cancels a
   resting order, so B3 - RL_B3 may partly be that cost or a simple "do not rejoin the side
   just hit" rule rather than what the Hawkes direction knows. Stated next to the table and
-  in the paper. Not built, Ilia's call: a control that also withholds the filled side for a
-  while after each own fill, or one that copies the signals' run-length distribution and
-  side persistence. Claude's recommendation: not before the tag, since these comparisons
-  have no pass rule and the limitation is stated.
+  in the paper. A control that copies the signals' run-length distribution and side
+  persistence was not built.
+- Fill-hold control F (Ilia, 2026-10-26, after that audit): B1 that does not rejoin the
+  side just filled until the fill's exchange time plus a hold h, with h chosen on the
+  training days so F's pull share matches B3's there. In PREREGISTRATION.md sections 7
+  and 10 and the Design history (commit 681b212; the rule was in the code, commit ea58b7f,
+  before F ran on any day). It runs in the second planned test-day run at the frozen h,
+  and the summary guard refuses any other h. Training-day grid run 83bb2b991997: h = 0.1 s
+  (F's pull share 0.0493 against B3's 0.0499); frozen in configs/selected.yaml and
+  section 10, and tests/unit/test_prereg.py recomputes it. Validation run fb21705e1269
+  (docs/M4_v2_draft.md): B3 - F +0.0021 bp [-0.0037, 0.0091], 2 of 6 days; F - RL_B3
+  +0.0209 bp [0.0112, 0.0329], 6 of 6. So on the validation days most of B3's gain over
+  random pulls is what not rejoining after our own fill gives, not what the Hawkes
+  direction adds. Exploratory; H1 and the pass rules are unchanged. Stated in the draft and
+  the paper with its limitation (6 days; the hold matches B3's training-day rate, 0.0334
+  against 0.0413 on these days).
 - Q2, Q3, Q6 (queue model API names, the exchange model with no partial fills, the third
   fee level of -0.1 bp, hypothetical before 2025-03-03) and Q24, Q26, Q29, Q30 (one
   permutation seed for C1 with three for R1; C3 removes order latency only; the C3 flag
@@ -108,18 +126,25 @@ Decided on 2026-10-26:
 
 Still open:
 - Vivas M0 to M4 (section 2).
-- /code-review of the 2026-10-26 code (section 2).
-- Open questions in docs/SESSION_REPORT.md that are still Ilia's: Q32 to Q51.
+- configs/repo.yaml into .claude/protected-paths.txt (docs/proposals/protect_repo_yaml.md).
+- Q32 to Q51: docs/OPEN_QUESTIONS.md. 13 are closed (facts, decided, or v1 only). 7 are
+  open, with a recommended answer each, ordered by what the tag freezes: Q36 (a section 11
+  row for intervals that disagree), Q34 (section 10 names the bootstrap interval), Q35
+  (section 8 selectivity is the median of daily ratios), Q50 (section 3 states fills where
+  the book moves through the quote), Q40 (the converter fix), Q38 (section 6 markout
+  clock), Q37 (paper only). The first four change frozen text, so they are for before the
+  tag.
 - The C1 rule revision of 2026-10-26 is disclosed in the Design history; it was made
   after seeing C1 fail against B1 on the validation days.
 - M5 code for v2 (2026-10-26), tested on synthetic configs, never run on a test day:
   engine/configs.v2_confirmatory (B0 to B3 in all 8 cells, C1, C2 and C4 in the primary
   cell, C3 at zero latency) and v2_confirmatory_controls (R1, R_B3, R_B2b, RL_B3 and
-  RL_B2b at the first run's realised rates and, for RL, pulled runs), written by
+  RL_B2b at the first run's realised rates and, for RL, pulled runs, and F at the frozen
+  hold), written by
   scripts/make_v2_configs.py confirmatory and controls. analysis.confirmatory_problem
   refuses results/summary.json unless both planned runs are present once each and every
-  control is matched to its strategy. The M5 builders were reviewed in the /code-review
-  of 583ccd3 onward; the RL additions were not.
+  control is matched to its strategy. Reviewed in the /code-review of 583ccd3 onward and,
+  with RL and F, in that of 2026-10-26 (section 2).
 - Section 11 statements and the paper print four decimals, not two (2026-10-26): with an
   MDE of 0.0231 bp, two decimals would print the MDE as 0.02. No number changes.
 - The paper draft (paper/template.md, `make paper-draft`) follows the layout of
