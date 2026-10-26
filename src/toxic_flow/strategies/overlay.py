@@ -7,21 +7,15 @@ signal (section 5). Prices round outward, a quote that would cross moves one tic
 the other side, and the inventory cap removes a side. With c = d = 0 every overlay is B1,
 so B1 runs as mode NONE of this loop.
 
-Signal inputs are precomputed streams that the loop consumes only once their local time is
-at or before now: market-order events for EWMA and HAWKES, best-level OFI contributions for
-OFI. The normalisers (Ring) are updated at every 100 ms step from the start of the data,
-warm-up included, so they are full when quoting starts.
-
-EXTERNAL takes u and m from a series (time, u, m), again only from points at or before now.
-Only the oracle canary C2 uses it, and it builds that series in tests/canary/ (SPEC.md
-AC3.6): no strategy or signal file computes anything forward-looking.
+The signal at each step comes from strategies.signal_input, shared with the v2 touch loop.
+This is the v1 design (PREREGISTRATION.md, Design history); it stays for the exploratory
+GLFT results and the v1 diagnosis.
 """
 
 import numpy as np
 from hftbacktest import BUY_EVENT
 from numba import njit
 
-from toxic_flow.signals import ewma, hawkes_online
 from toxic_flow.signals.normalise import Ring
 from toxic_flow.strategies.b0_fixed import order_size, sides_allowed
 from toxic_flow.strategies.b1_glft import (
@@ -31,8 +25,9 @@ from toxic_flow.strategies.b1_glft import (
     measure_trading_intensity,
 )
 from toxic_flow.strategies.common import both_resting, finish_day, place_quotes, record_fills
+from toxic_flow.strategies.signal_input import EWMA, EXTERNAL, HAWKES, NONE, OFI, signal_at
 
-NONE, OFI, EWMA, HAWKES, EXTERNAL = 0, 1, 2, 3, 4
+__all__ = ["EWMA", "EXTERNAL", "HAWKES", "NONE", "OFI", "run_b1", "run_overlay"]
 
 
 @njit(cache=True)
@@ -91,7 +86,7 @@ def run_overlay(
     a_ring, ofi_ring = Ring(norm_steps), Ring(norm_steps)
     state = np.zeros(4)
     lam = np.empty(2)
-    j, hi, lo = 0, 0, 0
+    pos = np.zeros(3, np.int64)  # stream positions, see signal_input.signal_at
     while True:
         if hbt.elapse(step_ns) != 0:
             break
@@ -128,38 +123,10 @@ def run_overlay(
         t += 1
 
         # Signal at now, from inputs received at or before now only.
-        u, a = 0.0, 0.0
-        if mode == EWMA or mode == HAWKES:
-            while j < len(sig_ts) and sig_ts[j] <= now:
-                if mode == EWMA:
-                    ewma.step(state, sig_ts[j], sig_side[j], tau_s)
-                else:
-                    hawkes_online.step(state, sig_ts[j], sig_side[j], beta)
-                j += 1
-            if mode == EWMA:
-                u, a = ewma.value(state, now, tau_s)
-            else:
-                hawkes_online.intensity(state, now, mu, alpha, beta, lam)
-                a = lam[0] + lam[1]
-                u = (lam[0] - lam[1]) / a
-        elif mode == OFI:
-            while hi < len(sig_ts) and sig_ts[hi] <= now:
-                hi += 1
-            while lo < len(sig_ts) and sig_ts[lo] <= now - ofi_window_ns:
-                lo += 1
-            ofi = sig_cum[hi] - sig_cum[lo]
-            ofi_ring.push(ofi)
-            s = ofi_ring.std()
-            u = np.tanh(ofi / s) if s > 0 else 0.0
-            a = abs(ofi)
-        if mode == EXTERNAL:
-            while j < len(sig_ts) and sig_ts[j] <= now:
-                j += 1
-            u, m = (ext_u[j - 1], ext_m[j - 1]) if j > 0 else (0.0, 0.0)
-        else:
-            a_ring.push(a)
-            abar = a_ring.mean()
-            m = min(max((a / abar - 1.0) / K, 0.0), 1.0) if abar > 0 else 0.0
+        u, m = signal_at(
+            now, mode, pos, state, lam, a_ring, ofi_ring, K, sig_ts, sig_side, sig_cum,
+            tau_s, ofi_window_ns, mu, alpha, beta, ext_u, ext_m,
+        )  # fmt: skip
         if n_diag < len(diag):
             diag[n_diag, 0], diag[n_diag, 1], diag[n_diag, 2] = now, u, m
             n_diag += 1

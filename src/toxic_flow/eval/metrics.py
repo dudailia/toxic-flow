@@ -107,5 +107,7 @@ def quote_metrics(fills, steps) -> dict:
         "ask_at_best_share": float(ask_best.mean()) if len(steps) else float("nan"),
         "median_bid_dist_ticks": med(bid_d),
         "median_ask_dist_ticks": med(ask_d),
+        # v2: share of quoting steps where the overlay marked a side toxic (section 4's p).
+        "toxic_share": float((steps["toxic"] != 0).mean()) if len(steps) else float("nan"),
         "hourly_quotes": hourly,
     }

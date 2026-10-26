@@ -8,6 +8,7 @@ metrics.parquet (one row per day and cell) and fills_<cell>.parquet (gitignored)
 Fees are zero in the simulation and applied in evaluation (PREREGISTRATION.md section 3).
 """
 
+import fcntl
 import hashlib
 import io
 import json
@@ -37,6 +38,7 @@ from toxic_flow.signals.normalise import NORM_STEPS
 from toxic_flow.strategies.b0_fixed import run_b0
 from toxic_flow.strategies.common import FILL_DTYPE, STEP_DTYPE
 from toxic_flow.strategies.overlay import EWMA, EXTERNAL, HAWKES, NONE, OFI, run_b1, run_overlay
+from toxic_flow.strategies.touch import PULL, run_touch
 
 ROOT = Path(__file__).resolve().parents[3]
 RESULTS = ROOT / "results"
@@ -62,25 +64,34 @@ def day_parts(day: str, sleep=time.sleep) -> list[str]:
     events hash checked against the manifest)."""
     dest = CONVERTED / day
     if not (dest / "convert.json").exists():
-        # The disk floor for a conversion, 12 GB unless Ilia lowers it for a block
-        # (2026-10-25: "continue until it is 3 GB"); the memory guard is unchanged.
-        min_free = int(float(os.environ.get("TOXIC_FLOW_MIN_FREE_GB", "12")) * 1e9)
-        code = (
-            "import sys\nfrom toxic_flow.data.convert import MemoryGuardError, convert_day\n"
-            f"try:\n    convert_day({day!r}, min_free={min_free})\nexcept MemoryGuardError as e:\n"
-            f"    print(e, file=sys.stderr)\n    sys.exit({MEMORY_REFUSED})"
-        )
-        waited = 0
-        while True:
-            rc = subprocess.run([sys.executable, "-c", code]).returncode
-            if rc != MEMORY_REFUSED:
-                break
-            if waited >= MEMORY_WAIT_S:
-                raise SystemExit(f"{day}: memory below the guard's need for {waited // 60} min")
-            sleep(MEMORY_RETRY_S)
-            waited += MEMORY_RETRY_S
-        if rc != 0:
-            raise subprocess.CalledProcessError(rc, "convert_day")
+        # One conversion at a time, also across runs on different days (Ilia's rule): the
+        # memory guard checks free memory at the start, which a parallel conversion would
+        # then take, and conversions write the shared manifest.
+        CONVERTED.mkdir(parents=True, exist_ok=True)
+        with open(CONVERTED / ".convert.lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if not (dest / "convert.json").exists():
+                # The disk floor for a conversion, 12 GB unless Ilia lowers it for a block
+                # (2026-10-25: "continue until it is 3 GB"); the memory guard is unchanged.
+                min_free = int(float(os.environ.get("TOXIC_FLOW_MIN_FREE_GB", "12")) * 1e9)
+                code = (
+                    "import sys\nfrom toxic_flow.data.convert import MemoryGuardError, convert_day\n"
+                    f"try:\n    convert_day({day!r}, min_free={min_free})\nexcept MemoryGuardError as e:\n"
+                    f"    print(e, file=sys.stderr)\n    sys.exit({MEMORY_REFUSED})"
+                )
+                waited = 0
+                while True:
+                    rc = subprocess.run([sys.executable, "-c", code]).returncode
+                    if rc != MEMORY_REFUSED:
+                        break
+                    if waited >= MEMORY_WAIT_S:
+                        raise SystemExit(
+                            f"{day}: memory below the guard's need for {waited // 60} min"
+                        )
+                    sleep(MEMORY_RETRY_S)
+                    waited += MEMORY_RETRY_S
+                if rc != 0:
+                    raise subprocess.CalledProcessError(rc, "convert_day")
     return [str(dest / f) for f in json.loads((dest / "convert.json").read_text())["files"]]
 
 
@@ -140,31 +151,12 @@ def shuffled_sides(side: np.ndarray, seed: int = 1729) -> np.ndarray:
     return np.random.default_rng(seed).permutation(side)
 
 
-def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
-    """Signal mode and inputs for an overlay config: B2, B2b, B3, or the canaries C1 (B3 on
-    shuffled sides), C2 and C4 (B3 with the decay rescaled). C3 is B3 at zero latency.
-
-    C2 is the B1 overlay with c = 1 and m = 0 on an oracle series (time, u, m) that the
-    caller supplies, because the only code allowed to look ahead lives in tests/canary/
-    (SPEC.md AC3.6). The engine never builds that series itself.
-    """
+def _signal_inputs(s: dict, day: str) -> tuple:
+    """Signal mode and input streams for B2, B2b, B3 and the canaries built on B3: C1 (B3
+    on shuffled sides) and C4 (B3 with the decay rescaled). Returns (mode, sig_ts,
+    sig_side, cum, tau_s, ofi_window_ns, mu, alpha, beta)."""
     mu, alpha, beta = np.zeros(2), np.zeros((2, 2)), 1.0
-    if s["name"] == "C2":
-        if oracle is None:
-            raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
-        ts, u, m = oracle(day, cfg)
-        if s.get("flip"):
-            u = -u  # M4 diagnosis item 1: the oracle's sign reversed, exploratory
-        return (
-            EXTERNAL, 1.0, 0.0, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), np.zeros(1),
-            1.0, 1, mu, alpha, beta, u, m, np.zeros((0, 3)),
-        )  # fmt: skip
     tau, ofi_window = 1.0, 1
-    if s["name"] == "B1":  # only with touch (M4 diagnosis): no signal, c = d = 0
-        return (
-            NONE, 0.0, 0.0, 1.0, NORM_STEPS, np.zeros(0, np.int64), np.zeros(0, np.int64),
-            np.zeros(1), 1.0, 1, mu, alpha, beta, np.zeros(0), np.zeros(0), np.zeros((0, 3)),
-        )  # fmt: skip
     if s["name"] == "B2":
         mode = OFI
         sig_ts, cum = ofi_inputs(day)
@@ -187,11 +179,68 @@ def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
                 sig_side = shuffled_sides(sig_side, int(s.get("seed", 1729)))
         else:
             raise ValueError(f"unknown strategy {s['name']}")
+    return mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta
+
+
+def _no_signal() -> tuple:
+    return (NONE, np.zeros(0, np.int64), np.zeros(0, np.int64), np.zeros(1), 1.0, 1,
+            np.zeros(2), np.zeros((2, 2)), 1.0)  # fmt: skip
+
+
+def _overlay_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
+    """v1 overlay arguments for run_overlay: signal inputs, c, d and K. C3 is B3 at zero
+    latency.
+
+    C2 is the B1 overlay with c = 1 and m = 0 on an oracle series (time, u, m) that the
+    caller supplies, because the only code allowed to look ahead lives in tests/canary/
+    (SPEC.md AC3.6). The engine never builds that series itself.
+    """
+    if s["name"] == "C2":
+        if oracle is None:
+            raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
+        ts, u, m = oracle(day, cfg)
+        if s.get("flip"):
+            u = -u  # M4 diagnosis item 1: the oracle's sign reversed, exploratory
+        return (
+            EXTERNAL, 1.0, 0.0, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), np.zeros(1),
+            1.0, 1, np.zeros(2), np.zeros((2, 2)), 1.0, u, m, np.zeros((0, 3)),
+        )  # fmt: skip
+    if s["name"] == "B1":  # only with touch (M4 diagnosis): no signal, c = d = 0
+        mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
+        c, d, K = 0.0, 0.0, 1.0
+    else:
+        mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _signal_inputs(s, day)
+        c, d, K = float(s["c"]), float(s["d"]), float(s["K"])
     return (
-        mode, float(s["c"]), float(s["d"]), float(s["K"]), NORM_STEPS,
-        sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta,
+        mode, c, d, K, NORM_STEPS, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta,
         np.zeros(0), np.zeros(0), np.zeros((0, 3)),
     )  # fmt: skip
+
+
+def _touch_args(s: dict, day: str, cfg: dict, oracle=None) -> tuple:
+    """v2 arguments for run_touch after the common ones: skew, signal inputs, K, and the
+    overlay's theta_u, k_ticks and theta_m (PREREGISTRATION.md section 4). B0 and B1 get
+    infinite thresholds, so the overlay never acts. C2's series comes from tests/canary/,
+    as in v1."""
+    off = np.inf
+    no_ext = (np.zeros(0), np.zeros(0))
+    if s["name"] in ("B0", "B1"):
+        mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
+        return (s["name"] == "B1", mode, 1.0, NORM_STEPS, sig_ts, sig_side, cum, tau,
+                ofi_window, mu, alpha, beta, *no_ext, off, 0, off, np.zeros((0, 3)))  # fmt: skip
+    if s["name"] == "C2":
+        if oracle is None:
+            raise ValueError("C2 needs its oracle series: run it with tests/canary/run_c2.py")
+        ts, u, m = oracle(day, cfg, design="v2")
+        mode, _, _, cum, tau, ofi_window, mu, alpha, beta = _no_signal()
+        return (True, EXTERNAL, 1.0, NORM_STEPS, ts, np.zeros(len(ts), np.int64), cum, tau,
+                ofi_window, mu, alpha, beta, u, m, 0.5, PULL, off, np.zeros((0, 3)))  # fmt: skip
+    mode, sig_ts, sig_side, cum, tau, ofi_window, mu, alpha, beta = _signal_inputs(s, day)
+    k_ticks = PULL if s["k_ticks"] == "pull" else int(s["k_ticks"])
+    theta_m = float(s["theta_m"]) if s["magnitude"] else off
+    return (True, mode, float(s["K"]), NORM_STEPS, sig_ts, sig_side, cum, tau, ofi_window,
+            mu, alpha, beta, *no_ext, float(s["theta_u"]), k_ticks, theta_m,
+            np.zeros((0, 3)))  # fmt: skip
 
 
 def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=0.0):
@@ -238,7 +287,10 @@ def run_cell(
     t0 = time.perf_counter()
     common = (venue["lot_size"], venue["min_notional"], int(cfg["max_lots"]))
     try:
-        if s["name"] == "B0":
+        if s.get("design") == "v2":
+            run_touch(hbt, *common, start, end, step, steps, fills, out,
+                      *_touch_args(s, day, cfg, oracle))  # fmt: skip
+        elif s["name"] == "B0":
             run_b0(hbt, int(s["h"]), *common, start, end, step, steps, fills, out)
         elif s["name"] == "B1" and not s.get("touch"):
             window = int(float(s["window_s"]) * 1e9 / step)

@@ -6,12 +6,13 @@ from hftbacktest import BUY, CANCELED, FILLED, GTX, LIMIT, NEW
 from numba import njit
 
 # bid_tick and ask_tick are the step's target quotes (NaN for a side not quoted), best_*
-# the book's best prices, cancels the cancels sent that step: diagnostics only (M4
-# diagnosis, 2026-10-24); no metric of section 6 reads them.
+# the book's best prices, cancels the cancels sent that step, toxic the v2 overlay's toxic
+# side (+1 ask, -1 bid, 0 none): diagnostics only (M4 diagnosis, 2026-10-24, and v2); no
+# metric of section 6 reads them.
 STEP_DTYPE = np.dtype(
     [("ts", "i8"), ("mid", "f8"), ("position", "f8"), ("balance", "f8"), ("both_quoted", "?"),
      ("bid_tick", "f8"), ("ask_tick", "f8"), ("best_bid_tick", "f8"), ("best_ask_tick", "f8"),
-     ("cancels", "i4")]
+     ("cancels", "i4"), ("toxic", "i1")]
 )  # fmt: skip
 FILL_DTYPE = np.dtype(
     [

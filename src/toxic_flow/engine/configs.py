@@ -54,18 +54,29 @@ def _b1(selected: dict) -> dict:
             "update_every": selected["B1"].get("update_every", 50)}  # fmt: skip
 
 
+def _signal_key(name: str, signal: dict) -> str:
+    """The training-constant key of a signal setting. C1 is B3 on shuffled sides, so it
+    uses B3's constants; C4 has its own, since its decay is a different parameter setting
+    (Q25, decided 2026-10-23)."""
+    if name == "B2":
+        return f"B2_ofi_{signal['ofi_window_s']:g}s"
+    if name == "B2b":
+        return f"B2b_ewma_{signal['tau_s']:g}s"
+    return f"C4_x{signal['decay_factor']:g}" if name == "C4" else "B3_hawkes"
+
+
 def _overlay(name: str, b1: dict, c: float, d: float, constants: dict, **signal) -> dict:
     """One overlay entry with its K. C1 and C4 are B3 entries with a different name."""
-    s = {"name": name, **b1, "c": c, "d": d, **signal}
-    if name == "B2":
-        s["K"] = constants["K"][f"B2_ofi_{signal['ofi_window_s']:g}s"]
-    elif name == "B2b":
-        s["K"] = constants["K"][f"B2b_ewma_{signal['tau_s']:g}s"]
-    else:
-        # C4 has its own K from the training days, since its decay is a different
-        # parameter setting (Q25, decided 2026-10-23).
-        key = f"C4_x{signal['decay_factor']:g}" if name == "C4" else "B3_hawkes"
-        s |= {"K": constants["K"][key], **constants["hawkes"]["params"]}
+    s = {
+        "name": name,
+        **b1,
+        "c": c,
+        "d": d,
+        **signal,
+        "K": constants["K"][_signal_key(name, signal)],
+    }
+    if name not in ("B2", "B2b"):
+        s |= constants["hawkes"]["params"]
     return s
 
 
@@ -185,3 +196,79 @@ def confirmatory(constants: dict, selected: dict, days) -> dict:
     s += [_selected_overlay(n, constants, selected) for n in ("B2", "B2b", "B3")]
     s += _canary_entries(constants, selected, cells=True)
     return _config("confirmatory", days, s, ALL_QUEUES, ["low", "high"])
+
+
+# v2 (PREREGISTRATION.md section 4, Design history): B0 and B1 join the touch and have no
+# parameters; the overlay steps back on the toxic side.
+V2_P = (0.05, 0.10, 0.25, 0.50)  # pull rate: share of training-day steps with |u| > theta_u
+V2_K_TICKS = (1, 5, "pull")
+V2_MAGNITUDE = (False, True)
+
+
+def v2_training(days) -> dict:
+    """v2 B0 and B1 on training days in all 8 cells (reported; nothing is chosen)."""
+    s = [{"name": "B0", "design": "v2"}, {"name": "B1", "design": "v2"}]
+    return _config("v2_train", days, s, ALL_QUEUES, ["low", "high"])
+
+
+def _v2_overlay(name, constants, thresholds, p, k_ticks, magnitude, **signal) -> dict:
+    """One v2 overlay entry with every number its run uses: K, and theta_u at pull rate p
+    and theta_m from the training days (section 5) for its signal setting."""
+    key = _signal_key(name, signal)
+    th = thresholds["signals"][key]
+    s = {"name": name, "design": "v2", "p": p, "k_ticks": k_ticks, "magnitude": magnitude,
+         **signal, "K": constants["K"][key], "theta_u": th["theta_u"][f"{p:g}"],
+         "theta_m": th["theta_m"]}  # fmt: skip
+    if name not in ("B2", "B2b"):
+        s |= constants["hawkes"]["params"]
+    return s
+
+
+def _check_thresholds(thresholds: dict) -> None:
+    if thresholds.get("label") != "train":
+        raise ValueError(f"thresholds labelled {thresholds.get('label')!r}, not train")
+
+
+def v2_tuning(constants: dict, thresholds: dict, days, name="v2_tune_val") -> dict:
+    """v2 M4: the overlay grid of section 4 on validation days in the primary cell, 24
+    settings per signal setting: B2 72, B2b 72, B3 24."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    grid = list(product(V2_P, V2_K_TICKS, V2_MAGNITUDE))
+    s = [_v2_overlay("B2", constants, thresholds, p, k, mg, ofi_window_s=w)
+         for w in OFI_WINDOWS_S for p, k, mg in grid]  # fmt: skip
+    s += [_v2_overlay("B2b", constants, thresholds, p, k, mg, tau_s=t)
+          for t in TAUS_S for p, k, mg in grid]  # fmt: skip
+    s += [_v2_overlay("B3", constants, thresholds, p, k, mg) for p, k, mg in grid]
+    return _config(name, days, s, [PRIMARY[0]], [PRIMARY[1]])
+
+
+def _v2_selected(name, constants, thresholds, selected, **extra) -> dict:
+    base = "B3" if name in ("C1", "C4") else name
+    sel = selected[base]
+    signal = {k: v for k, v in sel.items() if k not in ("p", "k_ticks", "magnitude")}
+    return _v2_overlay(name, constants, thresholds, sel["p"], sel["k_ticks"], sel["magnitude"],
+                       **signal, **extra)  # fmt: skip
+
+
+def v2_canaries(constants: dict, thresholds: dict, selected: dict, days) -> dict:
+    """v2 M4 on validation days, primary cell: B1, B2b and B3 at the selected settings (the
+    validation estimate of s), and the canaries of section 10: C1 (B3's settings and
+    thresholds on shuffled sides), C2 (the oracle), C4 at x10 and x0.1 (own K and
+    thresholds), C3 (B3 at zero latency)."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    sel = lambda n, **e: _v2_selected(n, constants, thresholds, selected, **e)  # noqa: E731
+    s = [{"name": "B1", "design": "v2"}, sel("B2b"), sel("B3"), sel("C1", seed=1729),
+         {"name": "C2", "design": "v2"},
+         *(sel("C4", label=f"C4_x{f:g}", decay_factor=f) for f in C4_FACTORS),
+         sel("B3") | {"cells": [[PRIMARY[0], "zero"]]}]  # fmt: skip
+    return _config("v2_canaries_val", days, s, [PRIMARY[0]], [PRIMARY[1]])
+
+
+def v2_mde_train(constants: dict, thresholds: dict, selected: dict, days) -> dict:
+    """v2 M4: B3 and B2b at the selected settings on training days, for s (section 9)."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    s = [_v2_selected(n, constants, thresholds, selected) for n in ("B2b", "B3")]
+    return _config("v2_mde_train", days, s, [PRIMARY[0]], [PRIMARY[1]])
