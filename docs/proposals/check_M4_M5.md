@@ -15,7 +15,7 @@ scripts/make_configs.py: tune_val, canaries_val and mde_train for M4, confirmato
 | AC4.5 | not checked: the viva is Ilia's to record | |
 | AC5.1 | every test-day entry in data/manifest.json has downloaded_at after the creation time of tag prereg-v1, and there is at least one | no tag |
 | AC5.2 | for each test day with a result, the first commit that names the day in docs/data_quality/EXCLUSIONS.md precedes the first run that includes it | no test runs |
-| AC5.3 | at least one non-smoke run touches the test days, and every one after the first has its config hash in DEVIATIONS.md | no test runs |
+| AC5.3 | at least one non-smoke run touches the test days, and every one after the first run of each planned config (confirmatory, then confirmatory_controls under v2) has its config hash in DEVIATIONS.md | no test runs |
 | AC5.4 | docs/audit_M5.md exists and is not empty | missing |
 
 Choices to confirm:
@@ -27,6 +27,8 @@ Choices to confirm:
 - AC4.5 is left out of the script, since only Ilia runs /viva.
 - AC5.2 dates the exclusion step by the commit that first names the day in EXCLUSIONS.md,
   so the exclusions file must be committed before the confirmatory run starts.
+
+Revised 2026-10-26: the M4 part is replaced by docs/proposals/check_M4_v2.md; AC5.3 accepts the two planned v2 test-day runs (configs/runs/confirmatory.yaml and confirmatory_controls.yaml) and counts any other test-day run as a rerun.
 
 ## Proposed code
 
@@ -193,7 +195,13 @@ def m5(r: Results) -> None:
 
     deviations = read("DEVIATIONS.md")
     ordered = sorted(runs, key=lambda x: x[0]["started_at"])
-    unlisted = [m["config_hash"] for m, _ in ordered[1:] if m["config_hash"] not in deviations]
+    # v2 plans two test-day runs (section 10): the grid, then the random-pull controls at
+    # its realised rates. The first run of each is planned; any other is a rerun.
+    planned = ("configs/runs/confirmatory.yaml", "configs/runs/confirmatory_controls.yaml")
+    firsts = {c: next((m["config_hash"] for m, _ in ordered if m["config"] == c), None)
+              for c in planned}  # fmt: skip
+    reruns = [m for m, _ in ordered if m["config_hash"] not in firsts.values()]
+    unlisted = [m["config_hash"] for m in reruns if m["config_hash"] not in deviations]
     r.add(
         "AC5.3 one confirmatory results directory; any rerun named in DEVIATIONS.md",
         bool(runs) and not unlisted,

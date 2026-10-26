@@ -5,9 +5,11 @@ uv run python scripts/analyse.py mde --train results/<h> --val results/<h>
     s and the MDE of section 9 (M4), printed as JSON.
 uv run python scripts/analyse.py summary --s-bp <s> --out <file.json> results/<h> [...]
     H1, H2 to H4, markouts and canaries. --out results/summary.json, which make paper
-    reads, is allowed only for runs of configs/runs/confirmatory.yaml (same config hash,
-    committed after prereg-v1) with every label on every non-excluded test day in each of
-    its cells, and with --s-bp equal to s as frozen in PREREGISTRATION.md section 9.
+    reads, is allowed only for the two planned test-day runs, configs/runs/confirmatory.yaml
+    and its random-pull controls configs/runs/confirmatory_controls.yaml (same config
+    hashes, made at commits after prereg-v1), with every label on every non-excluded test
+    day in each of its cells, each control at its strategy's realised rate, and with
+    --s-bp equal to s as frozen in PREREGISTRATION.md section 9.
 """
 
 import argparse
@@ -57,10 +59,10 @@ def paper_problem(metas: list[dict], s_bp: float) -> str | None:
     s = frozen_s()
     if s is None or abs(s - s_bp) > 1e-12:
         return f"--s-bp {s_bp} is not the s frozen in section 9 ({s})"
-    cfg = yaml.safe_load((ROOT / "configs" / "runs" / "confirmatory.yaml").read_text())
     for meta in metas:
+        cfg = yaml.safe_load((ROOT / meta["config"]).read_text())
         if meta["config_hash"] != config_hash(cfg):
-            return f"run {meta['config_hash']} is not configs/runs/confirmatory.yaml as committed"
+            return f"run {meta['config_hash']} is not {meta['config']} as committed"
         if git("merge-base", "--is-ancestor", "prereg-v1", meta["commit"]).returncode != 0:
             return f"run {meta['config_hash']} was made at a commit before prereg-v1"
     return None

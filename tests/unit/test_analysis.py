@@ -1,5 +1,6 @@
 """Sections 7, 8, 9 and 10 on synthetic results tables (eval/analysis.py)."""
 
+import json
 import re
 from pathlib import Path
 
@@ -140,9 +141,14 @@ def test_only_a_full_non_smoke_test_run_may_write_the_paper_summary():
     test_days = DAYS[:2]
     m = pl.DataFrame(rows("B3", [1.0] * 12)).filter(pl.col("day").is_in(test_days))
     conf = {"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"}
-    assert analysis.confirmatory_problem([conf], m, test_days) is None
-    assert "smoke" in analysis.confirmatory_problem([{**conf, "label": "smoke"}], m, test_days)
-    assert "test days" in analysis.confirmatory_problem([conf], m, DAYS[:3])
+    ctrl = {"label": "confirmatory_controls", "config": "configs/runs/confirmatory_controls.yaml"}
+    assert analysis.confirmatory_problem([conf, ctrl], m, test_days) is None
+    smoke = [{**conf, "label": "smoke"}, ctrl]
+    assert "smoke" in analysis.confirmatory_problem(smoke, m, test_days)
+    assert "test days" in analysis.confirmatory_problem([conf, ctrl], m, DAYS[:3])
+    # Both planned runs, once each: no controls run, or a second first run, is refused.
+    assert "0 runs" in analysis.confirmatory_problem([conf], m, test_days)
+    assert "2 runs" in analysis.confirmatory_problem([conf, conf, ctrl], m, test_days)
 
 
 def test_a_repeated_day_is_kept_once_if_identical_and_refused_if_not():
@@ -221,7 +227,8 @@ def test_c4_names_each_variant():
 
 def test_the_guard_wants_complete_cells_from_the_confirmatory_config():
     test_days = DAYS[:2]
-    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"}]
+    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"},
+            {"label": "c", "config": "configs/runs/confirmatory_controls.yaml"}]  # fmt: skip
     full = pl.DataFrame(rows("B3", [1.0] * 12) + rows("B2b", [0.0] * 12)).filter(
         pl.col("day").is_in(test_days)
     )
@@ -276,3 +283,22 @@ def test_c1_is_judged_against_r1_when_r1_ran_and_against_b1_is_still_reported():
         .otherwise(pl.col("break_even_fee_bps")).alias("break_even_fee_bps")
     )  # fmt: skip
     assert analysis.canaries(worse, mde_bp=1.0)["C1"]["pass"] is False
+
+
+def test_the_guard_wants_each_control_at_its_strategys_realised_rate():
+    test_days = DAYS[:2]
+    meta = [{"label": "confirmatory", "config": "configs/runs/confirmatory.yaml"},
+            {"label": "c", "config": "configs/runs/confirmatory_controls.yaml"}]  # fmt: skip
+    rate = {test_days[0]: 0.012, test_days[1]: 0.015}
+    c1 = pl.DataFrame(rows("C1", [0.0] * 12)).filter(pl.col("day").is_in(test_days))
+    c1 = c1.with_columns(toxic_share=pl.Series([0.012, 0.015]))
+
+    def r1(rates):
+        params = json.dumps({"name": "R", "rate_of": "C1", "seed": 1, "pull_rate": rates})
+        r = pl.DataFrame(rows("R1_s1", [0.0] * 12, params=params))
+        return r.filter(pl.col("day").is_in(test_days)).with_columns(strategy=pl.lit("R"))
+
+    ok = pl.concat([c1, r1(rate)], how="diagonal_relaxed")
+    assert analysis.confirmatory_problem(meta, ok, test_days) is None
+    off = pl.concat([c1, r1({**rate, test_days[1]: 0.02})], how="diagonal_relaxed")
+    assert "realised rate" in analysis.confirmatory_problem(meta, off, test_days)

@@ -177,3 +177,34 @@ def test_v2_random_pulls_have_three_seeds_per_control_at_the_given_rates():
     assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
     with pytest.raises(ValueError, match="cover"):
         configs.v2_random_pulls(const, th, sel, rates | {"C1": {days[0]: 0.01}}, days)
+
+
+def test_v2_confirmatory_is_the_grid_with_canaries_in_the_primary_cell():
+    from toxic_flow.engine import configs, grid
+
+    const, th = _v2_inputs()
+    sel = {"B2": {"p": 0.25, "k_ticks": "pull", "magnitude": False, "ofi_window_s": 5.0},
+           "B2b": {"p": 0.25, "k_ticks": "pull", "magnitude": False, "tau_s": 5.0},
+           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
+    cfg = configs.v2_confirmatory(const, th, sel, ["2025-07-01"])
+    assert cfg["name"] == "confirmatory"
+    cells = Counter(c["strategy"].get("label", c["strategy"]["name"]) for c in grid.expand(cfg))
+    assert {cells[n] for n in ("B0", "B1", "B2", "B2b")} == {8}
+    assert cells["B3"] == 9  # 8 cells and C3, B3 at zero latency
+    assert {cells[n] for n in ("C1", "C2", "C4_x10", "C4_x0.1")} == {1}
+    assert all(s["design"] == "v2" for s in cfg["strategies"])
+    assert not any(s["name"] == "R" for s in cfg["strategies"])
+
+
+def test_v2_confirmatory_controls_take_the_first_runs_rates():
+    from toxic_flow.engine import configs
+
+    days = ["2025-07-01", "2025-08-01"]
+    rates = {"C1": dict.fromkeys(days, 0.01), "B3": dict.fromkeys(days, 0.04),
+             "B2b": dict.fromkeys(days, 0.25)}  # fmt: skip
+    cfg = configs.v2_confirmatory_controls(rates, days)
+    assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 9
+    assert {s["rate_of"] for s in cfg["strategies"]} == {"C1", "B3", "B2b"}
+    assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
+    with pytest.raises(ValueError, match="not C1, B3 and B2b"):
+        configs.v2_confirmatory_controls({"C1": rates["C1"]}, days)

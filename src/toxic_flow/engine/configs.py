@@ -297,11 +297,40 @@ def v2_random_pulls(constants: dict, thresholds: dict, selected: dict, rates: di
     for name in ("B2b", "B3"):
         if selected[name]["k_ticks"] != "pull":
             raise ValueError(f"{name} does not pull at its selected setting")
-    if any(sorted(r) != sorted(days) for r in rates.values()):
-        raise ValueError("rates do not cover exactly the run's days")
     sel = lambda n, **e: _v2_selected(n, constants, thresholds, selected, **e)  # noqa: E731
     s = [{"name": "B1", "design": "v2"}, sel("C1", seed=1729), sel("B3"), sel("B2b")]
-    s += _random_pulls("C1", rates["C1"], "R1")
-    s += _random_pulls("B3", rates["B3"], "R_B3")
-    s += _random_pulls("B2b", rates["B2b"], "R_B2b")
-    return _config("v2_random_pulls_val", days, s, [PRIMARY[0]], [PRIMARY[1]])
+    return _config("v2_random_pulls_val", days, s + _controls(rates, days), [PRIMARY[0]],
+                   [PRIMARY[1]])  # fmt: skip
+
+
+def _controls(rates: dict, days) -> list[dict]:
+    """R1, R_B3 and R_B2b with three seeds each, at the per-day rates given."""
+    if sorted(rates) != ["B2b", "B3", "C1"]:
+        raise ValueError(f"rates for {sorted(rates)}, not C1, B3 and B2b")
+    if any(sorted(r) != sorted(days) for r in rates.values()):
+        raise ValueError("rates do not cover exactly the run's days")
+    return [*_random_pulls("C1", rates["C1"], "R1"), *_random_pulls("B3", rates["B3"], "R_B3"),
+            *_random_pulls("B2b", rates["B2b"], "R_B2b")]  # fmt: skip
+
+
+def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> dict:
+    """v2 M5, first of the two planned test-day runs: B0 to B3 in all 8 cells; C1, C2 and
+    C4 in the primary cell; C3 (B3 at zero latency) in the risk-averse model. Its realised
+    toxic shares of C1, B3 and B2b are the rates of the second run (section 10)."""
+    _check(constants)
+    _check_thresholds(thresholds)
+    sel = lambda n, **e: _v2_selected(n, constants, thresholds, selected, **e)  # noqa: E731
+    where = {"cells": [PRIMARY]}
+    s = [{"name": "B0", "design": "v2"}, {"name": "B1", "design": "v2"},
+         sel("B2"), sel("B2b"), sel("B3"),
+         sel("C1", seed=1729) | where, {"name": "C2", "design": "v2"} | where,
+         *(sel("C4", label=f"C4_x{f:g}", decay_factor=f) | where for f in C4_FACTORS),
+         sel("B3") | {"cells": [[PRIMARY[0], "zero"]]}]  # fmt: skip
+    return _config("confirmatory", days, s, ALL_QUEUES, ["low", "high"])
+
+
+def v2_confirmatory_controls(rates: dict, days) -> dict:
+    """v2 M5, second planned test-day run: R1, R_B3 and R_B2b in the primary cell at the
+    realised toxic shares of C1, B3 and B2b in the first run, day by day."""
+    return _config("confirmatory_controls", days, _controls(rates, days), [PRIMARY[0]],
+                   [PRIMARY[1]])  # fmt: skip

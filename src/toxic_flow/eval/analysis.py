@@ -6,6 +6,7 @@ label must have one parameter set per cell; the analysis compares settings, it d
 choose them. Output: plain dicts, and summary() for results/summary.json and the paper.
 """
 
+import json
 import re
 
 import numpy as np
@@ -290,20 +291,36 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
     }
 
 
+CONFIRMATORY = ("configs/runs/confirmatory.yaml", "configs/runs/confirmatory_controls.yaml")
+
+
 def confirmatory_problem(metas: list[dict], m: pl.DataFrame, test_days: list[str]):
-    """Why these runs may not write results/summary.json, or None if they may. Every run
-    comes from configs/runs/confirmatory.yaml and is not smoke, and every label has every
-    non-excluded test day in every cell it runs in. The caller checks s, the config hash
-    and the commit against the tag."""
+    """Why these runs may not write results/summary.json, or None if they may. The runs are
+    the two planned test-day runs, one of each: configs/runs/confirmatory.yaml and its
+    random-pull controls, configs/runs/confirmatory_controls.yaml (section 10). None is
+    smoke, every label has every non-excluded test day in every cell it runs in, and every
+    control pulls at the realised toxic share of the strategy it controls for, on each day,
+    in the first run. The caller checks s, the config hashes and the commits against the
+    tag."""
     for meta in metas:
         if meta.get("label") == "smoke":
             return "a smoke run is never the confirmatory result"
-        if meta.get("config") != "configs/runs/confirmatory.yaml":
-            return f"{meta.get('config')} is not configs/runs/confirmatory.yaml"
+        if meta.get("config") not in CONFIRMATORY:
+            return f"{meta.get('config')} is not one of {', '.join(CONFIRMATORY)}"
+    for config in CONFIRMATORY:
+        n = sum(meta.get("config") == config for meta in metas)
+        if n != 1:
+            return f"{n} runs of {config}, not 1"
     want = set(test_days)
     if set(m["day"]) != want:
         return f"the runs cover {m['day'].n_unique()} days, not the {len(want)} test days"
-    for (label, q, lat), g in _labelled(m).group_by(["label", "queue", "latency"]):
+    m = _labelled(m)
+    for (label, q, lat), g in m.group_by(["label", "queue", "latency"]):
         if set(g["day"]) != want:
             return f"{label} in {q}/{lat} lacks {sorted(want - set(g['day']))}"
+    for r in m.filter(pl.col("strategy") == "R").iter_rows(named=True):
+        p = json.loads(r["params"])
+        done = _rows(m, p["rate_of"], *PRIMARY).filter(pl.col("day") == r["day"])
+        if done.height != 1 or abs(done["toxic_share"][0] - p["pull_rate"][r["day"]]) > 1e-12:
+            return f"{r['label']} on {r['day']} does not pull at {p['rate_of']}'s realised rate"
     return None

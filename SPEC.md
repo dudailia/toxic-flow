@@ -237,8 +237,10 @@ Goal: download the 16 test days and run the pre-registered analysis one time.
 Acceptance:
 - AC5.1 every test-day manifest entry has downloaded_at later than the tag's creation time.
 - AC5.2 exclusion rules applied by script before any strategy result on that day exists.
-- AC5.3 one results directory for the confirmatory grid. Any rerun has a DEVIATIONS.md
-  entry naming the bug and the fixing commit, and both results stay in the report.
+- AC5.3 one results directory for the confirmatory grid and one for its random-pull
+  controls, which run after it at its realised pull rates (PREREGISTRATION.md section 10,
+  revised 2026-10-26). Any rerun has a DEVIATIONS.md entry naming the bug and the fixing
+  commit, and both results stay in the report.
 - AC5.4 leakage-auditor report on the test results saved to docs/audit_M5.md.
 
 Viva topics: read the primary result aloud with its CI and MDE; explain one day where

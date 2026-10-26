@@ -8,6 +8,11 @@
   uv run python scripts/make_v2_configs.py random results/<v2_canaries_val>
       random-pull controls; the rates are the realised toxic shares of C1, B3 and B2b in
       that run, primary cell, per day
+  uv run python scripts/make_v2_configs.py confirmatory   needs configs/selected.yaml
+  uv run python scripts/make_v2_configs.py controls results/<confirmatory>
+      M5, the two planned test-day runs (section 10): the grid on the kept test days, then
+      the random-pull controls at that run's realised toxic shares. Only after prereg-v1
+      and the exclusion step (SPEC.md AC5.2), since the kept test days need both.
 
 tune writes two configs over disjoint halves of the validation days (v2_tune_val_a and
 _b), so they can run side by side; the selection reads both. An existing config is never
@@ -40,11 +45,12 @@ def write(cfg: dict) -> None:
     print(out, len(cfg["strategies"]), "strategies")
 
 
-def canary_rates(run: Path) -> dict:
-    """{C1, B3, B2b: {day: toxic share}} from a committed v2_canaries_val run."""
+def realised_rates(run: Path, config: str) -> dict:
+    """{C1, B3, B2b: {day: toxic share}} in the primary cell of a committed run of
+    configs/runs/<config>.yaml."""
     meta = json.loads((run / "meta.json").read_text())
-    if meta["config"] != "configs/runs/v2_canaries_val.yaml":
-        raise SystemExit(f"{run} is not v2_canaries_val")
+    if meta["config"] != f"configs/runs/{config}.yaml":
+        raise SystemExit(f"{run} is not {config}")
     m = pl.read_parquet(run / "metrics.parquet").filter(
         (pl.col("queue") == configs.PRIMARY[0]) & (pl.col("latency") == configs.PRIMARY[1])
     )
@@ -71,8 +77,15 @@ def main(kind: str) -> None:
     elif kind == "mde":
         write(configs.v2_mde_train(const, th, selected, kept("train")))
     elif kind == "random":
-        write(configs.v2_random_pulls(const, th, selected, canary_rates(Path(sys.argv[2])),
-                                      kept("val")))  # fmt: skip
+        rates = realised_rates(Path(sys.argv[2]), "v2_canaries_val")
+        write(configs.v2_random_pulls(const, th, selected, rates, kept("val")))
+    elif kind in ("confirmatory", "controls"):
+        approved = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+        if kind == "confirmatory":
+            write(configs.v2_confirmatory(const, th, approved, kept("test")))
+        else:
+            rates = realised_rates(Path(sys.argv[2]), "confirmatory")
+            write(configs.v2_confirmatory_controls(rates, kept("test")))
     else:
         raise SystemExit(f"unknown kind {kind}")
 
