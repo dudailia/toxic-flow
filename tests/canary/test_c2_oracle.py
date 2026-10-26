@@ -95,3 +95,40 @@ def test_the_loop_moves_its_quotes_up_for_u_plus_one_and_down_for_u_minus_one(tm
         # And the direction: against the u = 0 quote of the same step.
         no_signal_bid = np.minimum(np.floor(r - half), ba - 1)
         assert np.all(np.sign(st["bid_tick"][quoted] - no_signal_bid[quoted]) * u >= 0)
+
+
+def test_v2_oracle_marks_only_moves_of_at_least_one_tick():
+    from c2_oracle import pull_series
+
+    bbo = np.zeros(6, BBO_DTYPE)
+    bbo["local_ts"] = [0, 5 * S, 10 * S, 15 * S, 20 * S, 25 * S]
+    # Mids 100.05, then +half a tick, +1 tick, -1 tick, -2 ticks, unchanged.
+    bbo["bid_px"] = [100.0, 100.05, 100.15, 100.05, 99.85, 99.85]
+    bbo["ask_px"] = bbo["bid_px"] + 0.1
+    grid = np.array([0, 5 * S, 10 * S, 15 * S, 20 * S, 22 * S], np.int64)
+    ts, u, m = pull_series(bbo, grid, tick=0.1, horizon_s=5.0)
+    # Half a tick is not enough; 22 s has no mid 5 s later.
+    assert list(u) == [0.0, 1.0, -1.0, -1.0, 0.0, 0.0]
+    assert np.all(m == 0.0) and np.array_equal(ts, grid)
+
+
+def test_v2_oracle_matches_a_brute_force_on_a_random_book():
+    from c2_oracle import pull_series
+
+    rng = np.random.default_rng(1729)
+    n = 2000
+    bbo = np.zeros(n, BBO_DTYPE)
+    bbo["local_ts"] = np.cumsum(rng.integers(1, 3 * S // 10, n))
+    bbo["bid_px"] = 100.0 + np.cumsum(rng.choice([-0.1, 0.0, 0.1], n))
+    bbo["ask_px"] = bbo["bid_px"] + rng.choice([0.1, 0.2], n)  # mids in half ticks
+    grid = np.arange(bbo["local_ts"][0], bbo["local_ts"][-1], S // 10, dtype=np.int64)
+    _, u, _ = pull_series(bbo, grid, tick=0.1, horizon_s=5.0)
+    mid = (bbo["bid_px"] + bbo["ask_px"]) / 2
+    for t, ut in zip(grid[::7], u[::7], strict=True):
+        if t + 5 * S > bbo["local_ts"][-1]:
+            assert ut == 0.0
+            continue
+        now = mid[np.flatnonzero(bbo["local_ts"] <= t)[-1]]
+        later = mid[np.flatnonzero(bbo["local_ts"] <= t + 5 * S)[-1]]
+        ticks = round((later - now) / 0.1, 6)
+        assert ut == (1.0 if ticks >= 1 else -1.0 if ticks <= -1 else 0.0)

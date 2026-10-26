@@ -113,3 +113,37 @@ def test_b0_quotes_the_touch_and_never_marks_a_side_toxic(day):
     assert ok.sum() > 20
     assert np.array_equal(steps["bid_tick"][ok], steps["best_bid_tick"][ok])
     assert np.all(steps["toxic"] == 0)
+
+
+def test_c2_pulls_the_side_the_series_marks(day):
+    """C2 in v2: B1 with u from a series, theta_u 0.5 and pull, so the ask is not quoted
+    while u = +1 and the bid not while u = -1."""
+    from hftbacktest import BacktestAsset, HashMapMarketDepthBacktest
+
+    from toxic_flow.strategies.signal_input import EXTERNAL
+
+    path = day[0]
+    asset = (
+        BacktestAsset().data([str(path)]).linear_asset(1.0).constant_order_latency(1_000_000, 1_000_000)
+        .risk_adverse_queue_model().no_partial_fill_exchange().trading_value_fee_model(0.0, 0.0)
+        .tick_size(0.05).lot_size(0.001).last_trades_capacity(1000)
+    )  # fmt: skip
+    hbt = HashMapMarketDepthBacktest([asset])
+    t0 = T0 * 1000
+    ts = np.arange(t0, t0 + 7 * 10**9, 100_000_000, dtype=np.int64)
+    u = np.tile([1.0, 0.0, -1.0], len(ts) // 3 + 1)[: len(ts)]
+    steps, out = np.zeros(500, STEP_DTYPE), np.zeros(13)
+    run_touch(
+        hbt, 0.001, 100.0, 10, t0 + 2 * 10**9, t0 + 6 * 10**9, 100_000_000, steps,
+        np.zeros(500, FILL_DTYPE), out, True, EXTERNAL, 1.0, N, ts, np.zeros(len(ts), np.int64),
+        np.zeros(1), 1.0, 1, MU, ALPHA, BETA, u, np.zeros(len(ts)), 0.5, PULL, np.inf,
+        np.zeros((0, 3)),
+    )  # fmt: skip
+    hbt.close()
+    steps = steps[: int(out[0])]
+    ok = np.isfinite(steps["mid"])
+    u_now = u[np.searchsorted(ts, steps["ts"], side="right") - 1]
+    assert np.all(np.isnan(steps["ask_tick"][ok & (u_now == 1.0)]))
+    assert np.all(np.isnan(steps["bid_tick"][ok & (u_now == -1.0)]))
+    assert np.all(steps["toxic"][ok] == u_now[ok])
+    assert np.isfinite(steps["bid_tick"][ok & (u_now == 0.0)]).any()

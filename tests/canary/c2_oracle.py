@@ -1,5 +1,6 @@
-"""Canary C2, the oracle (PREREGISTRATION.md section 10): the B1 overlay with u = sign of the
-mid change over the next 5 s, m = 0 and c = 1. It is the only code in the repo allowed to
+"""Canary C2, the oracle (PREREGISTRATION.md section 10). v1: the B1 overlay with u = sign of
+the mid change over the next 5 s, m = 0 and c = 1. v2: B1 at the touch, pulling the side
+the mid will move toward over the next 5 s when that move is at least one tick. It is the only code in the repo allowed to
 build a forward-looking array (SPEC.md AC3.6), and it lives here, outside src/. The
 strategy loop reads the series only at points at or before now (overlay mode EXTERNAL),
 so the look-ahead is entirely in future_mid below. If C2 cannot beat B1 by a wide margin,
@@ -11,20 +12,38 @@ import numpy as np
 HORIZON_S = 5.0
 
 
-def oracle_series(bbo: np.ndarray, grid: np.ndarray, horizon_s: float = HORIZON_S):
-    """(grid times, u, m): u = sign(mid at t + horizon - mid at t), 0 when the data ends
-    before t + horizon; m = 0."""
+def future_change(bbo: np.ndarray, grid: np.ndarray, horizon_s: float = HORIZON_S):
+    """mid at t + horizon minus mid at t for each grid time t, NaN when the data ends before
+    t + horizon or no mid exists at t. Mids are the latest book state at or before each
+    time, by local timestamp."""
     mid = (bbo["bid_px"] + bbo["ask_px"]) / 2
     now_i = np.searchsorted(bbo["local_ts"], grid, side="right") - 1
     ahead = grid + int(horizon_s * 1e9)
     fut_i = np.searchsorted(bbo["local_ts"], ahead, side="right") - 1
     known = (now_i >= 0) & (ahead <= bbo["local_ts"][-1])
     future_mid = np.where(known, mid[np.clip(fut_i, 0, None)], np.nan)
-    u = np.where(known, np.sign(future_mid - mid[np.clip(now_i, 0, None)]), 0.0)
+    return future_mid - mid[np.clip(now_i, 0, None)]
+
+
+def oracle_series(bbo: np.ndarray, grid: np.ndarray, horizon_s: float = HORIZON_S):
+    """v1 (grid times, u, m): u = sign(mid at t + horizon - mid at t), 0 when the data ends
+    before t + horizon; m = 0."""
+    d = future_change(bbo, grid, horizon_s)
+    return grid, np.where(np.isfinite(d), np.sign(d), 0.0), np.zeros(len(grid))
+
+
+def pull_series(bbo: np.ndarray, grid: np.ndarray, tick: float, horizon_s: float = HORIZON_S):
+    """v2 (section 10, grid times, u, m): u = +1 when the mid horizon_s ahead is at least one
+    tick above the mid now, -1 when at least one tick below, else 0 (also when the data
+    ends first); m = 0. The touch loop pulls the ask at u = +1 and the bid at u = -1.
+    Mids move in half ticks, so the change is counted in half ticks to avoid float error."""
+    d = future_change(bbo, grid, horizon_s)
+    half_ticks = np.where(np.isfinite(d), np.rint(d / (tick / 2)), 0.0)
+    u = np.where(np.abs(half_ticks) >= 2, np.sign(half_ticks), 0.0)
     return grid, u, np.zeros(len(grid))
 
 
-def oracle_for_day(day: str, cfg: dict):
+def oracle_for_day(day: str, cfg: dict, design: str = "v1"):
     """The oracle series on the config's decision grid for one day (engine's oracle hook)."""
     from toxic_flow.data.book import replay_bbo
     from toxic_flow.data.venue import venue_for
@@ -34,6 +53,8 @@ def oracle_for_day(day: str, cfg: dict):
     bbo, _ = replay_bbo(day_parts(day), venue["tick_size"], venue["lot_size"])
     step = int(cfg["step_ns"])
     grid = np.arange(utc_ns(day, "00:00:00"), utc_ns(day, "23:59:00"), step, dtype=np.int64)
+    if design == "v2":
+        return pull_series(bbo, grid, venue["tick_size"])
     return oracle_series(bbo, grid)
 
 
