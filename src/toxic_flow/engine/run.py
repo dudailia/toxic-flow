@@ -44,7 +44,8 @@ from toxic_flow.strategies.touch import PULL, run_touch
 
 ROOT = Path(__file__).resolve().parents[3]
 RESULTS = ROOT / "results"
-MAX_STEPS, MAX_FILLS = 900_000, 500_000
+# 846,000 quoting steps a day at 100 ms; the busiest training cell had 169,550 fills.
+MAX_STEPS, MAX_FILLS = 900_000, 2_000_000
 OUT_SLOTS = 13
 
 
@@ -353,6 +354,20 @@ def build_backtest(day: str, queue: str, latency: str, maker_fee=0.0, taker_fee=
     return HashMapMarketDepthBacktest([asset])
 
 
+def buffer_problem(out, max_steps: int = MAX_STEPS, max_fills: int = MAX_FILLS) -> str | None:
+    """Why a cell's recorded steps or fills cannot be trusted, or None. The loops stop
+    recording silently when a buffer is full, which would corrupt every metric, so a full
+    buffer, or fewer recorded fills than hftbacktest counted, stops the run."""
+    n_steps, engine_fills, n_fills = int(out[0]), int(out[1]), int(out[12])
+    if n_steps >= max_steps:
+        return f"step buffer full ({n_steps} steps)"
+    if n_fills >= max_fills:
+        return f"fill buffer full ({n_fills} fills)"
+    if n_fills != engine_fills:
+        return f"{n_fills} fills recorded, {engine_fills} counted by hftbacktest"
+    return None
+
+
 def run_cell(
     cell: dict, cfg: dict, maker_fee_bps: float = 0.0, oracle=None
 ) -> tuple[dict, pl.DataFrame]:
@@ -393,6 +408,11 @@ def run_cell(
     finally:
         hbt.close()
     wall = time.perf_counter() - t0
+    problem = buffer_problem(out)
+    if problem:
+        raise RuntimeError(
+            f"{day} {s.get('label', s['name'])} {cell['queue']}/{cell['latency']}: {problem}"
+        )
     steps, fills = steps[: int(out[0])], fills[: int(out[12])]
     # hftbacktest lists orders in hash-map order, which differs between processes; sorted
     # fills make every sum below, and so every metric, the same in every run.

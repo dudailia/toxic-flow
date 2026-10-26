@@ -1,4 +1,5 @@
-"""engine.run.opposite_prints (Q50) on a hand-made raw trades file."""
+"""engine.run checks without a backtest: opposite_prints (Q50) on a hand-made raw trades
+file, and the buffer check that stops a cell whose steps or fills were cut off."""
 
 import gzip
 
@@ -24,3 +25,15 @@ def test_opposite_prints_keeps_the_price_furthest_through_at_each_time(tmp_path,
     np.testing.assert_array_equal(p["b"][1], [100.3, 100.0])
     np.testing.assert_array_equal(p["s"][0], [12_000])
     np.testing.assert_array_equal(p["s"][1], [99.7])
+
+
+def test_a_full_buffer_or_an_uncounted_fill_stops_the_run():
+    out = np.zeros(run.OUT_SLOTS)
+    out[0], out[1], out[12] = 846_000, 39_000, 39_000
+    assert run.buffer_problem(out) is None
+    out[0] = run.MAX_STEPS
+    assert "step buffer full" in run.buffer_problem(out)
+    out[0], out[1], out[12] = 10, run.MAX_FILLS, run.MAX_FILLS
+    assert "fill buffer full" in run.buffer_problem(out)
+    out[1], out[12] = 40_000, 39_000
+    assert "counted by hftbacktest" in run.buffer_problem(out)
