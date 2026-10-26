@@ -84,7 +84,10 @@ def conclusion(boot_ci, t_ci, mean: float, cell_signs, mde_bp: float) -> dict:
     lo, hi = boot_ci
     text = STATEMENTS[key].format(
         # Four decimals: the MDE is a few hundredths of a bp, which two would round away.
-        mean=f"{abs(mean):.4f}", lo=f"{lo:.4f}", hi=f"{hi:.4f}", mde=f"{mde_bp:.4f}"
+        mean=f"{abs(mean):.4f}",
+        lo=f"{lo:.4f}",
+        hi=f"{hi:.4f}",
+        mde=f"{mde_bp:.4f}",
     )
     return {"key": key, "statement": text}
 
