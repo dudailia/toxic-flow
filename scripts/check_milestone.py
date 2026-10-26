@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -187,9 +188,16 @@ def m0(r: Results) -> None:
     data_dir = ROOT / "data"
     leaked = []
     if data_dir.exists():
+        # os.walk follows symlinks, so data/raw moved to an external disk and linked back
+        # (docs/ssd_move.md) is still searched; Path.rglob in Python 3.12 does not enter it.
+        paths = [
+            Path(parent) / name
+            for parent, dirs, files in os.walk(data_dir, followlinks=True)
+            for name in dirs + files
+        ]
         leaked = [
             p.relative_to(ROOT).as_posix()
-            for p in data_dir.rglob("*")
+            for p in paths
             if any(t in p.as_posix() for t in test_dates)
         ]
     r.add("AC0.5 no test-day path under data/", not leaked, str(leaked[:3]))
