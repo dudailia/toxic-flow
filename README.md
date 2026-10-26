@@ -1,21 +1,35 @@
 # toxic-flow
 
-A pre-registered study of whether a Hawkes estimate of market-order intensity helps a
-passive market maker on BTCUSDT perpetual futures, compared with cheaper order-flow
-signals, in an L2 replay backtest. Results are from simulation on historical data only.
+A pre-registered study on Binance BTCUSDT perpetual futures. It asks whether a causal
+Hawkes estimate of market-order intensity helps a passive market maker decide when to step
+back from the touch, compared with a decay-weighted trade count built from the same market
+orders and with order-flow imbalance. The edge is the break-even maker fee: gross PnL per
+unit of traded notional.
 
-Status and plan: SPEC.md. Hypotheses and analysis, frozen at tag prereg-v1: PREREGISTRATION.md.
+All results are from simulation on historical data: an L2 replay in hftbacktest of
+Tardis.dev files. No order was sent to an exchange. Nothing here is a claim about live
+trading, real fills or profit.
+
+- The plan, frozen by the git tag prereg-v1 before any test day was downloaded:
+  PREREGISTRATION.md. Its Design history says what changed before the tag, when and why.
+- Milestones and acceptance criteria: SPEC.md. What remains before the tag:
+  docs/TAG_CHECKLIST.md.
+- Changes after the tag: DEVIATIONS.md.
+- The paper: paper/template.md, built by `make paper` once the test days have run, or by
+  `make paper-draft` before that (test-day results stay as {{key}} placeholders).
 
 ## Reproduce
 
 Every run needs a config committed to git and a clean working tree, and writes
-`results/<config hash>/`. Steps marked (Ilia) are decisions or actions only Ilia takes.
+`results/<config hash>/` with the config, the commit and the metrics. Steps marked (Ilia)
+are decisions or actions only Ilia takes. Configs for the v2 design come from
+scripts/make_v2_configs.py; an existing config is never overwritten.
 
 Setup:
 
     uv sync
-    make hooks        # pre-commit runs make check
-    make check
+    make hooks        # the pre-commit hook runs make check
+    make check        # lint, fast tests, leakage tests, writing lint
 
 1. Training and validation data, then quality reports, market-order events and the
    exclusion rules, for each day:
@@ -26,49 +40,69 @@ Setup:
        uv run python -m toxic_flow.events.market_orders YYYY-MM-DD
        uv run python -m toxic_flow.data.exclusions
 
-2. B0 and B1 selection on the training days in the primary cell (grids in section 4),
-   then the chosen pair in all 8 cells:
-
-       uv run python scripts/make_configs.py training
-       make run CFG=configs/runs/train_select.yaml
-       uv run python scripts/select_params.py results/<hash> B0 docs/selection/B0_train.md
-       uv run python scripts/select_params.py results/<hash> B1 docs/selection/B1_train.md
-       (write B0 and B1 into configs/selected.yaml from those tables)
-       uv run python scripts/make_configs.py training_chosen
-       make run CFG=configs/runs/train_chosen.yaml
-
-3. Signal constants from the training days (pooled Hawkes fit, K):
+2. Signal constants and overlay thresholds from the training days (pooled Hawkes fit, K,
+   theta_u and theta_m):
 
        uv run python scripts/fit_signals.py
+       uv run python scripts/fit_thresholds.py
 
-4. Overlay tuning on the validation days, primary cell:
+3. B0 and B1 on the training days in all 8 queue and latency cells (they have no
+   parameters, so nothing is chosen):
 
-       uv run python scripts/make_configs.py tuning
-       make run CFG=configs/runs/tune_val.yaml
-       uv run python scripts/select_params.py results/<hash> B2 docs/selection/B2_val.md
+       uv run python scripts/make_v2_configs.py train
+       make run CFG=configs/runs/v2_train.yaml
 
-   and the same for B2b and B3. (Ilia) add B2, B2b and B3 to configs/selected.yaml.
+4. Overlay tuning on the validation days, primary cell, in two halves of the days, then
+   the section 4 rule:
 
-5. Canaries and the minimum detectable effect:
+       uv run python scripts/make_v2_configs.py tune
+       make run CFG=configs/runs/v2_tune_val_a.yaml
+       make run CFG=configs/runs/v2_tune_val_b.yaml
+       uv run python scripts/m4_v2.py select --tune results/<a> results/<b>
 
-       uv run python scripts/make_configs.py canaries
-       uv run python scripts/make_configs.py mde_train
-       uv run python tests/canary/run_c2.py configs/runs/canaries_val.yaml
-       make run CFG=configs/runs/mde_train.yaml
-       uv run python scripts/analyse.py mde --train results/<hash> --val results/<hash>
+   (Ilia) approve the choice into configs/selected.yaml.
 
-   Fill every [TBD] in PREREGISTRATION.md. (Ilia) tag and push prereg-v1.
+5. Canaries, the minimum detectable effect and the random-pull controls:
+
+       uv run python scripts/make_v2_configs.py canaries
+       uv run python tests/canary/run_c2.py configs/runs/v2_canaries_val.yaml
+       uv run python scripts/make_v2_configs.py mde
+       make run CFG=configs/runs/v2_mde_train.yaml
+       uv run python scripts/make_v2_configs.py random results/<canaries>
+       make run CFG=configs/runs/v2_random_pulls_val.yaml
+       uv run python scripts/m4_v2.py report --train-b results/<v2_train> \
+           --tune results/<a> results/<b> --canaries results/<canaries> --mde results/<mde>
+       uv run python scripts/m4_v2.py random --random results/<random> \
+           --canaries results/<canaries> --tune results/<a> results/<b>
+
+   (Ilia) tag and push prereg-v1, after docs/TAG_CHECKLIST.md is done.
 
 6. The test run, once. The loader refuses test days until the tag exists locally and on
-   the public remote.
+   the public remote. Two runs are planned: the grid, then the random-pull controls at the
+   grid's realised pull rates.
 
        make data DAYS=test
-       (quality reports and exclusions as in step 1)
-       uv run python scripts/make_configs.py confirmatory
+       (quality reports, events and exclusions as in step 1)
+       uv run python scripts/make_v2_configs.py confirmatory
        uv run python tests/canary/run_c2.py configs/runs/confirmatory.yaml
+       uv run python scripts/make_v2_configs.py controls results/<confirmatory>
+       make run CFG=configs/runs/confirmatory_controls.yaml
        uv run python scripts/analyse.py summary --s-bp <s from section 9> \
-           --out results/summary.json results/<hash>
+           --out results/summary.json results/<confirmatory> results/<controls>
        make paper
 
-C2, the oracle canary, is the only strategy allowed to look ahead, so configs that
-include it run through tests/canary/run_c2.py rather than make run.
+C2, the oracle canary, is the only strategy allowed to look ahead, so configs that include
+it run through tests/canary/run_c2.py rather than make run. `make check-full` adds the
+slow tests; three of them need 2024-01-01 converted on disk.
+
+## Layout
+
+- src/toxic_flow/data: download (with the test-day lock), conversion, quality checks.
+- src/toxic_flow/events: market orders, collapsed from trades.
+- src/toxic_flow/signals: OFI, decay-weighted counts, the Hawkes fit and online intensity.
+- src/toxic_flow/strategies: the quoting loops (numba, run inside hftbacktest).
+- src/toxic_flow/engine: run configs, the queue and latency grid, one run per config.
+- src/toxic_flow/eval: metrics, markouts and the pre-registered analysis. Anything that
+  looks ahead lives here or in tests/canary/, never in strategies or signals.
+- docs/: the record of every choice before the tag, including the v1 design that failed.
+- results/: one directory per run, named by the config hash.
