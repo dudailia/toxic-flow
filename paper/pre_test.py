@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from m4_v2 import kept  # noqa: E402
 
 from toxic_flow.data.split_lock import load_splits  # noqa: E402
+from toxic_flow.engine.configs import quote_hours  # noqa: E402
 from toxic_flow.eval import analysis  # noqa: E402
 
 OUT = ROOT / "paper" / "pre_test.json"
@@ -102,16 +103,25 @@ def hawkes(out: dict) -> None:
     out["pre_hawkes_memory_ms"] = num(1000 / c["params"]["beta"], 0)  # 1 / beta
 
 
+def selected() -> dict:
+    return yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+
+
 def thresholds(out: dict) -> None:
+    """theta_u at each overlay's selected setting, from the training-day file."""
     th = json.loads((ROOT / "docs" / "signals" / "train_thresholds.json").read_text())["signals"]
-    out["pre_theta_b3"] = num(th["B3_hawkes"]["theta_u"]["0.05"])
-    out["pre_theta_b2b"] = num(th["B2b_ewma_5s"]["theta_u"]["0.25"])
-    out["pre_theta_b2"] = num(th["B2_ofi_5s"]["theta_u"]["0.25"])
+    sel = selected()
+    keys = {"b3": ("B3_hawkes", sel["B3"]),
+            "b2b": (f"B2b_ewma_{sel['B2b']['tau_s']:g}s", sel["B2b"]),
+            "b2": (f"B2_ofi_{sel['B2']['ofi_window_s']:g}s", sel["B2"])}  # fmt: skip
+    for k, (name, s) in keys.items():
+        out[f"pre_theta_{k}"] = num(th[name]["theta_u"][f"{s['p']:g}"])
 
 
 def mde(out: dict) -> None:
     mc = run("v2_canaries_val")
-    x = analysis.mde_inputs(run("v2_mde_train"), mc, len(load_splits()["test"]))
+    # The kept test days, as scripts/analyse.py mde counts them; all 16 before the download.
+    x = analysis.mde_inputs(run("v2_mde_train"), mc, len(kept("test")))
     out["pre_s_train"], out["pre_s_val"] = num(x["s_train_bp"]), num(x["s_val_bp"])
     out["pre_s"], out["pre_mde"] = num(x["s_bp"]), num(x["mde_bp"])
     out["pre_3mde"] = num(3 * x["mde_bp"])
@@ -160,7 +170,7 @@ def signals(out: dict) -> None:
 
 
 def validation(out: dict) -> None:
-    sel = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())
+    sel = selected()
     out["pre_sel_b2"] = f"W = {sel['B2']['ofi_window_s']:g} s at p = {sel['B2']['p']:.0%}"
     out["pre_sel_b2b"] = f"tau = {sel['B2b']['tau_s']:g} s at p = {sel['B2b']['p']:.0%}"
     out["pre_sel_b3"] = f"p = {sel['B3']['p']:.0%}"
@@ -179,29 +189,17 @@ def validation(out: dict) -> None:
     m = analysis.with_seed_means(run("v2_random_pulls_val"))
     for a, b in (("C1", "R1"), ("R1", "B1"), ("B3", "R_B3"), ("B2b", "R_B2b")):
         put_compare(out, f"pre_rp_{a}_{b}".lower(), analysis.compare(m, a, b))
-    hours = 23 + 59 / 60 - 0.5  # quoting window, 00:30 to 23:59 UTC
+    hours = quote_hours()
     for lab in ("C1", "R1", "B3", "R_B3", "B2b", "R_B2b"):
         ep = m.filter(pl.col("label") == lab)["toxic_episodes"].mean() / hours
         out[f"pre_rp_runs_{lab.lower()}"] = f"{ep:,.0f}"
 
 
 def matched_p(out: dict) -> None:
-    from m4_v2 import tune_runs
+    from m4_v2 import matched_pairs, tune_runs
 
     mt, _ = tune_runs([ROOT / "results" / RUNS[c] for c in ("v2_tune_val_a", "v2_tune_val_b")])
-    prim = primary(mt)
-    for p in (0.05, 0.10, 0.25, 0.50):
-        rows = []
-        for name, extra in (("B3", {}), ("B2b", {"tau_s": 5.0})):
-            want = {"p": p, "k_ticks": "pull", "magnitude": False, **extra}
-            r = prim.filter(pl.col("strategy") == name).filter(
-                pl.col("params").map_elements(
-                    lambda s, w=want: all(json.loads(s).get(a) == v for a, v in w.items()),
-                    return_dtype=pl.Boolean,
-                )
-            )
-            rows.append(r.with_columns(label=pl.lit(name)))
-        both = pl.concat(rows, how="diagonal_relaxed")
+    for p, both in matched_pairs(mt, selected()).items():
         put_compare(out, f"pre_mp_{round(p * 100)}", analysis.compare(both, "B3", "B2b"))
 
 
@@ -217,11 +215,14 @@ def glft(out: dict) -> None:
     )
     by = per.group_by("gamma").agg(pl.col("bef").max(), pl.col("fills").median())
     row = {r["gamma"]: r for r in by.iter_rows(named=True)}
-    out["pre_glft_bef_low_gamma"] = num(row[0.025]["bef"], 2)
-    out["pre_glft_bef_gamma04"] = num(row[0.4]["bef"], 2)
-    out["pre_glft_fills_low_gamma"] = f"{row[0.025]['fills']:,.0f}"
-    out["pre_glft_fills_gamma04"] = f"{row[0.4]['fills']:,.0f}"
     c = primary(run("train_chosen_window")).filter(pl.col("strategy") == "B1")
+    lo = min(row)
+    chosen = json.loads(c["params"][0])["gamma"]  # the v1 choice, gamma 0.4
+    out["pre_glft_gamma_lo"], out["pre_glft_gamma_chosen"] = f"{lo:g}", f"{chosen:g}"
+    out["pre_glft_bef_low_gamma"] = num(row[lo]["bef"], 2)
+    out["pre_glft_bef_gamma04"] = num(row[chosen]["bef"], 2)
+    out["pre_glft_fills_low_gamma"] = f"{row[lo]['fills']:,.0f}"
+    out["pre_glft_fills_gamma04"] = f"{row[chosen]['fills']:,.0f}"
     out["pre_glft_chosen_bef"] = num(float(c["break_even_fee_bps"].mean()), 3)
     out["pre_glft_chosen_fills"] = f"{c['fills'].mean():,.0f}"
     xs, ys = [], []
@@ -230,6 +231,7 @@ def glft(out: dict) -> None:
         xs += b1["mark_mid"].to_list()
         ys += b1["median_bid_dist_ticks"].to_list()
     out["pre_glft_corr"] = num(float(np.corrcoef(xs, ys)[0, 1]), 2)
+    out["pre_glft_days"] = str(len(xs))
     touch = primary(run("v2_train")).filter(pl.col("strategy") == "B1")["fills"].mean()
     out["pre_glft_fill_ratio"] = num(touch / c["fills"].mean(), 0)
     mids = {}

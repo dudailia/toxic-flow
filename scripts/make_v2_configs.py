@@ -85,7 +85,7 @@ def main(kind: str) -> None:
             write(configs.v2_confirmatory(const, th, approved, kept("test")))
         else:
             rates = realised_rates(Path(sys.argv[2]), "confirmatory")
-            write(configs.v2_confirmatory_controls(rates, kept("test")))
+            write(configs.v2_confirmatory_controls(approved, rates, kept("test")))
     else:
         raise SystemExit(f"unknown kind {kind}")
 

@@ -202,9 +202,17 @@ def test_v2_confirmatory_controls_take_the_first_runs_rates():
     days = ["2025-07-01", "2025-08-01"]
     rates = {"C1": dict.fromkeys(days, 0.01), "B3": dict.fromkeys(days, 0.04),
              "B2b": dict.fromkeys(days, 0.25)}  # fmt: skip
-    cfg = configs.v2_confirmatory_controls(rates, days)
+    sel = {"B2b": {"p": 0.25, "k_ticks": 5, "magnitude": False, "tau_s": 5.0},
+           "B3": {"p": 0.05, "k_ticks": "pull", "magnitude": False}}  # fmt: skip
+    cfg = configs.v2_confirmatory_controls(sel, rates, days)
+    k = {s["label"][:-3]: s["k_ticks"] for s in cfg["strategies"]}
+    assert k == {"R1": "pull", "R_B3": "pull", "R_B2b": 5}  # each control at its strategy's K
     assert cfg["name"] == "confirmatory_controls" and len(cfg["strategies"]) == 9
     assert {s["rate_of"] for s in cfg["strategies"]} == {"C1", "B3", "B2b"}
     assert cfg["queue_models"] == ["risk_averse"] and cfg["latencies"] == ["high"]
     with pytest.raises(ValueError, match="not C1, B3 and B2b"):
-        configs.v2_confirmatory_controls({"C1": rates["C1"]}, days)
+        configs.v2_confirmatory_controls(sel, {"C1": rates["C1"]}, days)
+    with pytest.raises(ValueError, match="magnitude"):
+        configs.v2_confirmatory_controls(
+            sel | {"B3": {**sel["B3"], "magnitude": True}}, rates, days
+        )

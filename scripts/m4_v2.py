@@ -27,6 +27,7 @@ import yaml
 
 from toxic_flow.data.exclusions import excluded_days
 from toxic_flow.data.split_lock import load_splits
+from toxic_flow.engine.configs import quote_hours
 from toxic_flow.eval import analysis
 from toxic_flow.eval.analysis import BEF
 from toxic_flow.eval.select import PRIMARY, candidate_table, select
@@ -247,17 +248,19 @@ def reproduced(m: pl.DataFrame, mc: pl.DataFrame) -> str:
             else f"NOT reproduced: {j.height} of {a.height} rows matched, largest BEF difference {diff:.1e} bp")  # fmt: skip
 
 
-def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
-    """B3 against B2b at each p, both at B2b's selected decay and the selected K and
-    magnitude rule (the same for both), from the tuning runs. Exploratory."""
+MATCHED_P = (0.05, 0.10, 0.25, 0.50)
+
+
+def matched_pairs(mt: pl.DataFrame, selected: dict) -> dict:
+    """{p: rows of B3 and B2b (labels B3 and B2b)} at each p of the grid, both at B2b's
+    selected decay and the selected K and magnitude rule (the same for both), from the
+    tuning runs, primary cell. Exploratory. Exactly one setting must match each."""
     k, mg, tau = selected["B3"]["k_ticks"], selected["B3"]["magnitude"], selected["B2b"]["tau_s"]
     if (selected["B2b"]["k_ticks"], selected["B2b"]["magnitude"]) != (k, mg):
         raise SystemExit("B3 and B2b differ in K or the magnitude rule; matched p is not defined")
     prim = mt.filter((pl.col("queue") == PRIMARY[0]) & (pl.col("latency") == PRIMARY[1]))
-    L = [f"Tuning runs, primary cell; K {k}, magnitude rule {'on' if mg else 'off'}, B2b at tau {tau:g} s.", "",
-         "| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share | B3 cancels an hour | B2b cancels an hour | B3 / B2b notional |",
-         "|---|---|---|---|---|---|---|---|---|---|---|---|"]  # fmt: skip
-    for p in (0.05, 0.10, 0.25, 0.50):
+    out = {}
+    for p in MATCHED_P:
         rows = []
         for name, extra in (("B3", {}), ("B2b", {"tau_s": tau})):
             want = {"p": p, "k_ticks": k, "magnitude": mg, **extra}
@@ -270,15 +273,48 @@ def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
             if r["params"].n_unique() != 1:
                 raise SystemExit(f"{name} at p {p}: {r['params'].n_unique()} settings")
             rows.append(r.with_columns(label=pl.lit(name)))
-        both = pl.concat(rows, how="diagonal_relaxed")
+        out[p] = pl.concat(rows, how="diagonal_relaxed")
+    return out
+
+
+def matched_p(mt: pl.DataFrame, selected: dict) -> list[str]:
+    """The matched-p table and its limitation, every count computed from the rows."""
+    k, mg, tau = selected["B3"]["k_ticks"], selected["B3"]["magnitude"], selected["B2b"]["tau_s"]
+    L = [f"Tuning runs, primary cell; K {k}, magnitude rule {'on' if mg else 'off'}, B2b at tau {tau:g} s.", "",
+         "| p | B3 - B2b mean bp | Bootstrap 95% | t 95% | Days > 0 | B3 BEF bp | B2b BEF bp | B3 toxic share | B2b toxic share | B3 cancels an hour | B2b cancels an hour | B3 / B2b notional |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|"]  # fmt: skip
+    cancels, notional = [], []
+    for p, both in matched_pairs(mt, selected).items():
         c = analysis.compare(both, "B3", "B2b")
         g = {n: both.filter(pl.col("label") == n) for n in ("B3", "B2b")}
+        cancels.append(g["B3"]["cancels_per_hour"].mean() / g["B2b"]["cancels_per_hour"].mean())
+        notional.append(g["B3"]["traded_notional"].sum() / g["B2b"]["traded_notional"].sum())
         L.append(f"| {p:g} | {fmt(c['mean'])} | {ci(c['bootstrap_ci'])} | {ci(c['t_ci'])} | {c['n_positive']} | "
                  f"{fmt(g['B3'][BEF].mean())} | {fmt(g['B2b'][BEF].mean())} | "
                  f"{fmt(g['B3']['toxic_share'].mean(), 3)} | {fmt(g['B2b']['toxic_share'].mean(), 3)} | "
                  f"{g['B3']['cancels_per_hour'].mean():.0f} | {g['B2b']['cancels_per_hour'].mean():.0f} | "
-                 f"{g['B3']['traded_notional'].sum() / g['B2b']['traded_notional'].sum():.3f} |")  # fmt: skip
+                 f"{notional[-1]:.3f} |")  # fmt: skip
+    L += ["", "Limitation, read with this table: at the same p the two signals mark in runs of different",
+          f"length. B3 cancels {min(cancels):.1f} to {max(cancels):.1f} times as often as B2b across these p (cancels",
+          "columns), so part of B3's deficit at matched p may be the cost of re-queuing rather than",
+          f"worse information. B3 trades {min(notional):.2f} to {max(notional):.2f} of B2b's notional (last column, all",
+          "six days pooled)."]  # fmt: skip
     return L
+
+
+def run_length_note(m: pl.DataFrame) -> list[str]:
+    """The limitation of the random-pull comparisons, with the run counts it quotes taken
+    from the rows: R pulls independently at each step, so it starts more pulled runs."""
+    runs = {lab: m.filter(pl.col("label") == lab)["toxic_episodes"].mean()
+            for lab in ("C1", "R1", "B3", "R_B3", "B2b", "R_B2b")}  # fmt: skip
+    return ["Limitation, read with these rows: R pulls independently at each step, so it starts a new",
+            "pulled run more often than a signal whose marks persist (toxic episodes an hour in the",
+            f"table above), and each new run gives up the queue place once. R_B3 starts {runs['R_B3'] / runs['B3']:.1f}",
+            f"times as many runs as B3 and R_B2b {runs['R_B2b'] / runs['B2b']:.1f} times as many as B2b, so B3 - R_B3 and",
+            "B2b - R_B2b mix what the signal chooses with how often it pulls, and overstate the signal's",
+            "part most where the ratio is largest; their order may not hold under a control matched on",
+            f"run length as well. C1 starts {runs['C1'] / runs['R1']:.2f} times as many runs as R1, so C1 - R1 is close to",
+            "matched."]  # fmt: skip
 
 
 def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
@@ -289,7 +325,7 @@ def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
     m = analysis.with_seed_means(mr)
     can = analysis.canaries(m, mde_bp=float("nan"))
     c1 = can["C1"]
-    hours = 23 + 59 / 60 - 0.5  # quoting window, 00:30 to 23:59 UTC
+    hours = quote_hours()
     L = [RANDOM_HEAD, "",
          f"Run {meta['config_hash']} ({meta['config']}, commit {meta['commit'][:7]}), primary cell, "
          f"{len(kept('val'))} validation days. R is B1 that marks a side toxic at each 100 ms step with",
@@ -322,22 +358,11 @@ def cmd_random(random: Path, canaries: Path, tune: list[Path]) -> None:
           cmp_row("R_B3 - B1", analysis.compare(m, "R_B3", "B1")),
           cmp_row("R_B2b - B1", analysis.compare(m, "R_B2b", "B1")),
           "",
-          "Limitation, read with these rows: R pulls independently at each step, so it starts a new",
-          "pulled run far more often than a signal whose marks persist (toxic episodes an hour in the",
-          "table above), and each new run gives up the queue place once. B3 - R_B3 and B2b - R_B2b",
-          "therefore mix what the signal chooses with how often it pulls; for B2b the gap in runs is",
-          "about 24 times, so its difference overstates the signal's part the most, and the order of",
-          "the two differences may not hold under a control matched on run length as well. R1 and",
-          "C1 start about as many runs (C1 a few percent fewer), so C1 - R1 is close to matched.",
+          *run_length_note(m),
           "", "### Exploratory: B3 against B2b at matched p", "",
           "Runs " + ", ".join(x["config_hash"] for x in metas_t) + ". Exploratory; the selected B3 is p 0.05",
           "and the selected B2b p 0.25, so H1's pair compares different pull rates.", "",
-          *matched_p(mt, selected), "",
-          "Limitation, read with this table: at the same p the two signals mark in runs of different",
-          "length, so B3 cancels and re-queues more often than B2b at every p, more so as p grows (cancels",
-          "column), and part of B3's deficit at matched p may be that cost rather than worse",
-          "information. B3 also trades less notional than B2b at every p (last column, all six",
-          "days pooled)."]  # fmt: skip
+          *matched_p(mt, selected)]  # fmt: skip
     out = ROOT / "docs" / "M4_v2_draft.md"
     text = out.read_text()
     keep = text.split("\n" + RANDOM_HEAD)[0].rstrip("\n")

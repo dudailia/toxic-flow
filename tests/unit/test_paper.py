@@ -158,3 +158,10 @@ def test_the_draft_pdf_is_one_page_with_the_same_paragraphs_as_the_page(tmp_path
     assert "{{h1_statement}}" in paras and "{{canary_statement}}" in paras
     assert all(p in " ".join(draft.split()) for p in paras if not p.isupper())
     assert one_page_count(one_page(draft, tmp_path / "d.pdf", None)) == 1
+
+
+def test_a_missing_page_section_stops_the_pdf_instead_of_dropping_it():
+    from figures import page_text
+
+    with pytest.raises(KeyError, match="no section"):
+        page_text("# Title\n\nLead.\n\n## What the study asks\n\nQ.\n")

@@ -391,12 +391,13 @@ Exploratory, not a test of section 7 or 10. Reported in the paper as exploratory
 | R_B2b - B1 | 6 | -0.0524 | [-0.0730, -0.0346] | [-0.0795, -0.0252] | 0 | none |
 
 Limitation, read with these rows: R pulls independently at each step, so it starts a new
-pulled run far more often than a signal whose marks persist (toxic episodes an hour in the
-table above), and each new run gives up the queue place once. B3 - R_B3 and B2b - R_B2b
-therefore mix what the signal chooses with how often it pulls; for B2b the gap in runs is
-about 24 times, so its difference overstates the signal's part the most, and the order of
-the two differences may not hold under a control matched on run length as well. R1 and
-C1 start about as many runs (C1 a few percent fewer), so C1 - R1 is close to matched.
+pulled run more often than a signal whose marks persist (toxic episodes an hour in the
+table above), and each new run gives up the queue place once. R_B3 starts 1.3
+times as many runs as B3 and R_B2b 23.7 times as many as B2b, so B3 - R_B3 and
+B2b - R_B2b mix what the signal chooses with how often it pulls, and overstate the signal's
+part most where the ratio is largest; their order may not hold under a control matched on
+run length as well. C1 starts 0.96 times as many runs as R1, so C1 - R1 is close to
+matched.
 
 ### Exploratory: B3 against B2b at matched p
 
@@ -413,7 +414,7 @@ Tuning runs, primary cell; K pull, magnitude rule off, B2b at tau 5 s.
 | 0.5 | -0.0781 | [-0.1398, -0.0217] | [-0.1625, 0.0064] | 1 | -1.0304 | -0.9523 | 0.464 | 0.517 | 8809 | 1992 | 0.722 |
 
 Limitation, read with this table: at the same p the two signals mark in runs of different
-length, so B3 cancels and re-queues more often than B2b at every p, more so as p grows (cancels
-column), and part of B3's deficit at matched p may be that cost rather than worse
-information. B3 also trades less notional than B2b at every p (last column, all six
-days pooled).
+length. B3 cancels 1.2 to 4.4 times as often as B2b across these p (cancels
+columns), so part of B3's deficit at matched p may be the cost of re-queuing rather than
+worse information. B3 trades 0.72 to 0.84 of B2b's notional (last column, all
+six days pooled).

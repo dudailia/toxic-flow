@@ -134,5 +134,14 @@ committed config); or an external disk for data/raw. None of these was done.
   paper/pre_test.json meet it. The draft states no test result. paper/check_paper.py
   bans literal decimals only in sections headed Results, Robustness, Canaries or
   Markouts.
+- /code-review of this session's changes (583ccd3 onward, 2026-10-26) found 10 issues, all
+  fixed. The one that mattered most: PREREGISTRATION.md section 9 stated s mid-sentence, so
+  scripts/analyse.py could not read the frozen s and would have refused every test-day
+  summary. Section 9 now has the line "s = 0.0329 bp. MDE = 0.70 s = 0.0231 bp.", and
+  tests/unit/test_prereg.py checks that the guard reads it. Also fixed: a run without R1
+  now gives C1 no verdict instead of the superseded C1 - B1 rule; each random-pull
+  control steps back by its strategy's K; the seed means are added once; the limitation
+  text and the paper compute every count they quote; the paper's literal-number check
+  covers every section that reports a run.
 - After the tag, by Ilia: push it, then write the first entry of DEVIATIONS.md (tag,
   commit hash, push time on GitHub).

@@ -29,3 +29,15 @@ def test_selected_settings_match_configs_selected():
     assert sel["B2b"] == {"k_ticks": "pull", "magnitude": False, "p": 0.25, "tau_s": 5.0}
     assert sel["B3"] == {"k_ticks": "pull", "magnitude": False, "p": 0.05}
     assert "B2 with W = 5 s at p = 25%; B2b with tau = 5 s at p = 25%; B3 at\np = 5%" in TEXT
+
+
+def test_the_summary_guard_reads_the_frozen_s_and_it_is_the_measured_one():
+    # scripts/analyse.py refuses results/summary.json unless --s-bp equals the s read here.
+    import sys
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from analyse import frozen_s
+
+    pre = json.loads((ROOT / "paper" / "pre_test.json").read_text())
+    assert frozen_s() == float(pre["pre_s"])
+    assert f"MDE = 0.70 s = {pre['pre_mde']} bp." in TEXT

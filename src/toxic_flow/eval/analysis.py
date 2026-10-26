@@ -143,6 +143,8 @@ def with_seed_means(m: pl.DataFrame) -> pl.DataFrame:
     seeded = m.with_columns(base=pl.col("label").str.extract(SEED_LABEL.pattern, 1)).filter(
         pl.col("base").is_not_null()
     )
+    # Idempotent: a bare label already present was averaged by an earlier call.
+    seeded = seeded.filter(~pl.col("base").is_in(m["label"].unique().to_list()))
     if seeded.is_empty():
         return m
     cols = [c for c in (BEF, "fills", "gross_pnl", "traded_notional", "toxic_share",
@@ -172,14 +174,19 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
         out["C1"] = {**c, "rule": "C1 - R1", "pass": _contains_zero(c["bootstrap_ci"])}
         out["C1"]["vs_B1"] = {**compare(m, "C1", "B1"), "label": "rule first written"}
     elif _has(m, "C1"):
+        # Without R1 there is no verdict: the rule first written (C1 - B1) is superseded,
+        # and it fails by construction when pulling costs queue place (Q53).
         c = compare(m, "C1", "B1")
-        out["C1"] = {**c, "rule": "C1 - B1", "pass": _contains_zero(c["bootstrap_ci"])}
+        out["C1"] = {**c, "rule": "C1 - R1, R1 missing", "pass": None,
+                     "vs_B1": {**c, "label": "rule first written"}}  # fmt: skip
     if "C1" in out:
         if _has(m, "B3"):
             # Q28: C1 against B3 isolates the sign information and is reported beside the
             # pass rule, as descriptive.
             out["C1"]["vs_B3"] = {**compare(m, "C1", "B3"), "label": "descriptive"}
-        if out["C1"]["pass"] is None:
+        if out["C1"]["rule"].endswith("missing"):
+            text.append("C1, shuffled signs: its control R1 did not run, so no verdict.")
+        elif out["C1"]["pass"] is None:
             text.append("C1, shuffled signs: no interval, so no verdict.")
         elif out["C1"]["pass"]:
             ref = out["C1"]["rule"].split(" - ")[1]

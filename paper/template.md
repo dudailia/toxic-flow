@@ -216,13 +216,13 @@ re-queuing rather than worse information.
 ## GLFT, the quoting model that was dropped
 
 Exploratory, from the v1 runs. GLFT trades fills for less adverse selection per fill. On
-training days, raising risk aversion gamma from 0.025 to 0.4 cut the median day from
+training days, raising risk aversion gamma from {{pre_glft_gamma_lo}} to {{pre_glft_gamma_chosen}} cut the median day from
 {{pre_glft_fills_low_gamma}} to {{pre_glft_fills_gamma04}} fills and raised the best mean
 daily BEF from {{pre_glft_bef_low_gamma}} to {{pre_glft_bef_gamma04}} bp. At the chosen
 setting its mean daily BEF was {{pre_glft_chosen_bef}} bp on about {{pre_glft_chosen_fills}}
 fills a day: a smaller loss per unit of notional than the touch base, on about
 {{pre_glft_fill_ratio}} times fewer fills. Because the model works in ticks, its distance from the mid grew with the
-price: across the 18 days the correlation of the mid with that distance is
+price: across the {{pre_glft_days}} days the correlation of the mid with that distance is
 {{pre_glft_corr}}. That is why it barely traded on the validation days, and why v1's oracle
 had little to work with.
 

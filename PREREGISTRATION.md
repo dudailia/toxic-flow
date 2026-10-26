@@ -334,9 +334,14 @@ s is the larger of two estimates of the standard deviation of D_i with the selec
 settings: one on the 6 validation days and one on the 12 training days. Taking the
 larger is deliberate; 6 days give a noisy estimate.
 
-With the selected settings: s = 0.0329 bp on the 12 training days (run 58c46cc49981)
-and 0.0313 bp on the 6 validation days (run 5d27bc8ae820), so s = 0.0329 bp and
-MDE = 0.70 s = 0.0231 bp (docs/M4_v2_draft.md). C2's threshold, 3 x MDE, is 0.0692 bp.
+With the selected settings, the standard deviation is 0.0329 bp on the 12 training days
+(run 58c46cc49981) and 0.0313 bp on the 6 validation days (run 5d27bc8ae820)
+(docs/M4_v2_draft.md), so:
+
+s = 0.0329 bp. MDE = 0.70 s = 0.0231 bp.
+
+C2's threshold, 3 x MDE, is 0.0692 bp. scripts/analyse.py reads s from the line above
+and refuses a summary computed with any other s.
 
 If excluded test days reduce n, the MDE is recomputed with the same s and reported.
 An effect smaller than the MDE is described as one this study could not detect, never as

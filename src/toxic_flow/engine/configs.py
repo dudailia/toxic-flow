@@ -280,9 +280,19 @@ def v2_mde_train(constants: dict, thresholds: dict, selected: dict, days) -> dic
 R_SEEDS = (1, 2, 3)
 
 
-def _random_pulls(of: str, rates: dict, label: str) -> list[dict]:
+def quote_hours(cfg: dict = COMMON) -> float:
+    """Length of the quoting window in hours, from quote_start and quote_end."""
+
+    def hours(hms: str) -> float:
+        h, m, s = (int(x) for x in hms.split(":"))
+        return h + m / 60 + s / 3600
+
+    return hours(cfg["quote_end"]) - hours(cfg["quote_start"])
+
+
+def _random_pulls(of: str, rates: dict, label: str, k_ticks) -> list[dict]:
     return [{"name": "R", "design": "v2", "label": f"{label}_s{seed}", "rate_of": of,
-             "k_ticks": "pull", "seed": seed, "pull_rate": dict(rates)}
+             "k_ticks": k_ticks, "seed": seed, "pull_rate": dict(rates)}
             for seed in R_SEEDS]  # fmt: skip
 
 
@@ -294,23 +304,27 @@ def v2_random_pulls(constants: dict, thresholds: dict, selected: dict, rates: di
     at the selected settings."""
     _check(constants)
     _check_thresholds(thresholds)
-    for name in ("B2b", "B3"):
-        if selected[name]["k_ticks"] != "pull":
-            raise ValueError(f"{name} does not pull at its selected setting")
     sel = lambda n, **e: _v2_selected(n, constants, thresholds, selected, **e)  # noqa: E731
     s = [{"name": "B1", "design": "v2"}, sel("C1", seed=1729), sel("B3"), sel("B2b")]
-    return _config("v2_random_pulls_val", days, s + _controls(rates, days), [PRIMARY[0]],
-                   [PRIMARY[1]])  # fmt: skip
+    return _config("v2_random_pulls_val", days, s + _controls(selected, rates, days),
+                   [PRIMARY[0]], [PRIMARY[1]])  # fmt: skip
 
 
-def _controls(rates: dict, days) -> list[dict]:
-    """R1, R_B3 and R_B2b with three seeds each, at the per-day rates given."""
+def _controls(selected: dict, rates: dict, days) -> list[dict]:
+    """R1, R_B3 and R_B2b with three seeds each, at the per-day rates given, each stepping
+    back by the K of the strategy it controls for (C1 has B3's settings). The magnitude
+    rule is off in R, so the strategies must have it off too."""
     if sorted(rates) != ["B2b", "B3", "C1"]:
         raise ValueError(f"rates for {sorted(rates)}, not C1, B3 and B2b")
     if any(sorted(r) != sorted(days) for r in rates.values()):
         raise ValueError("rates do not cover exactly the run's days")
-    return [*_random_pulls("C1", rates["C1"], "R1"), *_random_pulls("B3", rates["B3"], "R_B3"),
-            *_random_pulls("B2b", rates["B2b"], "R_B2b")]  # fmt: skip
+    for name in ("B2b", "B3"):
+        if selected[name]["magnitude"]:
+            raise ValueError(f"{name} uses the magnitude rule, which R does not have")
+    k3, k2 = selected["B3"]["k_ticks"], selected["B2b"]["k_ticks"]
+    return [*_random_pulls("C1", rates["C1"], "R1", k3),
+            *_random_pulls("B3", rates["B3"], "R_B3", k3),
+            *_random_pulls("B2b", rates["B2b"], "R_B2b", k2)]  # fmt: skip
 
 
 def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> dict:
@@ -329,8 +343,8 @@ def v2_confirmatory(constants: dict, thresholds: dict, selected: dict, days) -> 
     return _config("confirmatory", days, s, ALL_QUEUES, ["low", "high"])
 
 
-def v2_confirmatory_controls(rates: dict, days) -> dict:
+def v2_confirmatory_controls(selected: dict, rates: dict, days) -> dict:
     """v2 M5, second planned test-day run: R1, R_B3 and R_B2b in the primary cell at the
     realised toxic shares of C1, B3 and B2b in the first run, day by day."""
-    return _config("confirmatory_controls", days, _controls(rates, days), [PRIMARY[0]],
-                   [PRIMARY[1]])  # fmt: skip
+    return _config("confirmatory_controls", days, _controls(selected, rates, days),
+                   [PRIMARY[0]], [PRIMARY[1]])  # fmt: skip

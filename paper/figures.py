@@ -89,7 +89,9 @@ def page_text(md: str) -> tuple[str, list[str]]:
     title, heads = sections(md)
     out = []
     for head, picks in PAGE:
-        paras = heads.get(head, [])
+        if head not in heads:
+            raise KeyError(f"the page has no section {head!r}; update PAGE in paper/figures.py")
+        paras = heads[head]
         chosen = paras if picks is None else [paras[i] for i in picks if i < len(paras)]
         if head:
             out.append(head.upper())

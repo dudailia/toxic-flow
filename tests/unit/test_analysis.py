@@ -34,6 +34,11 @@ def grid(label, bef, **kw):
 NOISE = np.random.default_rng(0).normal(0, 0.1, len(DAYS))
 
 
+def r1(bef, **kw):
+    """R1, C1's control, as three seeds with the same daily values."""
+    return [r for k in (1, 2, 3) for r in rows(f"R1_s{k}", bef, **kw)]
+
+
 def test_compare_is_a_minus_b_per_day_with_the_preregistered_intervals():
     m = pl.DataFrame(rows("B3", list(1.0 + NOISE)) + rows("B2b", [0.0] * 12))
     out = analysis.compare(m, "B3", "B2b")
@@ -93,7 +98,8 @@ def test_exploratory_pairs_and_markout_differences():
 def test_canaries_by_section_10():
     m = pl.DataFrame(
         rows("B1", [0.0] * 12) + rows("B3", [0.3] * 12)
-        + rows("C1", list(NOISE))  # signs shuffled: no gain over B1
+        + rows("C1", list(NOISE))  # signs shuffled: no gain over R1
+        + r1([0.0] * 12)
         + rows("C2", [5.0] * 12)  # the oracle wins by far
         + rows("B3", [0.2] * 12, latency="zero")  # C3 below B3 at high latency
         + rows("C4_x10", list(0.3 + NOISE)) + rows("C4_x0.1", [-1.0] * 12)
@@ -106,9 +112,9 @@ def test_canaries_by_section_10():
 
 
 def test_c1_fails_when_shuffled_signs_still_beat_b1():
-    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("C1", list(1.0 + NOISE)))
+    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("C1", list(1.0 + NOISE)) + r1([0.0] * 12))
     out = analysis.canaries(m, mde_bp=1.0)
-    assert not out["C1"]["pass"]
+    assert out["C1"]["pass"] is False
     assert "not order-flow information" in out["statement"]
 
 
@@ -210,7 +216,7 @@ def test_selectivity_counts_days_on_which_b3_did_not_trade():
 def test_a_failed_c1_replaces_the_interpretation_of_h1():
     m = pl.DataFrame(
         grid("B1", [0.0] * 12) + grid("B2", [0.0] * 12) + grid("B2b", [0.0] * 12)
-        + grid("B3", list(1.0 + NOISE)) + rows("C1", list(1.0 + NOISE))
+        + grid("B3", list(1.0 + NOISE)) + rows("C1", list(1.0 + NOISE)) + r1([0.0] * 12)
     )  # fmt: skip
     meta = {"hftbacktest": "2.4.4", "prereg_tagged_at": "x", "n_train_days": 12, "n_val_days": 6}
     s = analysis.summary(m, {"s_bp": 1.0}, meta)
@@ -247,7 +253,8 @@ def test_the_guard_wants_complete_cells_from_the_confirmatory_config():
 
 def test_c1_against_b3_is_reported_as_descriptive():
     # Q28: the pass rule stays C1 against B1; C1 against B3 is reported beside it.
-    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("B3", [0.5] * 12) + rows("C1", list(NOISE)))
+    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("B3", [0.5] * 12) + rows("C1", list(NOISE))
+                     + r1([0.0] * 12))  # fmt: skip
     c1 = analysis.canaries(m, mde_bp=1.0)["C1"]
     assert c1["pass"] is True
     assert c1["vs_B3"]["label"] == "descriptive"
@@ -308,3 +315,18 @@ def test_the_guard_wants_each_control_at_its_strategys_realised_rate():
     assert analysis.confirmatory_problem(meta, ok, test_days) is None
     off = pl.concat([c1, r1({**rate, test_days[1]: 0.02})], how="diagonal_relaxed")
     assert "realised rate" in analysis.confirmatory_problem(meta, off, test_days)
+
+
+def test_without_r1_c1_has_no_verdict_and_the_old_rule_is_only_reported():
+    # Q53: C1 - B1 is superseded; a run without R1 must not fail (or pass) C1 by it.
+    m = pl.DataFrame(rows("B1", [0.0] * 12) + rows("C1", list(-1.0 + NOISE)))
+    out = analysis.canaries(m, mde_bp=1.0)
+    assert out["C1"]["pass"] is None and out["C1"]["rule"].endswith("missing")
+    assert out["C1"]["vs_B1"]["bootstrap_ci"][1] < 0
+    assert "did not run" in out["statement"] and "not interpreted" not in out["statement"]
+
+
+def test_seed_means_are_added_once_however_often_they_are_asked_for():
+    m = pl.DataFrame(r1(list(NOISE)) + rows("B1", [0.0] * 12))
+    once = analysis.with_seed_means(m)
+    assert analysis.with_seed_means(once).height == once.height == m.height + 12

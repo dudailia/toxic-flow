@@ -13,7 +13,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULT_HEADINGS = ("Results", "Robustness", "Canaries", "Markouts")
+# Every section that reports a number from a run: test-day results, and the pre-test
+# results filled from paper/pre_test.json.
+RESULT_HEADINGS = ("Results", "Robustness", "Canaries", "Markouts", "Data",
+                   "How the market maker quotes", "How the design changed", "What the signals know",
+                   "Why quoting at the touch", "Tuning and canaries", "GLFT")  # fmt: skip
 DECIMAL = re.compile(r"(?<![\w.{])-?\d+\.\d+(?![\w.}])")
 PLACEHOLDER = re.compile(r"\{\{[^}]*\}\}")
 
