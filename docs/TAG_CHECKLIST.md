@@ -4,10 +4,26 @@ What must happen before Ilia creates and pushes the annotated tag prereg-v1 (CLA
 only Ilia touches tags). State as of 2026-10-26, commit given in the git log of this file.
 Each item says who acts and where the material is. The order is the order to do them in.
 
+## 0. For Ilia to decide first: Q38, the markout clock (section 6)
+
+What it is: a markout adds its horizon h to the fill's exchange time, but reads the mid on
+the decision-step grid, which runs on local time, a feed latency (a few ms) behind the
+exchange clock. eval/markouts.py states this; PREREGISTRATION.md does not.
+
+What it would change in section 6: one sentence added to the "Markouts" bullet, which
+now reads "for each fill, 10,000 * side * (mid(t_fill + h) - p_fill) / p_fill ... h in
+{1 s, 10 s, 60 s}". Proposed sentence: "t_fill is the fill's exchange time, and mid(t) is
+the mid at the last decision step at or before t on the local clock, so the mid lags the
+exchange clock by the feed latency." No code, metric or pass rule changes; markouts are a
+secondary, exploratory metric.
+
+Recommendation: add the sentence and keep the code. At horizons of 1 s and more a few ms
+of offset is small, and moving the lookup to exchange time would change every markout
+reported so far. Not applied, because it changes frozen text (docs/OPEN_QUESTIONS.md).
+
 ## 1. Protected-path changes
 
-All applied on 2026-10-26, each through Ilia's permission prompt while he was at the
-keyboard:
+All applied on 2026-10-26, each through Ilia's permission prompt or on his instruction:
 
 1. Q14, the stricter test-day lock (commit 3d98a41). src/toxic_flow/data/split_lock.py
    opens a test day only if prereg-v1 is an annotated tag, origin is the URL in
@@ -26,10 +42,14 @@ keyboard:
    not enter a symlinked folder, so after the SSD move (section 3) the check "no test-day
    path under data/" would have passed without looking at data/raw. It now uses
    os.walk(followlinks=True); found while writing docs/ssd_move.md.
+5. configs/repo.yaml added to .claude/protected-paths.txt (commit 36a3152, Ilia's
+   instruction), so an edit of the origin the test-day lock compares against asks Ilia
+   (code-review finding 1; docs/proposals/protect_repo_yaml.md).
 
 ## 2. Milestone checks and vivas
 
-`uv run python scripts/check_milestone.py M<n>` on 2026-10-26, after the changes above:
+`uv run python scripts/check_milestone.py M<n>` on 2026-10-26, after the changes of this
+file, including the M5 dress rehearsal (section 4):
 
 | Milestone | Result | What fails |
 |---|---|---|
@@ -49,26 +69,25 @@ scripts/verify_raw.py, the check script and the fill-hold control F) found 10 is
 docs/reviews/code_review_2026-10-26.md lists each with its outcome. Fixed with tests: F's
 hold frozen and checked by the summary guard (2, 3), computed text in the generated
 run-length section (4), draft sections kept (5), verify_raw on Finder metadata and nested
-links (6). Logged: configs/repo.yaml is not protected, so the lock's origin check rests
-on an unprotected file (1; docs/proposals/protect_repo_yaml.md, one line for Ilia to add
-to .claude/protected-paths.txt); RL and R share a random stream across controls of
+links (6). Applied on Ilia's instruction: configs/repo.yaml, on which the lock's origin check
+rests, is now protected (1; section 1, item 5). Logged: RL and R share a random stream across controls of
 different strategies (7; no single comparison is affected); two cleanups (9, 10). Finding
 8 needed no change. The leakage-auditor ran on the run-length run (section 4,
 docs/audit_run_length.md).
 
 ## 3. Disk for the 16 test days
 
-Free now: 17 GB (`df -H /`, 2026-10-26 after this block, decimal GB; it moves with swap,
-between 11 and 19 GB today). The floor Ilia set is 3 GB (the watchdog stops runs below it).
+Free now: 13 GB (`df -H /`, 2026-10-26 after the M5 dress rehearsal, decimal GB; it moves
+with swap, between 11 and 19 GB today). The floor Ilia set is 3 GB (the watchdog stops runs below it).
 Raw files may never be deleted, so all 16 test days' raw files must fit at once.
 
 | Item | GB | Basis |
 |---|---|---|
 | Raw, 16 test days | about 9.9 (4.2 to 16.2) | estimate in docs/disk_budget.md: the 18 measured train and val days' mean, smallest and largest day, times 16; test-day sizes cannot be known before the tag |
 | Converted cache, one day at a time | at most about 1.4 | docs/disk_budget.md, largest day at the measured ratio |
-| Results of the two test-day runs | about 2.0 | estimate: about 61 cells a day (B0 to B3 in 8 cells, the canaries, 9 R, 6 RL and 1 F runs) times 16 days, at the 2.1 MB a cell of results/4db60c584c71 |
+| Results of the two test-day runs | about 1.2 | measured in the M5 dress rehearsal: 61 cells a day (45 in the first run, 16 in the second) took 429 MB over the 6 validation days, about 72 MB a day, times 16; the earlier estimate from results/4db60c584c71 was 2.0 |
 | Floor | 3.0 | Ilia's rule |
-| Total | about 16.3 (10.6 to 22.6) | |
+| Total | about 15.5 (9.8 to 21.8) | |
 
 Decided by Ilia on 2026-10-26: an external SSD for data/raw. docs/ssd_move.md has the
 steps (only data/raw moves, through a symlink; APFS; copy, verify the copy, switch, verify
@@ -124,19 +143,67 @@ Decided on 2026-10-26:
   runs and a Design history entry for no gain in what the test can show. Ilia can still
   change any of them before the tag.
 
+Decided by Ilia later on 2026-10-26, all applied:
+- Q34, Q35, Q36, Q50 written into PREREGISTRATION.md as he worded them, with a Design
+  history entry (commit 4f6a1c5). Section 3 states that fills include those where the book
+  moves through our quote with no trade at our price; each cell now records the share of
+  such fills (no_print_fill_share: no opposite print at or through our price at the
+  fill's exchange time, from the hashed raw trades, commit 19347d5), and the summary and
+  the paper report it for every day. Section 8: selectivity is the median over test days
+  of the daily ratio. Section 10: pass rules use the 95% percentile bootstrap, 10,000
+  resamples, seed 1729. Section 11: a row for bootstrap and t intervals that disagree
+  about 0, printed word for word by eval/bootstrap.conclusion whatever the size of the
+  mean; a test checks that every statement the code can print is a section 11 row.
+- Q37 and Q40 applied as recommended, since they change no frozen text. Q38 is open
+  (section 0). docs/OPEN_QUESTIONS.md has each answer.
+- C3 flag revised (commit 36e0bb7): a non-zero-latency run of B3 flags only if it beats
+  the zero-latency run by more than the MDE on the mean, or with a bootstrap interval for
+  the daily difference that excludes 0. Section 10 and the Design history. Prompted by the
+  dress rehearsal below.
+- The paper has control F as its own exploratory section, "Control F: not rejoining the
+  side just filled", with the validation result and five limitations next to it: 6 days
+  that also chose B3's settings; F's pull share matched on training days but not on these
+  (pre_f_share keys); F built after an audit of these days, so they cannot test it;
+  primary cell only; simulated fills.
+
+M5 dress rehearsal (2026-10-26): the whole test-day pipeline on the 6 validation days in
+place of the test days, output in the session scratchpad only, deleted afterwards; no
+number from it is in the repo. A driver (outside the repo) ran the real code in separate
+steps and redirected only paths: make_v2_configs.py confirmatory and controls (the test
+split read as the validation days), run 1 through run_c2.py's oracle, run 2, analyse.py
+summary with its guards (only the tag-ancestry check answered yes, since no tag exists),
+and the paper steps (pre_test, build_paper, figures, check_paper). Run 1 took 71 minutes
+for 270 cells and run 2 41 minutes for 96 cells, so about 5 hours for 16 test days of the
+same size; 429 MB of results. Every guard passed: both planned runs present once each,
+every control at its strategy's realised rate and runs, F at the frozen hold, s equal to
+section 9, config hashes equal to the configs. The rehearsal's numbers equal the
+committed validation runs where they overlap (C1 - R1, C2 - B1, B3 - RL_B3, B3 - F), so
+the test-day config builders give the strategies the validation runs used. Found and
+fixed, each with a test:
+1. A full fill or step buffer stopped recording silently, which would corrupt every
+   metric of a cell; the busiest training cell had 169,550 fills against a 500,000 buffer.
+   A cell now stops if a buffer is full or the recorded fills differ from hftbacktest's
+   count (equal in every committed run and every rehearsal cell); buffer 2,000,000
+   (commit fbe7f45).
+2. The C3 flag fired on noise: B3 at low latency beat zero latency on the mean by a
+   noise-level margin. The leakage-auditor found no leak (toxic decisions identical at
+   all latencies, the zero and high rows equal to results/5d27bc8ae820). Rule revised by
+   Ilia (above).
+3. The one-page summary printed the test result without its limitations paragraph, and
+   its axis labels were cut at the page edge and overlapped (commit 3efca19).
+4. The README test-run steps lacked the commits the run needs: run_config refuses an
+   uncommitted config or a changed tree, and AC5.2 needs the exclusion record committed
+   before the first run (commit 761168c).
+Not reachable by the rehearsal: the test-day lock and download, the exclusion step on
+test days, and analyse.py's check that each run's commit follows the tag.
+
 Still open:
+- Q38, the markout clock (section 0).
 - Vivas M0 to M4 (section 2).
-- configs/repo.yaml into .claude/protected-paths.txt (docs/proposals/protect_repo_yaml.md).
-- Q32 to Q51: docs/OPEN_QUESTIONS.md. 13 are closed (facts, decided, or v1 only). 7 are
-  open, with a recommended answer each, ordered by what the tag freezes: Q36 (a section 11
-  row for intervals that disagree), Q34 (section 10 names the bootstrap interval), Q35
-  (section 8 selectivity is the median of daily ratios), Q50 (section 3 states fills where
-  the book moves through the quote), Q40 (the converter fix), Q38 (section 6 markout
-  clock), Q37 (paper only). The first four change frozen text, so they are for before the
-  tag.
 - The C1 rule revision of 2026-10-26 is disclosed in the Design history; it was made
   after seeing C1 fail against B1 on the validation days.
-- M5 code for v2 (2026-10-26), tested on synthetic configs, never run on a test day:
+- M5 code for v2 (2026-10-26), tested on synthetic configs and run end to end on the
+  validation days in the dress rehearsal (section 4), never run on a test day:
   engine/configs.v2_confirmatory (B0 to B3 in all 8 cells, C1, C2 and C4 in the primary
   cell, C3 at zero latency) and v2_confirmatory_controls (R1, R_B3, R_B2b, RL_B3 and
   RL_B2b at the first run's realised rates and, for RL, pulled runs, and F at the frozen
