@@ -233,7 +233,7 @@ def cmd_report(train_b: Path, tune: list[Path], canaries: Path, mde_run: Path) -
           f"- AC4.3, the C1 interval against B1 includes 0: {verdict[can['C1']['pass']] if 'C1' in can else 'not run'}.",
           "- C3, mean BEF of B3 by latency, bp: "
           + ", ".join(f"{k} {fmt(v)}" for k, v in c3.get("mean_bef_bp", {}).items())
-          + f"; flag (a non-zero latency above zero latency): {c3.get('flag')}.",
+          + f"; flag (section 10): {c3.get('flag')}.",
           f"- C4, matches B3 within the interval: {can.get('C4', {}).get('matches_b3')}.",
           "", f"Statement from eval/analysis.canaries: {can['statement']}"]  # fmt: skip
     # The sections the later subcommands wrote stay after the report (put_section). A

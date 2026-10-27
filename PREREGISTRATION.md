@@ -76,6 +76,16 @@ already did. The section 11 row replaces the sentence the code printed for that 
 the share of such fills is newly reported. None changes a pass rule or a validation
 result.
 
+The C3 flag (section 10) was changed on 2026-10-26 by Ilia Duda, after the M5 dress
+rehearsal (the planned test-day pipeline run on the 6 validation days, its output deleted
+afterwards) showed the rule first written firing on noise: B3 at low latency beat its
+zero-latency run on the mean by 0.0002 bp, about 0.1 standard errors of the daily
+difference, and the leakage audit found no leak. As first written, C3 flagged if any
+non-zero-latency run of B3 beat the zero-latency run on the mean. It now flags only if
+that lead is larger than the MDE, or if the bootstrap interval for the daily difference
+excludes 0. C3 has no pass rule, and the change was made before any test-day data was
+downloaded.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -427,7 +437,9 @@ section 8: the 95% percentile interval from 10,000 resamples of days, seed 1729.
   Pass: the mean gain over B1 on validation days is larger than 3 times the MDE. If C2
   fails, the harness cannot convert information into PnL, and the study stops.
 - C3, zero latency: B3 selected settings at zero latency. Reported as an upper bound.
-  Flag if any non-zero-latency run of B3 beats it on the mean.
+  Flag if any non-zero-latency run of B3 beats it by more than the MDE on the mean, or
+  with a bootstrap interval for the daily difference (non-zero minus zero latency, same
+  queue model) that excludes 0 (revised 2026-10-26, Design history).
 - C4, wrong decay: B3 at its selected p, K and magnitude rule, with beta multiplied by 10
   and divided by 10, alpha rescaled so the branching ratio stays at its fitted value, and
   K, theta_u(p) and theta_m computed on training days for each variant by the section 5

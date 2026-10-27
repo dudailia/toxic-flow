@@ -102,12 +102,12 @@ def test_canaries_by_section_10():
         + rows("C1", list(NOISE))  # signs shuffled: no gain over R1
         + r1([0.0] * 12)
         + rows("C2", [5.0] * 12)  # the oracle wins by far
-        + rows("B3", [0.2] * 12, latency="zero")  # C3 below B3 at high latency
+        + rows("B3", list(-1.5 + NOISE), latency="zero")  # far below B3 at high latency
         + rows("C4_x10", list(0.3 + NOISE)) + rows("C4_x0.1", [-1.0] * 12)
     )  # fmt: skip
     out = analysis.canaries(m, mde_bp=1.0)
     assert out["C1"]["pass"] and out["C2"]["pass"]
-    assert out["C3"]["flag"]  # B3 at high latency beats its zero-latency run
+    assert out["C3"]["flag"]  # B3 at high latency beats zero latency by more than the MDE
     assert out["C4"]["decay_not_driver"]  # x10 matches B3 within the interval
     assert "fitted decay is not what drives" in out["statement"]
 
@@ -279,6 +279,23 @@ def test_c1_against_b3_is_reported_as_descriptive():
     assert c1["pass"] is True
     assert c1["vs_B3"]["label"] == "descriptive"
     assert c1["vs_B3"]["mean"] == pytest.approx(NOISE.mean() - 0.5)
+
+
+def test_c3_flags_a_lead_over_the_mde_or_with_an_interval_above_0_but_not_noise():
+    """Section 10 as revised 2026-10-26: a noise-level lead of a non-zero latency, like the
+    one in the M5 rehearsal, does not flag."""
+    base = [rows("B1", [0.0] * 12), rows("B3", list(0.0 + NOISE), latency="zero")]
+    flat = lambda high: pl.DataFrame([r for x in base for r in x] + rows("B3", high))  # noqa: E731
+    noise = analysis.canaries(flat(list(0.0002 + NOISE[::-1])), mde_bp=0.5)["C3"]
+    assert noise["minus_zero"]["high"]["mean"] == pytest.approx(0.0002, abs=1e-12)
+    assert noise["flag"] is False
+    # Every day 0.01 bp above zero latency: below the MDE, but the interval excludes 0.
+    assert analysis.canaries(flat(list(0.01 + NOISE)), mde_bp=0.5)["C3"]["flag"] is True
+    # One large day: the mean is over the MDE, though the interval includes 0.
+    big = list(NOISE)
+    big[0] += 12 * 0.6
+    c3 = analysis.canaries(flat(big), mde_bp=0.5)["C3"]
+    assert c3["minus_zero"]["high"]["bootstrap_ci"][0] <= 0 and c3["flag"] is True
 
 
 def test_c3_without_fills_at_zero_latency_has_no_verdict():

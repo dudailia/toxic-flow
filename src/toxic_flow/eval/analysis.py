@@ -214,18 +214,33 @@ def canaries(m: pl.DataFrame, mde_bp: float) -> dict:
             for lat in ("zero", "low", "high")
             if _has(m, "B3", q, lat)
         }
-        others = [v for lat, v in mean.items() if lat != "zero"]
-        # A NaN mean (no day with fills) compares False with anything, so it would read as
-        # "zero latency was above"; without both means there is no verdict (review, M2/M3).
-        known = np.isfinite(mean["zero"]) and others and np.all(np.isfinite(others))
-        flag = any(v > mean["zero"] for v in others) if known else None
-        out["C3"] = {"mean_bef_bp": mean, "flag": flag}
+        # Revised 2026-10-26 (Design history): a non-zero latency flags only if it beats
+        # zero latency by more than the MDE on the mean, or with a bootstrap interval of the
+        # daily difference above 0. The rule first written flagged any lead, and in the M5
+        # rehearsal it fired on a noise-level lead.
+        zero = _by_day(m, "B3", q, "zero", BEF)
+        beats = {}
+        for lat in ("low", "high"):
+            if not _has(m, "B3", q, lat):
+                continue
+            _, d, _ = paired_differences(_by_day(m, "B3", q, lat, BEF), zero)
+            if len(d) < 2:
+                beats[lat] = None  # no interval, so no verdict either way
+                continue
+            lo, hi = bootstrap_ci(d)
+            beats[lat] = {"mean": float(d.mean()), "bootstrap_ci": (lo, hi),
+                          "beats": bool(d.mean() > mde_bp or lo > 0)}  # fmt: skip
+        known = [b["beats"] for b in beats.values() if b is not None]
+        flag = None if not beats or None in beats.values() else any(known)
+        out["C3"] = {"mean_bef_bp": mean, "minus_zero": beats, "flag": flag}
         text.append(
-            "C3, zero latency: a mean is missing (no day with fills), so no verdict."
+            "C3, zero latency: a non-zero latency has no interval against it, so no verdict."
             if flag is None
-            else "Flag: B3 at a non-zero latency beat its zero-latency run on the mean."
+            else "Flag: B3 at a non-zero latency beat its zero-latency run by more than the "
+            "MDE, or with a bootstrap interval above 0."
             if flag
-            else "C3, zero latency, was above B3 at every non-zero latency on the mean."
+            else "C3, zero latency: no non-zero latency beat it by more than the MDE or with a "
+            "bootstrap interval above 0."
         )
     variants = sorted(
         x for x in set(_labelled(m)["label"]) if x.startswith("C4") and _has(m, x)
