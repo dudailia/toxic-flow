@@ -86,6 +86,12 @@ that lead is larger than the MDE, or if the bootstrap interval for the daily dif
 excludes 0. C3 has no pass rule, and the change was made before any test-day data was
 downloaded.
 
+Section 6 gained one sentence on 2026-10-26, decided by Ilia Duda before any test-day
+data was downloaded (Q38, docs/OPEN_QUESTIONS.md): a markout's horizon is added to the
+fill's exchange time, while the mid is read on the decision-step grid, which runs on the
+local clock a feed latency behind. It states what eval/markouts.py already did; no code,
+metric or pass rule changed.
+
 ## 1. Question
 
 On Binance USDT-M BTCUSDT perpetual tick data, does a causal Hawkes estimate of
@@ -326,7 +332,9 @@ For strategy s on day i, over the quoting window:
   It applies to the test days. For training and validation days before 2025-03-03 it is
   a hypothetical rate.
 - Markouts: for each fill, 10,000 * side * (mid(t_fill + h) - p_fill) / p_fill, side = +1
-  for a buy, h in {1 s, 10 s, 60 s}. Negative means adverse selection.
+  for a buy, h in {1 s, 10 s, 60 s}. Negative means adverse selection. t_fill is the
+  fill's exchange time, and mid(t) is the mid at the last decision step at or before t on
+  the local clock, so the mid lags the exchange clock by the feed latency.
 - Inventory variance: variance of q sampled each second, in order-size units.
 - Fill rate: fills per quoting hour. Quote presence: share of time both sides are quoted.
 

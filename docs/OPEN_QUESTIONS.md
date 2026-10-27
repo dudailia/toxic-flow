@@ -9,13 +9,7 @@ they change no frozen text.
 
 ## Still open, for Ilia
 
-1. Q38, section 6 markouts (frozen, secondary metric). The horizon is added to the fill's
-   exchange time, but the mid is read on the local-time step grid, a feed latency (a few
-   ms) behind. Already stated in eval/markouts.py. Recommended: state it in section 6 in
-   one sentence and keep the code; at horizons of 1 s and more the offset is small, and
-   moving the lookup to exchange time would change every markout reported so far. Not
-   applied: it changes frozen text, and Ilia's instruction of 2026-10-26 was to apply only
-   recommendations that change none.
+None.
 
 ## Closed
 
@@ -29,6 +23,7 @@ before the tag.
 | Q35 | selectivity: median of daily ratios or ratio of medians | Decided by Ilia 2026-10-26: the median over test days of the daily ratio of B3 to B2b traded notional; written into section 8. The code already did this (eval/bootstrap.selectivity). |
 | Q36 | section 11 had no row for intervals that disagree about 0 | Decided by Ilia 2026-10-26: the row "The bootstrap and t intervals disagree on whether 0 is inside", statement "Inconclusive: the two intervals disagree on whether 0 is inside." Written into section 11; eval/bootstrap.conclusion prints it whatever the size of the mean, and a test checks that every statement is a section 11 row word for word. |
 | Q37 | the paper prints the tag's creation time, not its push time | Applied as recommended (no frozen text): scripts/analyse.py keeps reading the creation time from git, and the push time stays Ilia's first DEVIATIONS.md entry. |
+| Q38 | the markout clock: horizon on exchange time, mid on the local-time step grid | Decided by Ilia 2026-10-26: the sentence added to section 6, code kept as is (eval/markouts.py); Design history entry. |
 | Q40 | the Q13 converter fix keeps a larger later snapshot whole | Applied as recommended (no frozen text): confirmed as is. Every training and validation day was converted with it, and its events hashes are in data/manifest.json; undoing it would change every result so far. |
 | Q50 | fills where the book moves through the quote with no print | Decided by Ilia 2026-10-26: section 3 states it, and each day's share is reported. Measured per cell as no_print_fill_share (eval/metrics.no_print_share: no opposite print at or through our price at the fill's exchange time, prices compared in ticks); the test-day summary has the share for every strategy and day in the primary cell, and the paper a table for B0 to B3. No change to the fill model, which is hftbacktest's. |
 | Q32 | configs/selected.yaml format | In use: configs/selected.yaml holds the v2 settings Ilia approved on 2026-10-26. |

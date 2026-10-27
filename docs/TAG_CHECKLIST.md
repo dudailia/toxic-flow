@@ -4,22 +4,11 @@ What must happen before Ilia creates and pushes the annotated tag prereg-v1 (CLA
 only Ilia touches tags). State as of 2026-10-26, commit given in the git log of this file.
 Each item says who acts and where the material is. The order is the order to do them in.
 
-## 0. For Ilia to decide first: Q38, the markout clock (section 6)
+## 0. Q38, the markout clock (section 6): decided
 
-What it is: a markout adds its horizon h to the fill's exchange time, but reads the mid on
-the decision-step grid, which runs on local time, a feed latency (a few ms) behind the
-exchange clock. eval/markouts.py states this; PREREGISTRATION.md does not.
-
-What it would change in section 6: one sentence added to the "Markouts" bullet, which
-now reads "for each fill, 10,000 * side * (mid(t_fill + h) - p_fill) / p_fill ... h in
-{1 s, 10 s, 60 s}". Proposed sentence: "t_fill is the fill's exchange time, and mid(t) is
-the mid at the last decision step at or before t on the local clock, so the mid lags the
-exchange clock by the feed latency." No code, metric or pass rule changes; markouts are a
-secondary, exploratory metric.
-
-Recommendation: add the sentence and keep the code. At horizons of 1 s and more a few ms
-of offset is small, and moving the lookup to exchange time would change every markout
-reported so far. Not applied, because it changes frozen text (docs/OPEN_QUESTIONS.md).
+Decided by Ilia on 2026-10-26: section 6 now says that t_fill is the fill's exchange time
+and that mid(t) is read on the local-clock step grid, so the mid lags the exchange clock
+by the feed latency. The code is unchanged (eval/markouts.py); Design history entry.
 
 ## 1. Protected-path changes
 
@@ -154,8 +143,8 @@ Decided by Ilia later on 2026-10-26, all applied:
   resamples, seed 1729. Section 11: a row for bootstrap and t intervals that disagree
   about 0, printed word for word by eval/bootstrap.conclusion whatever the size of the
   mean; a test checks that every statement the code can print is a section 11 row.
-- Q37 and Q40 applied as recommended, since they change no frozen text. Q38 is open
-  (section 0). docs/OPEN_QUESTIONS.md has each answer.
+- Q37 and Q40 applied as recommended, since they change no frozen text. Q38 decided by
+  Ilia (section 0). docs/OPEN_QUESTIONS.md has each answer.
 - C3 flag revised (commit 36e0bb7): a non-zero-latency run of B3 flags only if it beats
   the zero-latency run by more than the MDE on the mean, or with a bootstrap interval for
   the daily difference that excludes 0. Section 10 and the Design history. Prompted by the
@@ -198,7 +187,6 @@ Not reachable by the rehearsal: the test-day lock and download, the exclusion st
 test days, and analyse.py's check that each run's commit follows the tag.
 
 Still open:
-- Q38, the markout clock (section 0).
 - Vivas M0 to M4 (section 2).
 - The C1 rule revision of 2026-10-26 is disclosed in the Design history; it was made
   after seeing C1 fail against B1 on the validation days.
