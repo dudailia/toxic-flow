@@ -146,3 +146,66 @@ def test_the_bundle_matches_its_schema(bundle):
     validate(bundle, schema, schema)
     with pytest.raises(AssertionError, match="missing"):
         validate({k: v for k, v in bundle.items() if k != "mde"}, schema, schema)
+
+
+REPLAY = ROOT / "site" / "replay_window.json"
+
+
+@pytest.fixture(scope="module")
+def replay() -> dict:
+    return json.loads(REPLAY.read_text())
+
+
+def test_the_replay_window_is_the_minute_the_rule_fixed_and_under_3_mb(replay):
+    assert REPLAY.stat().st_size < 3_000_000
+    assert (replay["day"], replay["window_utc"]) == ("2024-06-01", ["12:00:00", "12:01:00"])
+    from site_replay import DAY, END, START
+
+    assert (DAY, START, END) == ("2024-06-01", "12:00:00", "12:01:00")
+    times = [b["t_ms"] for b in replay["book"]]
+    assert len(times) == 600 and all(0 <= t < 60_000 for t in times)
+    assert replay["signals"]["t_ms"] == times
+    for s in replay["strategies"].values():
+        assert [q["t_ms"] for q in s["quotes"]] == times  # the book each quote was set from
+    assert all(0 <= t["t_ms"] < 60_000 for t in replay["trades"])
+
+
+def test_each_strategy_in_the_replay_reproduces_its_committed_day_result(replay):
+    """The trace test for the replay: the whole day behind the minute equals the committed
+    training-day result, so the minute shown comes from runs already reported."""
+    import polars as pl
+
+    assert set(replay["strategies"]) == {"B1", "B3", "F"}
+    for name, s in replay["strategies"].items():
+        src = s["day_result"]["reproduces"]
+        assert git("ls-files", "--", src).stdout.strip(), src
+        m = pl.read_parquet(ROOT / src)
+        m = m if "label" in m.columns else m.with_columns(label=pl.col("strategy"))
+        label = "F_h0.1" if name == "F" else name
+        r = m.filter((pl.col("label") == label) & (pl.col("day") == "2024-06-01")
+                     & (pl.col("queue") == "risk_averse") & (pl.col("latency") == "high"))  # fmt: skip
+        assert r.height == 1
+        assert r["fills"][0] == s["day_result"]["fills"]
+        assert r["break_even_fee_bps"][0] == pytest.approx(
+            s["day_result"]["break_even_fee_bps"], abs=1e-9
+        )
+
+
+def test_replay_fills_are_simulated_and_pulls_match_the_quotes(replay):
+    for s in replay["strategies"].values():
+        assert all(f["simulated"] is True for f in s["fills"])
+        quotes = {q["t_ms"]: q for q in s["quotes"]}
+        for p in s["pulls"]:
+            pulled = [q for t, q in quotes.items() if p["start_ms"] <= t < p["end_ms"]]
+            assert pulled and all(q[p["side"]] is None for q in pulled)
+    assert replay["strategies"]["B1"]["pulls"] == []  # B1 never pulls
+
+
+def test_replay_book_levels_are_ordered_and_uncrossed(replay):
+    for b in replay["book"]:
+        bids, asks = [p for p, _ in b["bids"]], [p for p, _ in b["asks"]]
+        assert 1 <= len(bids) <= 5 and 1 <= len(asks) <= 5
+        assert bids == sorted(bids, reverse=True) and asks == sorted(asks)
+        assert bids[0] < asks[0]
+    lam = replay["signals"]
+    assert min(lam["hawkes_lambda_b"] + lam["hawkes_lambda_s"]) > 0

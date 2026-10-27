@@ -59,15 +59,15 @@ def ms(ts, w0: int) -> float:
     return round((int(ts) - w0) / 1e6, 3)
 
 
-def book(w0: int, step: int, n: int, tick: float) -> list[dict]:
-    """Top LEVELS levels each side at each step, the local view after feed latency."""
+def book(w0: int, decision: np.ndarray, tick: float) -> list[dict]:
+    """Top LEVELS levels each side at each decision time, the local view after feed
+    latency, so each row is the book the quotes of that step were set from."""
     hbt = build_backtest(DAY, *CELL)
     out = []
     try:
-        hbt.elapse(w0 - hbt.current_timestamp)
-        for k in range(n):
-            if k:
-                hbt.elapse(step)
+        hbt.elapse(1)  # the clock reads INT64_MAX until the first elapse loads data
+        for t_ns in decision:
+            hbt.elapse(int(t_ns) - hbt.current_timestamp)
             d = hbt.depth(0)
             sides = {}
             for name, best, sign, qty in (("bids", d.best_bid_tick, -1, d.bid_qty_at_tick),
@@ -149,7 +149,7 @@ def main() -> None:
         lam = hawkes_at(ev_ts, ev_side, decision, mu, alpha, float(b3["beta"]))
         tau = yaml.safe_load((ROOT / "configs" / "selected.yaml").read_text())["B2b"]["tau_s"]
         u, a = ewma_at(ev_ts, ev_side, decision, float(tau))
-        book_rows = book(w0, step, len(decision), tick)
+        book_rows = book(w0, decision, tick)
         trade_rows = trades(w0, w1)
     finally:
         evict_converted(DAY)
