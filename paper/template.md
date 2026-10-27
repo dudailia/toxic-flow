@@ -314,7 +314,9 @@ estimated, not observed; an order at the front of the queue fills in full on any
 its price; funding payments are not modelled. The simulator also fills a resting quote
 when the book moves through its price with no trade there, which a real venue may treat
 differently. In the primary cell such fills were {{no_print_min}} to {{no_print_max}} of
-a day's fills across B0 to B3; the share for each day:
+a day's fills across B0 to B3.
+
+Share of fills with no trade at or through our price, primary cell, each test day:
 
 {{no_print_table}}
 

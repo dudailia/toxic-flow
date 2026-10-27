@@ -60,7 +60,9 @@ PAGE = [
     ("What the study asks", [0]),
     ("How the design changed before the test", None),
     ("Tuning and canaries on the validation days", [0]),
-    ("Results on the test days", [0, 1]),
+    # The limitations paragraph goes with the result (CLAUDE.md), found by its first word
+    # because its position moves when the template changes.
+    ("Results on the test days", [0, 1, "Limitations"]),
     ("Canaries on the test days", None),
 ]
 FOOTER = (
@@ -92,7 +94,10 @@ def page_text(md: str) -> tuple[str, list[str]]:
         if head not in heads:
             raise KeyError(f"the page has no section {head!r}; update PAGE in paper/figures.py")
         paras = heads[head]
-        chosen = paras if picks is None else [paras[i] for i in picks if i < len(paras)]
+        chosen = paras if picks is None else [
+            p for i, p in enumerate(paras)
+            if i in picks or any(isinstance(x, str) and p.startswith(x) for x in picks)
+        ]  # fmt: skip
         if head:
             out.append(head.upper())
         out += chosen
@@ -106,9 +111,22 @@ def placeholder(ax, label: str) -> None:
     ax.text(0.5, 0.5, label, ha="center", va="center", fontsize=8, color="0.4", wrap=True)
 
 
+# Figure-relative axes boxes: room on the left of each for its y label and tick labels,
+# so no label is cut at the page edge or runs into the other figure.
+AXES = ((0.11, 0.11, 0.36, 0.15), (0.61, 0.11, 0.34, 0.15))
+
+
 def one_page(md: str, out: Path, s: dict | None) -> Path:
     """A4, one page: the chosen paragraphs of the built page, then the two figures (or,
     in the draft, empty frames that say what will be drawn there)."""
+    fig = page_figure(md, s)
+    with PdfPages(out, metadata={"Title": page_text(md)[0]}) as pdf:
+        pdf.savefig(fig)
+    plt.close(fig)
+    return out
+
+
+def page_figure(md: str, s: dict | None):
     title, paras = page_text(md)
     fig = plt.figure(figsize=(8.27, 11.69))
     fig.text(0.06, 0.975, textwrap.fill(title, 70, break_on_hyphens=False), va="top", fontsize=12, weight="bold",
@@ -117,7 +135,7 @@ def one_page(md: str, out: Path, s: dict | None) -> Path:
         p if p.isupper() else textwrap.fill(p, 124) for p in paras
     )  # headings stay on their own line
     fig.text(0.06, 0.935, body, va="top", fontsize=6.5, family="serif", linespacing=1.2)
-    a1, a2 = fig.add_axes((0.08, 0.11, 0.4, 0.15)), fig.add_axes((0.57, 0.11, 0.38, 0.15))
+    a1, a2 = fig.add_axes(AXES[0]), fig.add_axes(AXES[1])
     if s is None:
         placeholder(a1, "Fig. 1, B3 minus B2b on each test day,\ndrawn from results/summary.json")
         placeholder(
@@ -128,10 +146,7 @@ def one_page(md: str, out: Path, s: dict | None) -> Path:
         cells(a2, s)
     fig.text(0.06, 0.015, textwrap.fill(FOOTER, 130), va="bottom", fontsize=6.5, color="0.3",
              family="serif")  # fmt: skip
-    with PdfPages(out, metadata={"Title": title}) as pdf:
-        pdf.savefig(fig)
-    plt.close(fig)
-    return out
+    return fig
 
 
 def build_figures(s: dict, out: Path, md: str) -> list[Path]:

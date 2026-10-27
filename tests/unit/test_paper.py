@@ -180,3 +180,33 @@ def test_every_template_section_with_a_number_is_checked_for_literal_decimals():
         heading, body = section.split("\n", 1)
         if "{{" in body:
             assert heading.startswith(RESULT_HEADINGS), heading
+
+
+def test_the_page_keeps_the_limitations_with_the_result_and_no_label_leaves_its_place(tmp_path):
+    import matplotlib.pyplot as plt
+    from figures import page_figure, page_text
+
+    s = _summary()
+    template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
+    (tmp_path / "s.json").write_text(json.dumps({k: v for k, v in s.items()
+                                                 if not isinstance(v, dict)}))  # fmt: skip
+    page = build(template, tmp_path / "s.json", tmp_path / "paper.md", PRE_TEST).read_text()
+    _, paras = page_text(page)
+    i = paras.index("RESULTS ON THE TEST DAYS")
+    assert any(p.startswith("Limitations, stated with the result") for p in paras[i:])
+    # Values of the size the M5 rehearsal drew (hundredths and thousandths of a bp), whose
+    # long tick labels pushed the first y label off the page.
+    h = s["h1"]
+    to_small = lambda x: x / 10 - 0.05  # noqa: E731
+    h["primary"]["per_day"] = {d: to_small(v) for d, v in h["primary"]["per_day"].items()}
+    h["primary"]["bootstrap_ci"] = tuple(map(to_small, h["primary"]["bootstrap_ci"]))
+    h["primary"]["t_ci"] = tuple(map(to_small, h["primary"]["t_ci"]))
+    h["primary"]["mean"] = to_small(h["primary"]["mean"])
+    h["cell_means"] = {c: v / 100 - 0.005 for c, v in h["cell_means"].items()}
+    fig = page_figure(page, s)
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    boxes = [a.get_tightbbox(r).transformed(fig.transFigure.inverted()) for a in fig.axes]
+    plt.close(fig)
+    assert all(b.x0 >= 0 and b.x1 <= 1 for b in boxes)  # nothing cut at the page edge
+    assert boxes[0].x1 < boxes[1].x0  # Fig. 2's labels do not run into Fig. 1
