@@ -369,11 +369,12 @@ def buffer_problem(out, max_steps: int = MAX_STEPS, max_fills: int = MAX_FILLS) 
 
 
 def run_cell(
-    cell: dict, cfg: dict, maker_fee_bps: float = 0.0, oracle=None
+    cell: dict, cfg: dict, maker_fee_bps: float = 0.0, oracle=None, keep: dict | None = None
 ) -> tuple[dict, pl.DataFrame]:
     """One day of one strategy in one queue-model and latency cell. Returns (metrics row,
     fills with markouts). maker_fee_bps puts a fee into hftbacktest itself (AC2.3 test);
-    oracle is C2's series builder (see _overlay_args)."""
+    oracle is C2's series builder (see _overlay_args). keep, if given, receives the day's
+    decision steps and sorted fills (scripts/site_replay.py draws them)."""
     day = cell["day"]
     assert_allowed(day)
     venue = venue_for(day)
@@ -417,6 +418,8 @@ def run_cell(
     # hftbacktest lists orders in hash-map order, which differs between processes; sorted
     # fills make every sum below, and so every metric, the same in every run.
     fills = np.sort(fills, order=["local_ts", "order_id"])
+    if keep is not None:
+        keep.update(steps=steps, fills=fills)
     fee_levels = {
         name: venue["maker_fee_bps"] if f == "venue" else float(f)
         for name, f in cfg["fee_levels_bps"].items()

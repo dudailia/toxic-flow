@@ -1,4 +1,4 @@
-.PHONY: check check-full hooks data run paper paper-draft
+.PHONY: check check-full hooks data run paper paper-draft site-data
 
 # Fast gate, run by the pre-commit hook: lint, then every test not marked slow. That
 # includes tests/leakage and the writing lint in tests/test_writing.py.
@@ -41,3 +41,10 @@ paper-draft:
 	uv run python paper/build_paper.py --draft
 	uv run python paper/figures.py --draft
 	uv run python paper/check_paper.py --draft
+
+# The project page's data, from committed results only: site/toxic-flow.json (training and
+# validation results, test-day keys null) and site/replay_window.json (one fixed minute of
+# 2024-06-01, which the script checks against the committed runs it reproduces).
+site-data:
+	uv run python scripts/site_data.py
+	uv run python scripts/site_replay.py

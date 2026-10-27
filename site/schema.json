@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dudailia/toxic-flow/site/schema.json",
+  "title": "toxic-flow project page bundle (site/toxic-flow.json)",
+  "description": "Built by scripts/site_data.py from committed results only. Training and validation days; every test-day value is null until the test run. Simulated fills.",
+  "type": "object",
+  "required": ["title", "note", "units", "primary_cell", "cells", "splits", "runs", "design_history",
+               "preregistered_conclusions", "hawkes_fit", "mde", "training", "validation",
+               "matched_p", "fill_hold", "signal_information", "glft", "test"],
+  "$defs": {
+    "ci": {"type": "array", "items": {"type": ["number", "null"]}, "minItems": 2, "maxItems": 2},
+    "comparison": {
+      "type": "object",
+      "required": ["a", "b", "cell", "label", "source", "n_days", "days_dropped", "mean_bp",
+                   "bootstrap_ci_bp", "t_ci_bp", "days_positive", "per_day_bp"],
+      "properties": {
+        "a": {"type": "string"}, "b": {"type": "string"}, "cell": {"type": "string"},
+        "label": {"type": "string"}, "source": {"type": "string"},
+        "n_days": {"type": "integer"}, "days_dropped": {"type": "array", "items": {"type": "string"}},
+        "mean_bp": {"type": ["number", "null"]},
+        "bootstrap_ci_bp": {"$ref": "#/$defs/ci"}, "t_ci_bp": {"$ref": "#/$defs/ci"},
+        "days_positive": {"type": "integer"},
+        "per_day_bp": {"type": "object", "additionalProperties": {"type": ["number", "null"]}}
+      }
+    }
+  },
+  "properties": {
+    "title": {"type": "string"},
+    "note": {"type": "string"},
+    "primary_cell": {"type": "string"},
+    "cells": {"type": "array", "items": {"type": "string"}, "minItems": 8, "maxItems": 8},
+    "splits": {"type": "object", "required": ["train", "val", "test"],
+               "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "runs": {"type": "object", "additionalProperties": {"type": "object", "required": ["hash", "source"]}},
+    "design_history": {"type": "array", "items": {"type": "object", "required": ["date", "commit", "event"],
+      "properties": {"date": {"type": ["string", "null"]}, "commit": {"type": ["string", "null"]},
+                     "event": {"type": "string"}}}},
+    "preregistered_conclusions": {"type": "object", "required": ["source", "rows"],
+      "properties": {"rows": {"type": "array", "items": {"type": "object",
+        "required": ["outcome", "statement", "key"],
+        "properties": {"outcome": {"type": "string"}, "statement": {"type": "string"},
+                       "key": {"type": "string"}}}}}},
+    "hawkes_fit": {"type": "object", "required": ["source", "params", "se", "loglik", "n_events", "branching_ratio"],
+      "properties": {"params": {"type": "object", "additionalProperties": {"type": "number"}},
+                     "se": {"type": "object", "additionalProperties": {"type": "number"}}}},
+    "mde": {"type": "object", "required": ["source", "s_train_bp", "s_val_bp", "s_bp", "mde_bp", "n_test"]},
+    "training": {"type": "object", "required": ["days", "grids", "comparisons", "strategies"],
+      "properties": {"comparisons": {"type": "array", "items": {"$ref": "#/$defs/comparison"}}}},
+    "validation": {"type": "object", "required": ["days", "comparisons", "c3_mean_bef_bp", "strategies"],
+      "properties": {"comparisons": {"type": "array", "items": {"$ref": "#/$defs/comparison"}}}},
+    "matched_p": {"type": "object", "required": ["source", "rows"],
+      "properties": {"rows": {"type": "array", "items": {"$ref": "#/$defs/comparison"}}}},
+    "fill_hold": {"type": "object", "required": ["source", "hold_s", "pull_share"]},
+    "signal_information": {"type": "object", "required": ["source", "splits"]},
+    "glft": {"type": "object", "required": ["source", "by_gamma", "chosen_gamma", "mid_vs_distance"]},
+    "test": {"type": "object", "required": ["note", "keys", "h1_cell_means_bp", "h1_per_day_bp"],
+      "properties": {"keys": {"type": "object", "additionalProperties": {"type": "null"}},
+                     "h1_cell_means_bp": {"type": "object", "additionalProperties": {"type": "null"}},
+                     "h1_per_day_bp": {"type": "object", "additionalProperties": {"type": "null"}},
+                     "no_print_share": {"type": "null"}, "summary_source": {"type": "null"}}}
+  }
+}
