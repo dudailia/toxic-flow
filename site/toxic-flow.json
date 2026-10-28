@@ -5410,6 +5410,37 @@
   "bef": "break-even maker fee",
   "bp": "basis points of traded notional"
  },
+ "v1": {
+  "c2_minus_b1": {
+   "a": "C2",
+   "b": "B1",
+   "bootstrap_ci_bp": [
+    -1.7829848631396983,
+    -0.06590565732004344
+   ],
+   "cell": "risk_averse/high",
+   "days_dropped": [],
+   "days_positive": 2,
+   "label": "v1 design, superseded; failed canary C2",
+   "mean_bp": -0.8719918508071332,
+   "n_days": 6,
+   "per_day_bp": {
+    "2025-01-01": -2.7332903845180376,
+    "2025-02-01": -0.16894171494714608,
+    "2025-03-01": 0.30325800556569693,
+    "2025-04-01": -1.6316497509323413,
+    "2025-05-01": -1.1645481551684658,
+    "2025-06-01": 0.16322089515749497
+   },
+   "source": "results/9eaa1b3d693c/metrics.parquet",
+   "t_ci_bp": [
+    -2.1202697336276985,
+    0.376286032013432
+   ]
+  },
+  "label": "v1 design, superseded; failed canary C2",
+  "source": "results/9eaa1b3d693c/metrics.parquet"
+ },
  "validation": {
   "c3_mean_bef_bp": {
    "risk_averse": {

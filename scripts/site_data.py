@@ -293,6 +293,18 @@ def timeline() -> list[dict]:
     ]
 
 
+V1_LABEL = "v1 design, superseded; failed canary C2"
+
+
+def v1() -> dict:
+    """v1's oracle canary C2 against its GLFT B1 on the validation days, primary cell, from
+    the committed v1 canary run that docs/M4_draft.md reports. The failure that led to v2
+    (Design history)."""
+    src = run_source("canaries_val_draft")
+    c2 = comparison(pre_test.run("canaries_val_draft"), "C2", "B1", src, V1_LABEL)
+    return {"label": V1_LABEL, "source": src, "c2_minus_b1": c2}
+
+
 def build() -> dict:
     splits = load_splits()
     return {
@@ -318,6 +330,7 @@ def build() -> dict:
         "fill_hold": fill_hold(),
         "signal_information": signal_information(),
         "glft": glft(),
+        "v1": v1(),
         "test": test_keys(),
     }
 

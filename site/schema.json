@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["title", "note", "units", "primary_cell", "cells", "splits", "runs", "design_history",
                "preregistered_conclusions", "hawkes_fit", "mde", "training", "validation",
-               "matched_p", "fill_hold", "signal_information", "glft", "test"],
+               "matched_p", "fill_hold", "signal_information", "glft", "v1", "test"],
   "$defs": {
     "ci": {"type": "array", "items": {"type": ["number", "null"]}, "minItems": 2, "maxItems": 2},
     "comparison": {
@@ -53,6 +53,9 @@
     "fill_hold": {"type": "object", "required": ["source", "hold_s", "pull_share"]},
     "signal_information": {"type": "object", "required": ["source", "splits"]},
     "glft": {"type": "object", "required": ["source", "by_gamma", "chosen_gamma", "mid_vs_distance"]},
+    "v1": {"type": "object", "required": ["label", "source", "c2_minus_b1"],
+      "properties": {"label": {"type": "string"}, "source": {"type": "string"},
+                     "c2_minus_b1": {"$ref": "#/$defs/comparison"}}},
     "test": {"type": "object", "required": ["note", "keys", "h1_cell_means_bp", "h1_per_day_bp"],
       "properties": {"keys": {"type": "object", "additionalProperties": {"type": "null"}},
                      "h1_cell_means_bp": {"type": "object", "additionalProperties": {"type": "null"}},

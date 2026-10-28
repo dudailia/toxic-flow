@@ -67,6 +67,27 @@ def test_every_number_names_committed_results_it_comes_from(bundle):
     assert any(f.startswith("results/") and f.endswith("metrics.parquet") for f in seen)
 
 
+def test_the_v1_block_is_c2_against_b1_from_the_committed_v1_canary_run(bundle):
+    """Covered by the trace test above like every section; here also checked against the
+    run docs/M4_draft.md reports, recomputed from its committed metrics."""
+    import polars as pl
+
+    from toxic_flow.eval import analysis
+
+    v1 = bundle["v1"]
+    assert v1["label"] == v1["c2_minus_b1"]["label"] == "v1 design, superseded; failed canary C2"
+    src = "results/9eaa1b3d693c/metrics.parquet"
+    assert v1["source"] == v1["c2_minus_b1"]["source"] == src
+    assert "9eaa1b3d693c" in (ROOT / "docs" / "M4_draft.md").read_text()
+    c = analysis.compare(pl.read_parquet(ROOT / src), "C2", "B1")
+    got = v1["c2_minus_b1"]
+    assert (got["a"], got["b"], got["cell"]) == ("C2", "B1", "risk_averse/high")
+    assert got["mean_bp"] == c["mean"] and got["days_positive"] == c["n_positive"]
+    assert got["bootstrap_ci_bp"] == list(c["bootstrap_ci"]) and got["t_ci_bp"] == list(c["t_ci"])
+    assert got["per_day_bp"] == c["per_day"] and len(got["per_day_bp"]) == 6
+    assert got["bootstrap_ci_bp"][1] < 0  # the failure: the oracle lost to B1
+
+
 def test_every_test_day_value_is_null(bundle):
     t = bundle["test"]
     assert t["keys"] and all(v is None for v in t["keys"].values())
