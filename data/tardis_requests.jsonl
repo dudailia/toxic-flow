@@ -68,3 +68,67 @@
 {"at": "2026-10-23T20:41:35+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/06/01/BTCUSDT.csv.gz", "status": 200}
 {"at": "2026-10-29T02:43:18+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz"}
 {"at": "2026-10-29T02:43:20+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:56:38+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/07/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:56:38+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/07/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:57:17+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/07/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:57:18+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/07/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:57:20+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/08/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:57:20+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/08/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:58:21+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/08/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:58:22+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/08/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:58:25+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/09/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:58:26+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/09/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:59:16+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/09/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:59:16+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/09/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:59:19+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/10/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:59:19+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/10/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:00:12+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/10/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:00:13+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/10/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:00:16+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/11/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:00:16+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/11/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:00:51+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/11/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:00:51+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/11/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:00:53+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/12/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:00:53+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/12/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:02:09+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/12/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:02:09+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/12/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:02:15+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/01/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:02:16+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/01/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:02:49+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/01/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:02:49+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/01/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:02:50+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/02/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:02:51+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/02/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:04:09+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/02/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:04:10+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/02/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:04:16+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/03/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:04:16+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/03/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:05:34+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/03/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:05:35+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/03/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:05:40+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/04/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:05:40+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/04/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:06:44+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/04/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:06:45+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/04/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:06:49+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/05/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:06:49+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/05/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:07:52+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/05/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:07:52+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/05/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:07:55+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/06/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:07:56+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/06/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:09:29+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/06/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:09:29+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/06/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:09:33+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/07/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:09:34+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/07/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:11:06+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/07/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:11:07+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/07/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:11:11+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/08/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:11:12+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/08/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:11:51+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/08/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:11:51+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/08/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:11:53+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/09/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:11:53+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/09/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:12:55+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/09/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:12:56+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/09/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:12:58+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/10/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:12:59+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/10/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T03:14:10+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/10/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T03:14:11+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/10/01/BTCUSDT.csv.gz", "status": 200}

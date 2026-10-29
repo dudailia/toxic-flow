@@ -1,0 +1,57 @@
+{
+  "date": "2026-02-01",
+  "exclusion_rule_1": false,
+  "exclusion_rule_2": false,
+  "quoting_window_ns": [
+    1769905800000000000,
+    1769990340000000000
+  ],
+  "book_updates": 165955107,
+  "snapshot_rows": 7085,
+  "trades": 6759515,
+  "feed_latency_ms": {
+    "book": {
+      "p50": 3.185,
+      "p90": 4.317,
+      "p99": 12.826,
+      "max": 646.714
+    },
+    "trades": {
+      "p50": 3.897,
+      "p90": 6.16,
+      "p99": 21.739,
+      "max": 613.674
+    }
+  },
+  "largest_gap_s": {
+    "book": 1.402,
+    "trades": 4.759
+  },
+  "largest_gap_starts_utc": {
+    "book": "2026-02-01T15:26:18.108+00:00",
+    "trades": "2026-02-01T03:38:53.166+00:00"
+  },
+  "feed_batches": 7139910,
+  "crossed_book_batches": 0,
+  "one_sided_book_batches": 0,
+  "exclusion_rule_3": false,
+  "inferred": {
+    "tick_size": 0.1,
+    "book_rows": 165962192,
+    "book_rows_off_tick_grid": 0,
+    "trade_rows": 6759515,
+    "trade_rows_off_tick_grid": 0,
+    "lot_size": 0.001,
+    "trade_rows_off_lot_grid": 0
+  },
+  "local_ts_offset_ns": 0,
+  "market_orders": {
+    "prints": 6759515,
+    "unknown_side": 0,
+    "events": 1279709,
+    "collapse_ratio": 5.2821,
+    "multi_print_events": 686641,
+    "max_prints_in_event": 512,
+    "local_ts_offset_ns": 0
+  }
+}
