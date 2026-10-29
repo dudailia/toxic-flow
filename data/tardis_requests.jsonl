@@ -66,3 +66,5 @@
 {"at": "2026-10-23T20:40:55+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2025/06/01/BTCUSDT.csv.gz", "status": 200}
 {"at": "2026-10-23T20:41:34+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/06/01/BTCUSDT.csv.gz"}
 {"at": "2026-10-23T20:41:35+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/trades/2025/06/01/BTCUSDT.csv.gz", "status": 200}
+{"at": "2026-10-29T02:43:18+00:00", "event": "request", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz"}
+{"at": "2026-10-29T02:43:20+00:00", "event": "response", "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2024/05/01/BTCUSDT.csv.gz", "status": 200}
