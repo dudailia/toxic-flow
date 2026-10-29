@@ -63,3 +63,17 @@ Each later entry: date, what changed, why, which results it affects, fixing comm
 - Effect on results: none. The confirmatory run reads test days only; every training and
   validation result is already in results/ and the files can be fetched again as the same
   bytes.
+
+## 4. The first confirmatory run was cut off by a reboot (2026-10-29)
+
+- What: the confirmatory run (configs/runs/confirmatory.yaml, committed in 255b523, results
+  folder results/fb5cb1e00ce5) started at about 07:47Z on 2026-10-29 through
+  tests/canary/run_c2.py. The Mac restarted for a macOS update: Ilia gives about 05:49 EDT;
+  the run's folder was last written at 06:01:01 EDT; the machine was up again at 08:47:22
+  EDT (kern.boottime). The run never finished: it wrote no metrics.parquet and no
+  meta.json, so it has no result.
+- Treated as void, on Ilia's instruction, before any of its results were analysed: none of
+  its files was opened, read, analysed or committed.
+- Restart: from the same committed config, so the same config hash and results folder
+  (results/fb5cb1e00ce5), from the first cell. No code or config changed.
+- Effect on results: none. Only the restarted run is reported.
