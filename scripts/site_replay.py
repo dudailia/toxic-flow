@@ -109,6 +109,12 @@ def pulls(steps: np.ndarray, w0: int, step: int) -> list[dict]:
 
 
 def main() -> None:
+    # A fresh clone has no raw data: say which day to fetch rather than fail inside the engine.
+    missing = [
+        f for f in ("incremental_book_L2.csv.gz", "trades.csv.gz") if not (RAW / DAY / f).exists()
+    ]
+    if missing:
+        raise SystemExit(f"site_replay needs data/raw/{DAY}/: run make data DAYS={DAY}")
     cfg = yaml.safe_load(CONFIG.read_text())
     w0, w1 = utc_ns(DAY, START), utc_ns(DAY, END)
     step, tick = int(cfg["step_ns"]), venue_for(DAY)["tick_size"]

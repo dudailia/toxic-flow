@@ -1175,3 +1175,20 @@ deleted. The disk watchdog ran during the run.
   the machine used memory; it then ran without a refusal ending it.
 
 No test-day URL was requested, no tag was touched, nothing was downloaded.
+
+# Master plan block, 2026-10-28 (phases A to D, unattended)
+
+Rules kept: no tag command; no test-day URL before prereg-v1 is on origin; no edit to a path
+in .claude/protected-paths.txt (this session runs from another project directory, so the
+guard hook does not fire for it; the rule is kept by hand); a commit and push after each
+item. Where a decision was needed, the option that changes the least was taken and is
+listed under "Judgment calls" below.
+
+## Phase A
+
+1. Fresh clone (git clone from origin into a temp folder, uv sync, make check): exit 0,
+   415 passed, 31 deselected, 1 min 23 s. make paper-draft also passes there. make
+   site-data stopped inside the engine with a traceback, because scripts/site_replay.py
+   replays 2024-06-01 and a clone has no data/raw. It now stops first with
+   "site_replay needs data/raw/2024-06-01/: run make data DAYS=2024-06-01". No other trip
+   found.
