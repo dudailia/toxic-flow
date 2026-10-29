@@ -1,0 +1,150 @@
+# Written by scripts/make_v2_configs.py (v2).
+name: confirmatory
+label: confirmatory
+days:
+- '2026-01-01'
+- '2025-11-01'
+- '2026-08-01'
+- '2025-07-01'
+- '2026-05-01'
+- '2025-10-01'
+- '2025-09-01'
+- '2026-04-01'
+- '2026-09-01'
+- '2026-03-01'
+- '2026-10-01'
+- '2025-08-01'
+- '2026-02-01'
+- '2026-06-01'
+- '2025-12-01'
+- '2026-07-01'
+strategies:
+- name: B0
+  design: v2
+- name: B1
+  design: v2
+- name: B2
+  design: v2
+  p: 0.25
+  k_ticks: pull
+  magnitude: false
+  ofi_window_s: 5.0
+  K: 4.663662
+  theta_u: 0.7320441752672195
+  theta_m: 0.31903523206710815
+- name: B2b
+  design: v2
+  p: 0.25
+  k_ticks: pull
+  magnitude: false
+  tau_s: 5.0
+  K: 2.649641
+  theta_u: 0.40453990548849106
+  theta_m: 0.24822858572006218
+- name: B3
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  K: 3.878084
+  theta_u: 0.5693326056003569
+  theta_m: 0.21842259168624867
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+- name: C1
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  seed: 1729
+  K: 3.878084
+  theta_u: 0.5693326056003569
+  theta_m: 0.21842259168624867
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+  cells: &id001
+  - - risk_averse
+    - high
+- name: C2
+  design: v2
+  cells: *id001
+- name: C4
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  label: C4_x10
+  decay_factor: 10.0
+  K: 9.303423
+  theta_u: 0.6897379815578459
+  theta_m: 0.09920914694666862
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+  cells: *id001
+- name: C4
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  label: C4_x0.1
+  decay_factor: 0.1
+  K: 2.197368
+  theta_u: 0.39317987561225864
+  theta_m: 0.23076734542846672
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+  cells: *id001
+- name: B3
+  design: v2
+  p: 0.05
+  k_ticks: pull
+  magnitude: false
+  K: 3.878084
+  theta_u: 0.5693326056003569
+  theta_m: 0.21842259168624867
+  mu_b: 1.9679062115024324
+  mu_s: 1.8787333856834776
+  alpha_bb: 8.148885923056378
+  alpha_bs: 1.0116655893123387
+  alpha_sb: 1.2233069281570115
+  alpha_ss: 8.12478827995103
+  beta: 13.801394306161166
+  cells:
+  - - risk_averse
+    - zero
+queue_models:
+- risk_averse
+- power3
+- power2
+- log
+latencies:
+- low
+- high
+quote_start: 00:30:00
+quote_end: '23:59:00'
+step_ns: 100000000
+max_lots: 10
+fee_levels_bps:
+  standard_maker: venue
+  zero: 0.0
+  lp_tier1: -0.1
