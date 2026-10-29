@@ -129,5 +129,5 @@ Recorded in DEVIATIONS.md, entry 3.
   training or validation day, `make site-data` (it replays 2024-06-01), the slow test
   tests/unit/test_raw_hashes.py, and the M0 and M1 checks that read raw files.
 - For M5: the 16 test days need about 9.9 GB of raw (4.2 to 16.2 GB, section "Totals"), so
-  about 19.2 GB stays free after the download (13.0 to 24.9 GB), above the 12 GB conversion
+  about 19.2 GB stays free after the download (12.9 to 24.9 GB), above the 12 GB conversion
   floor, with one converted day (at most about 1.4 GB) cached at a time.
