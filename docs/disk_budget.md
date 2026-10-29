@@ -109,3 +109,25 @@ differently would not help much: the reader holds the whole day's book rows (34 
 6.3 GB for 2024-05-01) before cutting parts. A two-pass reader that keeps only timestamps
 for the cut search would lower it; it is not built. hftbacktest itself takes a day as
 several files, so the limit is this reader, not the engine.
+
+## Training and validation raw files removed (Ilia's decision, 2026-10-28)
+
+Ilia: "I approve removing data/raw for the 18 train and val days only, after
+scripts/restore_raw.py has been tested, because they are public and pinned by SHA-256."
+Recorded in DEVIATIONS.md, entry 3.
+
+- Tested first: tests/unit/test_restore_raw.py, and a live restore on 2026-10-29 of
+  2024-05-01's book file, which had been removed by hand (DEVIATIONS.md, entry 2): fetched
+  through the downloader in 70 s, SHA-256 equal to its pin.
+- Removed on 2026-10-29 with `uv run python scripts/restore_raw.py --remove train val`: 36
+  files, each checked against its pin first. data/raw held 11.12 GB before (du); free disk
+  went from 18.00 GB to 29.13 GB (df). No test-day file existed or was touched.
+- The manifest keeps all 36 pins. `uv run python scripts/verify_raw.py` now reports the 36
+  files missing; that is expected until they are restored.
+- To bring them back: `uv run python scripts/restore_raw.py` (all 18 days, about 11.1 GB)
+  or with one date, then `uv run python scripts/verify_raw.py`. Needed before any run on a
+  training or validation day, `make site-data` (it replays 2024-06-01), the slow test
+  tests/unit/test_raw_hashes.py, and the M0 and M1 checks that read raw files.
+- For M5: the 16 test days need about 9.9 GB of raw (4.2 to 16.2 GB, section "Totals"), so
+  about 19.2 GB stays free after the download (13.0 to 24.9 GB), above the 12 GB conversion
+  floor, with one converted day (at most about 1.4 GB) cached at a time.
