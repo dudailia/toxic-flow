@@ -85,3 +85,20 @@ Each later entry: date, what changed, why, which results it affects, fixing comm
   (results/fb5cb1e00ce5), from the first cell, started at 2026-10-30T03:03:20Z on a clean
   tree. No code or config changed.
 - Effect on results: none. Only the restarted run is reported.
+
+## 5. The MDE printed from the frozen s is 0.0230 bp, section 9 says 0.0231 bp (2026-10-30)
+
+- What: section 9 freezes "s = 0.0329 bp. MDE = 0.70 s = 0.0231 bp." scripts/analyse.py
+  reads s = 0.0329 from that line, as section 9 says, and src/toxic_flow/eval/bootstrap.py
+  mde() gives (z_0.975 + z_0.80) x 0.0329 / 4 = 0.023043 bp, printed as 0.0230 bp. The
+  0.0231 in section 9 was worked out from s before rounding: 0.032923 bp on the training
+  days (run 58c46cc49981; analysis.mde_inputs), which gives 0.023059 bp.
+- Found: after results/summary.json was written (b111530), before the paper was built.
+- Change: none to code, configs or PREREGISTRATION.md. The summary keeps the MDE from the
+  frozen s, as the committed code computes it.
+- Both results: with MDE 0.023043 bp (reported) and with 0.023059 bp (section 9's
+  figure), H1 is "no detectable difference" in both, C1 and C2 pass in both (C2 threshold
+  0.0691 bp and 0.0692 bp; C2 beat B1 by 2.3888 bp), C3 does not flag in both, and the C4
+  statement is the same. The H1 sentence differs only in its last number: "The study could
+  detect effects of 0.0230 bp or larger." against "... 0.0231 bp or larger."
+- Effect on results: none on any verdict; the printed MDE is 0.0230 bp, not 0.0231 bp.
