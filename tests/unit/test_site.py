@@ -30,6 +30,27 @@ def test_the_committed_bundle_is_what_the_script_builds_now(bundle):
     assert json.loads(json.dumps(build(), sort_keys=True)) == bundle
 
 
+@pytest.mark.parametrize(
+    ("status", "ok"),
+    [("", True), ("M  paper/template.md\n", True), (" M paper/template.md\n", False),
+     ("MM paper/template.md\n", False)],
+)  # fmt: skip
+def test_a_source_staged_for_commit_is_read_and_an_unstaged_edit_is_refused(
+    monkeypatch, status, ok
+):
+    """The pre-commit hook builds the bundle while the change is staged, so a staged source
+    counts as committed; a working copy that differs from the index never does."""
+    import site_data
+
+    out = {"ls-files": "paper/template.md\n", "status": status}
+    monkeypatch.setattr(site_data, "git", lambda *a: out[a[0]])
+    if ok:
+        assert site_data.committed("paper/template.md") == "paper/template.md"
+    else:
+        with pytest.raises(SystemExit, match="differs from the commit"):
+            site_data.committed("paper/template.md")
+
+
 def numbers(x, path=(), source=None):
     """(path, value, nearest source) for every number in x."""
     if isinstance(x, dict):

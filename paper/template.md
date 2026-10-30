@@ -275,7 +275,9 @@ interval from {{h1_ci_low_bp}} to {{h1_ci_high_bp}} bp and a paired t interval f
 {{h1_t_low_bp}} to {{h1_t_high_bp}} bp. B3 was ahead on {{h1_days_positive}} of
 {{h1_n_days}} days, and the point estimate has the sign of the primary cell in
 {{h1_cells_same_sign}} of 8 cells. The MDE for this number of days is {{mde_bp}} bp, with
-s = {{s_bp}} bp. The median ratio of B3 to B2b traded notional is {{selectivity_ratio}}.
+s = {{s_bp}} bp. Section 9 printed the MDE as {{pre_mde}} bp, worked out from s before
+it was rounded; the frozen s gives {{mde_bp}} bp, and no verdict differs between the two
+(DEVIATIONS.md, entry 5). The median ratio of B3 to B2b traded notional is {{selectivity_ratio}}.
 
 {{h1_statement}}
 

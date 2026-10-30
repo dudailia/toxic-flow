@@ -60,10 +60,13 @@ def git(*args: str) -> str:
 
 
 def committed(rel: str) -> str:
-    """rel, after checking that git tracks it and it equals the committed version."""
+    """rel, after checking that git tracks it and the file equals the version in git's index.
+    A staged change counts as committed: the pre-commit hook builds the bundle while the
+    change is staged, so the bundle is checked against what the commit will hold."""
     if not git("ls-files", "--", rel).strip():
         raise SystemExit(f"{rel} is not tracked by git: the bundle reads committed files only")
-    if git("status", "--porcelain", "--", rel).strip():
+    # Porcelain "XY path": Y is the working copy against the index.
+    if git("status", "--porcelain", "--", rel)[1:2].strip():
         raise SystemExit(f"{rel} differs from the commit")
     return rel
 
