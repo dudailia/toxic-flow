@@ -74,6 +74,14 @@ Each later entry: date, what changed, why, which results it affects, fixing comm
   meta.json, so it has no result.
 - Treated as void, on Ilia's instruction, before any of its results were analysed: none of
   its files was opened, read, analysed or committed.
+- Set aside: Ilia moved the folder out of the repository on 2026-10-30, to
+  ~/toxic-flow-void/fb5cb1e00ce5_interrupted_2026-10-29 (451 files, no subfolders). Its
+  files' SHA-256 values, computed without opening any file's contents, are in
+  docs/void_run_fb5cb1e00ce5.sha256 (that list's own SHA-256:
+  3446e7193007d8eceafc987abaf923ae48cc3a51f6d220f15052d9e6ac2f4a76). To check the folder
+  is untouched: `cd ~/toxic-flow-void/fb5cb1e00ce5_interrupted_2026-10-29 && shasum -a 256 -c
+  ~/Projects/toxic-flow/docs/void_run_fb5cb1e00ce5.sha256`.
 - Restart: from the same committed config, so the same config hash and results folder
-  (results/fb5cb1e00ce5), from the first cell. No code or config changed.
+  (results/fb5cb1e00ce5), from the first cell, started at 2026-10-30T03:03:20Z on a clean
+  tree. No code or config changed.
 - Effect on results: none. Only the restarted run is reported.
