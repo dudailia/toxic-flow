@@ -1,0 +1,9 @@
+{
+  "config": "configs/runs/confirmatory_controls.yaml",
+  "config_hash": "5e57ec7d771f",
+  "commit": "6a6a096a2058b3d8ff48e75306301e7af7eb37fe",
+  "started_at": "2026-10-30T08:21:46+00:00",
+  "hftbacktest": "2.4.4",
+  "label": "confirmatory_controls",
+  "finished_at": "2026-10-30T10:36:38+00:00"
+}
