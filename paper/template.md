@@ -281,6 +281,10 @@ it was rounded; the frozen s gives {{mde_bp}} bp, and no verdict differs between
 
 {{h1_statement}}
 
+Limitation: the daily difference varied more on the test days than s, the figure the MDE
+was planned with, so the power at the MDE was below the planned 80%, and both intervals
+reach B3 deficits larger than the MDE (docs/audit_M5.md, lesser finding 1).
+
 The statement above is chosen by script from these sentences, committed before the test:
 
 | Outcome on test days | Statement |
@@ -294,7 +298,8 @@ The statement above is chosen by script from these sentences, committed before t
 | C1 fails on test days | The signal's gain does not depend on event signs, so it is not order-flow information. Primary result reported but not interpreted. |
 
 Exploratory, same statistic: B3 minus B2 {{h2_mean_bp}} bp ({{h2_ci_low_bp}} to
-{{h2_ci_high_bp}}), B3 minus B1 {{h3_mean_bp}} bp ({{h3_ci_low_bp}} to {{h3_ci_high_bp}}),
+{{h2_ci_high_bp}}; its paired t interval includes 0, so by section 8 it is
+inconclusive), B3 minus B1 {{h3_mean_bp}} bp ({{h3_ci_low_bp}} to {{h3_ci_high_bp}}),
 B2b minus B1 {{h4_mean_bp}} bp ({{h4_ci_low_bp}} to {{h4_ci_high_bp}}). Against random
 pulls at their own rates: B3 {{rp_b3_mean_bp}} bp ({{rp_b3_ci_low_bp}} to
 {{rp_b3_ci_high_bp}}), B2b {{rp_b2b_mean_bp}} bp ({{rp_b2b_ci_low_bp}} to
