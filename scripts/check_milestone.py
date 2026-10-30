@@ -647,7 +647,57 @@ def m5(r: Results) -> None:
     )
 
 
-MILESTONES = {"M0": m0, "M1": m1, "M2": m2, "M3": m3, "M4": m4, "M5": m5}
+def m6(r: Results) -> None:
+    summary = ROOT / "results" / "summary.json"
+    build = ROOT / "paper" / "build"
+    page, pdf = build / "paper.md", build / "summary.pdf"
+    tracked = bool(
+        subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "--", "results/summary.json"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    )
+    check = subprocess.run(
+        ["uv", "run", "python", "paper/check_paper.py"], cwd=ROOT, capture_output=True, text=True
+    )
+    r.add(
+        "AC6.1 paper built from the committed summary.json: no open {{key}}, no literal decimal",
+        tracked and page.exists() and check.returncode == 0,
+        f"summary.json tracked {tracked}; paper.md {page.exists()}; "
+        f"check_paper exit {check.returncode}",
+    )
+    # make paper writes summary.pdf from summary.json, so a PDF older than it is stale.
+    fresh = pdf.exists() and summary.exists() and pdf.stat().st_mtime >= summary.stat().st_mtime
+    r.add(
+        "AC6.2 one-page PDF built from the same summary.json",
+        fresh,
+        "paper/build/summary.pdf is newer than results/summary.json" if fresh else "missing or stale",
+    )
+    heading = "## What I would do with L3 data and real fills"
+    built = page.read_text() if page.exists() else ""
+    r.add(
+        "AC6.3 section on L3 data and real fills",
+        heading in read("paper/template.md") and heading in built,
+        "in the template and in the built page",
+    )
+    readme = read("README.md")
+    missing = [s for s in ("make data", "make run", "make paper") if s not in readme]
+    r.add(
+        "AC6.4 README reproduces the study with make data, make run, make paper",
+        not missing,
+        f"missing {missing}" if missing else "all three in the README",
+    )
+    lint = subprocess.run(
+        ["uv", "run", "pytest", "tests/test_writing.py", "-q"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    r.add("AC6.5 writing lint passes on everything", lint.returncode == 0, f"exit {lint.returncode}")
+
+
+MILESTONES = {"M0": m0, "M1": m1, "M2": m2, "M3": m3, "M4": m4, "M5": m5, "M6": m6}
 
 
 def main() -> int:
