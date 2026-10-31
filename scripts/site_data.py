@@ -8,8 +8,8 @@ already reports (paper/pre_test.py RUNS) and the committed outputs of the fittin
 (docs/signals, docs/exploratory). The script refuses a source that git does not track or
 that differs from the commit. Each section lists its sources, so every number can be
 traced to one (tests/unit/test_site.py rebuilds the bundle and compares). Numbers are
-unformatted. Training and validation days only: every test-day key is present with the
-value null, to be filled from results/summary.json after the test. Fills are simulated.
+unformatted. The test-day block is read from the committed results/summary.json, every
+key the paper takes from it. Fills are simulated.
 """
 
 import json
@@ -278,16 +278,21 @@ def conclusions() -> dict:
 
 
 def test_keys() -> dict:
-    """Every number the paper takes from the test days, as null until results/summary.json."""
+    """Every number the paper takes from the test days, read from the committed
+    results/summary.json (scripts/analyse.py summary over the two M5 runs), with the label
+    of the post-hoc numbers (DEVIATIONS.md entry 6)."""
+    src = committed("results/summary.json")
+    s = json.loads((ROOT / src).read_text())
     template = (ROOT / committed("paper/template.md")).read_text()
     keys = sorted({k for k in re.findall(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", template)
                    if not k.startswith("pre_")})  # fmt: skip
-    days = load_splits()["test"]  # the dates only; no test-day data is read
-    return {"note": "Test days not run: every value is null until the tag and the test run.",
-            "keys": dict.fromkeys(keys),
-            "h1_cell_means_bp": dict.fromkeys(CELLS),
-            "h1_per_day_bp": dict.fromkeys(days),
-            "no_print_share": None, "summary_source": None}  # fmt: skip
+    per_day = s["h1"]["primary"]["per_day"]
+    return {"source": src, "note": "Test days, from results/summary.json. Fills are simulated.",
+            "runs": s["runs"], "keys": {k: s[k] for k in keys},
+            "posthoc_note": s["posthoc_note"],
+            "h1_cell_means_bp": s["h1"]["cell_means"],
+            "h1_per_day_bp": {d: per_day[d] for d in load_splits()["test"]},
+            "no_print_share": s["no_print_share"]}  # fmt: skip
 
 
 def timeline() -> list[dict]:
@@ -314,7 +319,7 @@ def build() -> dict:
         "title": "Does a Hawkes model of order flow help a market maker? A pre-registered test",
         "note": "Replay simulation of historical Binance BTCUSDT perpetual data: simulated "
         "fills, no order sent to an exchange, no claim about live trading or profit. "
-        "Training and validation days only; test-day values are null.",
+        "Test-day values come from results/summary.json.",
         "units": {"bp": "basis points of traded notional", "bef": "break-even maker fee"},
         "primary_cell": "/".join(PRIMARY),
         "cells": CELLS,

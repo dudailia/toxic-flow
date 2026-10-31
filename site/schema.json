@@ -56,10 +56,15 @@
     "v1": {"type": "object", "required": ["label", "source", "c2_minus_b1"],
       "properties": {"label": {"type": "string"}, "source": {"type": "string"},
                      "c2_minus_b1": {"$ref": "#/$defs/comparison"}}},
-    "test": {"type": "object", "required": ["note", "keys", "h1_cell_means_bp", "h1_per_day_bp"],
-      "properties": {"keys": {"type": "object", "additionalProperties": {"type": "null"}},
-                     "h1_cell_means_bp": {"type": "object", "additionalProperties": {"type": "null"}},
-                     "h1_per_day_bp": {"type": "object", "additionalProperties": {"type": "null"}},
-                     "no_print_share": {"type": "null"}, "summary_source": {"type": "null"}}}
+    "test": {"type": "object", "required": ["source", "note", "runs", "keys", "posthoc_note",
+                                            "h1_cell_means_bp", "h1_per_day_bp", "no_print_share"],
+      "properties": {"source": {"type": "string"}, "posthoc_note": {"type": "string"},
+                     "runs": {"type": "array", "items": {"type": "object",
+                       "required": ["config_hash", "commit", "label"]}},
+                     "keys": {"type": "object", "additionalProperties": {"type": ["number", "string"]}},
+                     "h1_cell_means_bp": {"type": "object", "additionalProperties": {"type": "number"}},
+                     "h1_per_day_bp": {"type": "object", "additionalProperties": {"type": "number"}},
+                     "no_print_share": {"type": "object", "additionalProperties": {"type": "object",
+                       "additionalProperties": {"type": "number"}}}}}
   }
 }

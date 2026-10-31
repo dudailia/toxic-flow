@@ -65,9 +65,9 @@ def numbers(x, path=(), source=None):
         yield path, x, source
 
 
-# Sections whose numbers are not results: dates and labels of the design, and the count of
-# test days. Everything else needs a source.
-NOT_RESULTS = ("splits", "cells", "runs", "design_history", "test")
+# Sections whose numbers are not results: dates and labels of the design. Everything else,
+# the test-day block included, needs a source.
+NOT_RESULTS = ("splits", "cells", "runs", "design_history")
 
 
 def test_every_number_names_committed_results_it_comes_from(bundle):
@@ -109,14 +109,26 @@ def test_the_v1_block_is_c2_against_b1_from_the_committed_v1_canary_run(bundle):
     assert got["bootstrap_ci_bp"][1] < 0  # the failure: the oracle lost to B1
 
 
-def test_every_test_day_value_is_null(bundle):
+def test_every_test_day_value_is_the_committed_summary_s(bundle):
+    """The trace test for the test days: each value equals results/summary.json at its key,
+    and summary.json names the committed runs it was computed from."""
     t = bundle["test"]
-    assert t["keys"] and all(v is None for v in t["keys"].values())
+    s = json.loads((ROOT / "results" / "summary.json").read_text())
+    assert t["source"] == "results/summary.json"
+    assert t["keys"] and t["keys"] == {k: s[k] for k in t["keys"]}
+    # The post-hoc numbers (DEVIATIONS.md entry 6) travel with the label that says so.
+    assert {"posthoc_sd_bp", "posthoc_mde_bp"} <= set(t["keys"])
+    assert t["posthoc_note"] == s["posthoc_note"]
+    assert "not part of the pre-registered analysis" in t["posthoc_note"]
+    assert t["h1_per_day_bp"] == s["h1"]["primary"]["per_day"]
     assert list(t["h1_per_day_bp"]) == bundle["splits"]["test"]
-    assert all(v is None for v in t["h1_per_day_bp"].values())
+    assert t["h1_cell_means_bp"] == s["h1"]["cell_means"]
     assert set(t["h1_cell_means_bp"]) == set(bundle["cells"])
-    assert [p for p, _, _ in numbers(t)] == []
-    # No test day appears anywhere outside the null placeholders.
+    assert t["no_print_share"] == s["no_print_share"]
+    assert t["runs"] == s["runs"] and t["runs"]
+    for r in t["runs"]:
+        assert git("ls-files", "--", f"results/{r['config_hash']}/metrics.parquet").stdout.strip()
+    # No test day appears anywhere outside the test block.
     rest = json.dumps({k: v for k, v in bundle.items() if k not in ("test", "splits")})
     assert not [d for d in bundle["splits"]["test"] if d in rest]
 
