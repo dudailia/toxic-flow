@@ -102,3 +102,24 @@ Each later entry: date, what changed, why, which results it affects, fixing comm
   statement is the same. The H1 sentence differs only in its last number: "The study could
   detect effects of 0.0230 bp or larger." against "... 0.0231 bp or larger."
 - Effect on results: none on any verdict; the printed MDE is 0.0230 bp, not 0.0231 bp.
+
+## 6. Post-hoc: the test-day spread of D and the MDE at it (Ilia, 2026-10-31)
+
+- Ilia's decision: "add to summary.json the test-day SD of D and the MDE at that SD,
+  labelled post-hoc and not part of the pre-registered analysis ... The paper states both
+  numbers next to the H1 sentence, so 'could detect effects of 0.0230 bp' never stands
+  alone."
+- Why: the leakage audit (docs/audit_M5.md, lesser finding 1) found that D varied more on
+  the test days than the s the MDE was planned with, so the planned MDE overstates what
+  the test could detect.
+- Change: src/toxic_flow/eval/analysis.py summary() adds posthoc_sd_bp (standard deviation
+  of the primary cell's daily D, B3 minus B2b, over the 16 test days), posthoc_mde_bp
+  (section 9's formula at that SD and n = 16) and posthoc_note, which labels both as
+  post-hoc (test in tests/unit/test_analysis.py). results/summary.json was rebuilt with the
+  same command and inputs as in b111530; every earlier key is unchanged.
+- Values: posthoc_sd_bp 0.0503 bp against the planned s of 0.0329 bp; posthoc_mde_bp
+  0.0352 bp against the planned MDE of 0.0230 bp. Power at 0.0230 bp with this SD is about
+  45%, not 80% (computed for this entry, not a key of summary.json).
+- Effect on results: adds two reported numbers; no verdict uses them and none changes. The
+  pre-registered sentence of section 11 is printed as committed, with the post-hoc numbers
+  beside it in the paper.

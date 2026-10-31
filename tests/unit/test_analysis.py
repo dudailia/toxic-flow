@@ -150,6 +150,12 @@ def test_summary_has_every_key_the_paper_template_needs():
     assert summary["h1_cells_same_sign"] == 8
     assert summary["rl_b3_mean_bp"] == pytest.approx(summary["rp_b3_mean_bp"])  # same rows
     assert summary["f_b3_mean_bp"] == pytest.approx(1.0 + NOISE.mean() - 0.25)  # B3 - F
+    # Post-hoc (DEVIATIONS.md entry 6): the SD of the primary D on the test days, which is
+    # 1.0 + NOISE here, and the MDE section 9's formula gives at that SD.
+    sd = np.std(NOISE, ddof=1)
+    assert summary["posthoc_sd_bp"] == pytest.approx(sd)
+    assert summary["posthoc_mde_bp"] == pytest.approx(analysis.mde(sd, 12))
+    assert "not part of the pre-registered analysis" in summary["posthoc_note"]
 
 
 def test_no_print_shares_per_day_in_the_primary_cell_with_their_range_and_table():

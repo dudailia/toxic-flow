@@ -60,9 +60,10 @@ PAGE = [
     ("What the study asks", [0]),
     ("How the design changed before the test", None),
     ("Tuning and canaries on the validation days", [0]),
-    # The limitations paragraph goes with the result (CLAUDE.md), found by its first word
-    # because its position moves when the template changes.
-    ("Results on the test days", [0, 1, "Limitations"]),
+    # The limitations paragraphs go with the result (CLAUDE.md), found by their first words
+    # because their positions move when the template changes. The post-hoc one keeps the
+    # planned MDE in the H1 sentence from standing alone (DEVIATIONS.md entry 6).
+    ("Results on the test days", [0, 1, "Limitation, post-hoc", "Limitations"]),
     ("Canaries on the test days", None),
 ]
 FOOTER = (
@@ -132,9 +133,10 @@ def page_figure(md: str, s: dict | None):
     fig.text(0.06, 0.975, textwrap.fill(title, 70, break_on_hyphens=False), va="top", fontsize=12, weight="bold",
              family="serif")  # fmt: skip
     body = "\n\n".join(
-        p if p.isupper() else textwrap.fill(p, 124) for p in paras
+        p if p.isupper() else textwrap.fill(p, 134) for p in paras
     )  # headings stay on their own line
-    fig.text(0.06, 0.935, body, va="top", fontsize=6.5, family="serif", linespacing=1.2)
+    # 6.2 pt over 134 characters keeps the text above both figures (tests/unit/test_paper.py)
+    fig.text(0.06, 0.935, body, va="top", fontsize=6.2, family="serif", linespacing=1.2)
     a1, a2 = fig.add_axes(AXES[0]), fig.add_axes(AXES[1])
     if s is None:
         placeholder(a1, "Fig. 1, B3 minus B2b on each test day,\ndrawn from results/summary.json")

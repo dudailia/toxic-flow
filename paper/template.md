@@ -281,9 +281,12 @@ it was rounded; the frozen s gives {{mde_bp}} bp, and no verdict differs between
 
 {{h1_statement}}
 
-Limitation: the daily difference varied more on the test days than s, the figure the MDE
-was planned with, so the power at the MDE was below the planned 80%, and both intervals
-reach B3 deficits larger than the MDE (docs/audit_M5.md, lesser finding 1).
+Limitation, post-hoc and not part of the pre-registered analysis (DEVIATIONS.md, entry
+6): on the test days the daily difference had a standard deviation of {{posthoc_sd_bp}} bp,
+larger than the planned s of {{s_bp}} bp, and at that spread section 9's formula gives an
+MDE of {{posthoc_mde_bp}} bp. So the planned MDE of {{mde_bp}} bp had less than the planned
+80% power, and both intervals reach B3 deficits larger than it (docs/audit_M5.md, lesser
+finding 1).
 
 The statement above is chosen by script from these sentences, committed before the test:
 

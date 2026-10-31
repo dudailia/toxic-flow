@@ -315,6 +315,9 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
             "gain does not depend on event signs, so it is not order-flow information. "
             "Primary result reported but not interpreted."
         )
+    # Post-hoc, added after the test (DEVIATIONS.md entry 6, Ilia 2026-10-31): the spread of
+    # D on the test days and the MDE at that spread, so the planned MDE never stands alone.
+    sd = float(np.std(list(p["per_day"].values()), ddof=1))
     return {
         "h1_statement": h["statement"],
         "h1_mean_bp": p["mean"],
@@ -336,6 +339,11 @@ def summary(m: pl.DataFrame, mde_in: dict, meta: dict) -> dict:
             sum(np.sign(v) == np.sign(p["mean"]) for v in h["cell_means"].values())
         ),
         "selectivity_ratio": h["selectivity"]["median_notional_ratio"],
+        "posthoc_sd_bp": sd,
+        "posthoc_mde_bp": mde(sd, p["n"]),
+        "posthoc_note": "posthoc_sd_bp and posthoc_mde_bp are post-hoc, added after the test "
+        "(DEVIATIONS.md entry 6): not part of the pre-registered analysis, and no verdict "
+        "uses them.",
         **{f"{k.lower()}_{x}": v for k, r in ex.items() for x, v in _flat(r["bef"]).items()},
         **_canary_keys(m, c),
         **no_print,

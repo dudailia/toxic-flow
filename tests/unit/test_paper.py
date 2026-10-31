@@ -210,3 +210,25 @@ def test_the_page_keeps_the_limitations_with_the_result_and_no_label_leaves_its_
     plt.close(fig)
     assert all(b.x0 >= 0 and b.x1 <= 1 for b in boxes)  # nothing cut at the page edge
     assert boxes[0].x1 < boxes[1].x0  # Fig. 2's labels do not run into Fig. 1
+
+
+def test_the_page_text_ends_above_both_figures(tmp_path):
+    """The reprinted paragraphs grow with the template (the post-hoc limitation of
+    DEVIATIONS.md entry 6 pushed them into the figure titles); they must end above both
+    figures, titles included."""
+    import matplotlib.pyplot as plt
+    from figures import page_figure
+
+    s = _summary()
+    template = Path(__file__).resolve().parents[2] / "paper" / "template.md"
+    (tmp_path / "s.json").write_text(json.dumps({k: v for k, v in s.items()
+                                                 if not isinstance(v, dict)}))  # fmt: skip
+    page = build(template, tmp_path / "s.json", tmp_path / "paper.md", PRE_TEST).read_text()
+    fig = page_figure(page, s)
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    inv = fig.transFigure.inverted()
+    body = fig.texts[1].get_window_extent(r).transformed(inv)
+    tops = [a.get_tightbbox(r).transformed(inv).y1 for a in fig.axes]
+    plt.close(fig)
+    assert body.y0 > max(tops)
